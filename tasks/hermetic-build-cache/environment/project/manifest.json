@@ -1,0 +1,24 @@
+{
+  "targets": {
+    "app": {
+      "kind": "bundle",
+      "entry": "src/main.txt",
+      "output": "out/app.txt"
+    },
+    "docs": {
+      "kind": "bundle",
+      "entry": "src/docs.txt",
+      "output": "out/docs.txt"
+    },
+    "package": {
+      "kind": "concat",
+      "requires": ["app", "docs"],
+      "output": "out/package.txt"
+    },
+    "fingerprint": {
+      "kind": "sha256",
+      "requires": ["package"],
+      "output": "out/package.sha256"
+    }
+  }
+}

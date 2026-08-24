@@ -81,7 +81,7 @@ The Klavis PDF requires all three standard trials for both configured agents to 
 | Python | 3.14.6 |
 | uv | 0.11.28 |
 | GitHub CLI | 2.96.0, authenticated as `RishabhPrabhu1` |
-| Harbor CLI | Not installed at snapshot time |
+| Harbor CLI | 0.22.0 installed during implementation |
 | Docker | Not installed at snapshot time |
 | Modal credentials | Not checked into this repository; required for the upstream default remote backend |
 
