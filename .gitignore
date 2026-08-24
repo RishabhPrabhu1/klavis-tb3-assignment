@@ -47,3 +47,6 @@ coverage/
 *.log
 tmp/
 temp/
+jobs/
+.harbor/
+results/jobs-*/
