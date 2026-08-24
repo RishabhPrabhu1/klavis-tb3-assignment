@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TB3_REPO=${TB3_REPO:-}
-TASK_DIR="$ROOT_DIR/tasks/hermetic-build-cache"
+TASK_DIR="$ROOT_DIR/tasks/build-snapshot-publish"
 
 if [[ -z "$TB3_REPO" ]]; then
   echo "Set TB3_REPO to a checkout of terminal-bench-3." >&2
@@ -15,7 +15,7 @@ if [[ ! -d "$TB3_REPO/checks" ]]; then
 fi
 
 check_root=$(mktemp -d "${TMPDIR:-/tmp}/tb3-static-task.XXXXXX")
-check_task="$check_root/hermetic-build-cache"
+check_task="$check_root/build-snapshot-publish"
 trap 'find "$check_root" -type f -name "*.pyc" -delete 2>/dev/null || true; find "$check_root" -depth -type d -empty -delete 2>/dev/null || true' EXIT
 cp -R "$TASK_DIR" "$check_task"
 

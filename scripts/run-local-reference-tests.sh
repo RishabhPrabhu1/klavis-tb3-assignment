@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-TASK_DIR="$ROOT_DIR/tasks/hermetic-build-cache"
+TASK_DIR="$ROOT_DIR/tasks/build-snapshot-publish"
 TEST_PYTHON=${TEST_PYTHON:-python3}
 
 if ! "$TEST_PYTHON" -c 'import pytest' >/dev/null 2>&1; then

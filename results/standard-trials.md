@@ -1,6 +1,6 @@
 # Standard Trials
 
-Status: pending execution in the current TB3 environment.
+Status: pending execution for `build-snapshot-publish` in the current TB3 environment.
 
 The assignment requires three genuine failures for each current default configuration:
 

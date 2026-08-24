@@ -33,6 +33,12 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _failpoint(label: str) -> None:
+    """Deterministic interruption hook used by the verifier."""
+    if os.environ.get("BUILDSYS_FAILPOINT") == label:
+        os._exit(86)
+
+
 class Builder:
     def __init__(self, project: str | Path):
         self.project = Path(project).resolve()
@@ -137,6 +143,7 @@ class Builder:
                     "output_digest": output_digest,
                 },
             )
+            _failpoint(f"after-target:{name}")
             result = {"output": output, "output_digest": output_digest, "bytes": data}
             self.events.append(
                 {
@@ -187,39 +194,15 @@ class Builder:
             raise BuildError(f"could not read included file: {relative}") from exc
         discovered = [relative]
         chunks: list[bytes] = []
-        next_active = active + [relative]
         for line in text.splitlines(keepends=True):
             if line.startswith("@include "):
                 child = _safe_relative(line[len("@include ") :].strip())
-                child_data, child_deps = self._expand(child, next_active)
+                child_data, child_deps = self._expand(child, active + [relative])
                 chunks.append(child_data)
-                discovered.append(child)
-            elif line.startswith("@glob "):
-                directory = _safe_relative(line[len("@glob ") :].strip())
-                child_data, child_deps = self._expand_glob(directory, next_active)
-                chunks.append(child_data)
-                discovered.append(f"dir:{directory}")
+                discovered.extend(child_deps)
             else:
                 chunks.append(line.encode("utf-8"))
         return b"".join(chunks), discovered
-
-    def _expand_glob(
-        self, directory: str, active: list[str]
-    ) -> tuple[bytes, list[str]]:
-        path = self.project / directory
-        if not path.is_dir():
-            raise BuildError(f"glob directory does not exist: {directory}")
-        entries = sorted(
-            child for child in path.iterdir() if child.is_file()
-        )
-        discovered = [f"dir:{directory}"]
-        chunks: list[bytes] = []
-        for entry in entries:
-            relative = entry.relative_to(self.project).as_posix()
-            child_data, child_deps = self._expand(relative, active)
-            chunks.append(child_data)
-            discovered.extend(child_deps)
-        return b"".join(chunks), _unique_paths(discovered)
 
     def _action_key(
         self,
@@ -230,29 +213,17 @@ class Builder:
     ) -> str:
         signatures = []
         for relative in _unique_paths(files):
-            if relative.startswith("dir:"):
-                directory = _safe_relative(relative[4:])
-                path = self.project / directory
-                if not path.is_dir():
-                    raise BuildError(f"glob directory does not exist: {directory}")
-                entries = sorted(child.name for child in path.iterdir() if child.is_file())
-                signatures.append({"directory": directory, "entries": entries})
-                continue
             path = self.project / _safe_relative(relative)
             try:
                 data = path.read_bytes()
             except FileNotFoundError:
-                # A prior glob member may have been removed.  The missing
-                # sentinel changes the action key so execution can rediscover
-                # the current directory contents instead of failing while
-                # inspecting stale dependency metadata.
                 signatures.append({"path": relative, "missing": True})
                 continue
             except OSError as exc:
                 raise BuildError(f"could not read input file: {relative}") from exc
             signatures.append({"path": relative, "sha256": _sha256(data)})
         payload = {
-            "engine": 1,
+            "engine": 2,
             "target": name,
             "definition": definition,
             "files": signatures,
@@ -268,9 +239,7 @@ class Builder:
             value = json.loads(self._record_path(name).read_text())
         except (OSError, ValueError):
             return None
-        if not isinstance(value, dict):
-            return None
-        if not isinstance(value.get("dependencies"), list):
+        if not isinstance(value, dict) or not isinstance(value.get("dependencies"), list):
             return None
         return value
 

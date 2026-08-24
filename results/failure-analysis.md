@@ -1,18 +1,18 @@
 # Failure Analysis
 
-Status: pending frontier-agent trials.
+Status: pending frontier-agent trials for the replacement task.
 
-## Intended failure mode
+## Killed prototype
 
-The starter build tool expands nested includes and directory globs correctly when it runs, but its persisted dependency manifest records only the immediate reference. A direct-input cache therefore appears correct on ordinary repeated builds while missing changes to nested files and existing members of a globbed directory. The correct repair carries the complete discovered closure into the next action-key calculation.
+The original `hermetic-build-cache` task was rejected before official trials. Its visible failure was an incomplete dependency closure, and the reference solution reduced to two local changes from `append(...)` to `extend(child_deps)`. That is a bookkeeping defect, not the non-local systems invariant required by the assignment. The prototype is preserved in Git history and is not part of the current `tasks/` tree.
 
-## Local evidence
+## Replacement hypothesis
 
-The reference repair passes all nine focused verifier tests. The untouched starter fails the dependency-manifest, nested-input, changed-glob-member, and complete-glob-discovery cases while passing ordinary cache/recovery cases, including glob-member removal and materialized-output restoration. These are local implementation diagnostics, not frontier-agent trial results.
+`build-snapshot-publish` should fail agents that model a build as independently valid target files. The intended failure is a mixed output generation after a deterministic interruption between target publications. A correct solution must make one immutable generation the visibility boundary while preserving selective cache reuse.
 
 ## Trial analysis template
 
-For each invalid standard trial, record:
+For each valid standard trial, record:
 
 ```text
 Agent:

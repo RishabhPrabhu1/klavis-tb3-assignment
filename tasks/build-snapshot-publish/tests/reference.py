@@ -27,19 +27,6 @@ def _expand(project: Path, relative: str, active: list[str]) -> tuple[bytes, set
             data, child_deps = _expand(project, child, active + [relative])
             chunks.append(data)
             discovered.update(child_deps)
-        elif line.startswith("@glob "):
-            directory = safe_relative(line[len("@glob ") :].strip())
-            directory_path = project / directory
-            if not directory_path.is_dir():
-                raise ValueError("glob directory does not exist")
-            discovered.add(f"dir:{directory}")
-            for child_path in sorted(
-                child for child in directory_path.iterdir() if child.is_file()
-            ):
-                child = child_path.relative_to(project).as_posix()
-                data, child_deps = _expand(project, child, active + [relative])
-                chunks.append(data)
-                discovered.update(child_deps)
         else:
             chunks.append(line.encode("utf-8"))
     return b"".join(chunks), discovered

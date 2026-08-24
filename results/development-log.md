@@ -21,3 +21,23 @@
   - **Change:** Tests execute `/app/buildsys` only in a child process, drop it to `nobody` when the verifier is root, protect `/logs/verifier`, capture output to files, and kill the process group on timeout.
   - **Evidence:** Hidden truth remains in `tests/` and is not copied into the agent image; the reward is written only by root after pytest exits.
   - **Decision:** Preserve this isolation pattern for mutation and adversarial testing.
+
+- **Hypothesis:** The original two-line dependency-closure task cannot meet the intrinsic-difficulty gate.
+  - **Change:** Rejected `hermetic-build-cache` as a final task and selected `build-snapshot-publish`, where the state model must separate immutable staged generations from one atomic visibility selector.
+  - **Evidence:** The original oracle was a local `append` to `extend` repair. The v2 starter passes normal builds and cache reuse but fails deterministic interrupted-publication cases; the v2 oracle passes those cases without changing the public CLI.
+  - **Decision:** Continue only with the generation-publication invariant. Switch to `cas-lease-gc` if the oracle or verifier collapses into a local patch or timing-dependent test.
+
+- **Hypothesis:** Candidate-controlled verifier inputs and readable verifier files would make local security claims unreliable.
+  - **Change:** The v2 verifier builds separate candidate/reference workspaces, keeps reference truth root-only, makes `/tests` root-only in the verifier image, runs candidate code as `nobody`, and cleans process groups after normal exit as well as timeout.
+  - **Evidence:** The local verifier derives all expected bytes from the independent reference workspace and the mutation suite rejects publication, definition, upstream, object-integrity, and selector mutants.
+  - **Decision:** Keep security and contract coverage as release blockers, not documentation claims.
+
+- **Hypothesis:** The compact oracle must stay within the redesign plan's implementation-size kill gate.
+  - **Change:** Removed redundant reference-path and validation scaffolding while preserving staged generations, content-addressed object validation, atomic `CURRENT` replacement, and output-selector recovery.
+  - **Evidence:** The oracle is 270 nonblank lines and the independent six-case local suite still passes; all seven mutation variants remain rejected.
+  - **Decision:** Keep `build-snapshot-publish`; do not switch to `cas-lease-gc` on solution size.
+
+- **Hypothesis:** Official implementation evidence is currently infrastructure-blocked rather than task-validated.
+  - **Change:** Ran the actual Harbor implementation-rubric command against the new task with the recorded upstream rubric.
+  - **Evidence:** Harbor failed before container execution because the development machine has no `docker` executable.
+  - **Decision:** Do not claim Harbor, Docker, or frontier-model completion; preserve the exact blocker in `results/validation.md`.

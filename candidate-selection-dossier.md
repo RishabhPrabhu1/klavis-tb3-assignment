@@ -1,6 +1,12 @@
 # Candidate Selection Dossier
 
-Status: primary candidate implemented; local validation and final packaging are complete, while Docker/Harbor and required model trials remain environment-dependent.
+Status: the original two-line `hermetic-build-cache` prototype was rejected during continuation review. The replacement `build-snapshot-publish` task and local gates are complete; Docker/Harbor and required model trials remain pending.
+
+## Continuation redesign
+
+The original primary was deliberately killed rather than hidden or padded. Its reference repair only propagated two discarded dependency lists, which failed the assignment's intrinsic-difficulty gate. The selected replacement keeps the professional build/cache setting but makes the crux generation-consistent publication: individually atomic records and outputs can still form a mixed build state unless one immutable generation is selected atomically.
+
+The decision memo, wrong-vs-correct abstraction, oracle plan, verifier plan, and contract matrix are in `results/`.
 
 ## Selection criteria
 
@@ -20,7 +26,8 @@ Scores are on a 1–5 scale, where 5 is strongest. They are design judgments, no
 
 | Candidate | Verifiable | Specified | Solvable | Difficult | Realistic | Outcome-based | Novelty | Cheat resistance | Decision |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| Hermetic incremental build cache | 5 | 4 | 5 | 5 | 5 | 5 | 5 | 4 | Primary |
+| Hermetic incremental build cache | 5 | 4 | 5 | 5 | 5 | 5 | 5 | 4 | Rejected after oracle review |
+| Build snapshot publication | 5 | 5 | 5 | 5 | 5 | 5 | 5 | 5 | Replacement |
 | Lease-safe content-addressed storage GC | 5 | 4 | 5 | 5 | 5 | 5 | 4 | 5 | Fallback |
 | Fenced lease writer | 5 | 5 | 5 | 4 | 5 | 5 | 4 | 5 | Strong alternative |
 | Crash-consistent release publisher | 5 | 4 | 5 | 4 | 5 | 5 | 4 | 4 | Alternative |
@@ -140,11 +147,19 @@ Scores are on a 1–5 scale, where 5 is strongest. They are design judgments, no
 
 ## Primary selection
 
-### Selected candidate: `hermetic-build-cache`
+### Original selected candidate: `hermetic-build-cache` (killed)
 
 This candidate has the best combination of professional relevance, novel overlap profile, agentic exploration, and a verifier that can compare exact outcomes. Its difficulty comes from a graph-wide semantic invariant rather than from an arbitrary race or a long list of special cases. It also directly uses the plan's preferred incremental-build/cache family while remaining distinct from the current TB3 task catalog.
 
-The implementation will not begin until the candidate contract is reduced to one explicit crux and the verifier/oracle design is written down. The first design constraint is to keep the task about transitive semantic dependency closure; symlinks, hard links, renames, and concurrency will be included only if they expose that same invariant and can be specified succinctly.
+The implementation was started only after reducing the candidate contract to one explicit crux. Continuation review found that the resulting oracle was a two-line local patch, so this candidate is retained only as a documented rejected prototype.
+
+### Replacement candidate: `build-snapshot-publish`
+
+- **Invariant:** all materialized outputs and cache metadata visible after an interrupted publish belong to one immutable committed generation.
+- **Wrong abstraction:** independently publish each target's object, record, and output and treat the latest files as the build state.
+- **Correct abstraction:** stage a complete generation and atomically switch one selector; readers never consume unreachable staging data.
+- **Why it remains realistic:** build/release infrastructure routinely needs reproducible artifact publication while retaining selective cache reuse.
+- **Kill conditions:** a local patch, timing-dependent verifier, diffuse contract, or oracle exceeding the intended expert implementation envelope sends the work to the `cas-lease-gc` fallback.
 
 ### Fallback selection: `cas-lease-gc`
 

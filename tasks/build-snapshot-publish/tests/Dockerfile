@@ -16,3 +16,5 @@ ENV PATH="/opt/venv/bin:${PATH}"
 COPY . /tests/
 
 RUN mkdir -p /app /logs/verifier
+RUN chmod -R go-rwx /tests \
+    && chmod 700 /logs/verifier
