@@ -29,9 +29,9 @@ Result: all 22 current static checks passed.
 TEST_PYTHON=/tmp/tb3-build-test-venv.Po50im/bin/python ./scripts/run-local-reference-tests.sh
 ```
 
-Result: `8 passed`.
+Result: `9 passed`.
 
-The untouched starter fails the intended closure cases and passes the ordinary-repeat, unrelated-input, and materialized-output recovery cases. This confirms that nop behavior is nontrivial, but the official Harbor nop result is still pending.
+The untouched starter fails the intended closure cases and passes the ordinary cache/recovery cases that it can reach, including unrelated-input reuse, glob-member removal, and materialized-output recovery. This confirms that nop behavior is nontrivial, but the official Harbor nop result is still pending.
 
 ### Mutation checks
 

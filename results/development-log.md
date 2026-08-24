@@ -14,7 +14,7 @@
 
 - **Hypothesis:** A single nested-include bookkeeping defect would be too shallow for the assignment's frontier-failure target.
   - **Change:** Added directory-glob discovery to the same dependency-closure contract. A valid cache must track recursive file content and glob directory membership while preserving valid reuse.
-  - **Evidence:** The unchanged starter passes ordinary repeat and unrelated-input cases but fails nested-file invalidation, changed glob-member invalidation, and complete dependency reporting. The two-line reference repair passes all eight focused tests.
+  - **Evidence:** The unchanged starter passes ordinary cache/recovery cases but fails nested-file invalidation, changed glob-member invalidation, and complete dependency reporting. The two-line reference repair passes all nine focused tests, including removal from a globbed directory.
   - **Decision:** Keep the task centered on one invariant—complete semantic discovery closure—without adding unrelated races or arbitrary corner cases.
 
 - **Hypothesis:** Separate-verifier execution must treat candidate code as hostile even for a small Python task.

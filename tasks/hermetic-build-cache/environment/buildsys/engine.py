@@ -241,6 +241,13 @@ class Builder:
             path = self.project / _safe_relative(relative)
             try:
                 data = path.read_bytes()
+            except FileNotFoundError:
+                # A prior glob member may have been removed.  The missing
+                # sentinel changes the action key so execution can rediscover
+                # the current directory contents instead of failing while
+                # inspecting stale dependency metadata.
+                signatures.append({"path": relative, "missing": True})
+                continue
             except OSError as exc:
                 raise BuildError(f"could not read input file: {relative}") from exc
             signatures.append({"path": relative, "sha256": _sha256(data)})

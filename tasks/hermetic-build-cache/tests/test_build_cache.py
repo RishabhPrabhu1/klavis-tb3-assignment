@@ -297,6 +297,26 @@ def test_new_glob_member_changes_the_bundle() -> None:
         finish(project)
 
 
+def test_removed_glob_member_changes_the_bundle() -> None:
+    project = make_project()
+    try:
+        run_candidate(project)
+        (project / "src/assets/b.txt").unlink()
+        report = run_candidate(project)
+        assert statuses(report) == {
+            "app": "built",
+            "docs": "cached",
+            "package": "built",
+            "fingerprint": "built",
+        }
+        app_event = next(event for event in report["events"] if event["target"] == "app")
+        assert "dir:src/assets" in app_event["dependencies"]
+        assert "src/assets/b.txt" not in app_event["dependencies"]
+        assert_outputs(project, "fingerprint", report)
+    finally:
+        finish(project)
+
+
 def test_corrupt_cache_object_forces_rebuild() -> None:
     project = make_project()
     try:

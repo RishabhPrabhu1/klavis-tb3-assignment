@@ -1,6 +1,6 @@
 # Candidate Selection Dossier
 
-Status: primary candidate selected for implementation planning; no task code has been written yet.
+Status: primary candidate implemented; local validation and final packaging are complete, while Docker/Harbor and required model trials remain environment-dependent.
 
 ## Selection criteria
 

@@ -8,7 +8,7 @@ The starter build tool expands nested includes and directory globs correctly whe
 
 ## Local evidence
 
-The reference repair passes all eight focused verifier tests. The untouched starter fails the dependency-manifest, nested-input, changed-glob-member, and complete-glob-discovery cases while passing ordinary repeat, unrelated-input, new-glob-membership invalidation, and materialized-output restoration cases. These are local implementation diagnostics, not frontier-agent trial results.
+The reference repair passes all nine focused verifier tests. The untouched starter fails the dependency-manifest, nested-input, changed-glob-member, and complete-glob-discovery cases while passing ordinary cache/recovery cases, including glob-member removal and materialized-output restoration. These are local implementation diagnostics, not frontier-agent trial results.
 
 ## Trial analysis template
 
