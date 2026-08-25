@@ -1,57 +1,90 @@
 # Validation
 
-Status: v2 local implementation and static validation are complete; Docker/Harbor and frontier trials remain pending because Docker is unavailable and Modal credentials are not configured on the development machine.
+Status: implementation and verifier hardening are in progress. Earlier local tests and static checks passed on the recorded development machine, but the verifier and live upstream snapshot have changed since those runs. The current suite must be re-executed before any final validation claim. Docker/Harbor and frontier trials remain pending because Docker was unavailable and Modal credentials were not configured on the recorded development machine.
 
 ## Environment
 
-- TB3 upstream commit: `45e819259a95fb10e43dcebcc11b73140ace3b32`
-- Harbor: `0.22.0`
-- Docker: unavailable at the time of this record
-- Modal credentials: unavailable at the time of this record
+- Current live TB3 snapshot recorded in `results/environment.md`: `2d58e0374d2de102181f080c5a9d77af29f3717c`
+- Earlier static/local execution snapshot: `45e819259a95fb10e43dcebcc11b73140ace3b32`
+- Harbor: `0.22.0` at the recorded local run
+- Docker: unavailable at the time of the recorded run
+- Modal credentials: unavailable at the time of the recorded run
 - Python: `3.14.6`
-- pytest: `9.1.1` in an isolated temporary environment
+- pytest: `9.1.1` in the recorded isolated temporary environment
 - pytest-json-ctrf: `0.5.2` in the same temporary environment
 
-## Commands and results
+## Commands and evidence
 
 ### Static checks
 
 The wrapper stages a no-space temporary copy because the upstream scripts do not safely handle a workspace path containing spaces.
 
 ```bash
-TB3_REPO=/tmp/terminal-bench-3-research.0wlQ6w/repo ./scripts/run-static-checks.sh
+TB3_REPO=/path/to/current/terminal-bench ./scripts/run-static-checks.sh
 ```
 
-Result: all 22 current static checks passed for `build-snapshot-publish`.
+Historical result: all 22 static checks passed for `build-snapshot-publish` against the earlier upstream snapshot.
+
+Current status: **rerun required** against the live snapshot recorded in `results/environment.md`. Do not treat the historical result as final CI evidence.
 
 ### Local reference regression
 
 ```bash
-TEST_PYTHON=/tmp/tb3-build-test-venv.Po50im/bin/python ./scripts/run-local-reference-tests.sh
+TEST_PYTHON=/path/to/isolated/python ./scripts/run-local-reference-tests.sh
 ```
 
-Result: 6 focused tests passed for the generation-publication oracle. The tests cover clean/repeat reuse, transitive edits and new includes, unrelated inputs, target-definition changes, cache/output corruption recovery, and interrupted publication.
+Historical result before the latest hardening: 6 focused generation-publication tests passed.
 
-The untouched v2 starter fails the two interrupted-publication parameterizations and passes the ordinary cache/output cases. This is the intended nop signal, but the official Harbor nop result remains pending.
+The current verifier additionally includes:
+
+- progress validation for all four `after-target:TARGET` failpoint boundaries;
+- a verifier-controlled external SIGKILL test that does not expose `BUILDSYS_FAILPOINT` to candidate code;
+- a Linux/root verifier self-test proving detached `setsid()` candidate processes are cleaned up;
+- UID-based cleanup of candidate processes on every verifier invocation.
+
+Current status: **rerun required**. The oracle must pass the complete current `tests/` directory before the next gate.
+
+### Starter / nop behavior
+
+Historical result: the untouched v2 starter failed interrupted-publication cases while passing ordinary cache/output behavior.
+
+The current external-kill guard is specifically designed to reject failpoint-only safety and ordinary per-target in-place publication. Official Harbor nop remains pending.
 
 ### Mutation checks
 
 ```bash
-TEST_PYTHON=/tmp/tb3-build-test-venv.Po50im/bin/python ./scripts/run-mutation-checks.sh
+TEST_PYTHON=/path/to/isolated/python ./scripts/run-mutation-checks.sh
 ```
 
-Result: all seven invalid variants were rejected: starter, always-rebuild, ignore-upstream, ignore-definition, trust-object, publish-in-place, and no-selector.
+The current mutation matrix contains eight invalid variants:
 
-The compact generation-based oracle is 270 nonblank lines; it remains below the continuation plan's approximate 300-line kill threshold.
+```text
+starter
+always-rebuild
+ignore-upstream
+ignore-definition
+trust-object
+publish-in-place
+no-selector
+failpoint-shortcut
+```
+
+Historical result: the earlier seven-mutant matrix was rejected before the latest failpoint/external-crash hardening.
+
+Current status: **rerun required**. Every current invalid variant must be rejected by the complete verifier suite.
+
+The compact generation-based oracle remains below the continuation plan's approximate implementation-size kill threshold; line count is not itself evidence of correctness or difficulty.
 
 ### Harbor implementation rubric
 
+Current command:
+
 ```bash
 harbor check tasks/build-snapshot-publish \
-  -r /tmp/terminal-bench-3-research.0wlQ6w/repo/rubrics/task-implementation.toml
+  -r /path/to/current/terminal-bench/rubrics/task-implementation.toml
 ```
 
-Result: blocked before the check trial. On 2026-08-24, Harbor reported `FileNotFoundError: [Errno 2] No such file or directory: 'docker'` while trying to provision the implementation-rubric check.
+Recorded result on 2026-08-24: blocked before the check trial because Harbor could not find a `docker` executable. This is an infrastructure blocker, not a rubric pass or failure.
 
 ### Oracle and nop
 
@@ -66,4 +99,6 @@ Official result: pending Docker/Harbor environment provisioning.
 
 ### Standard and adversarial trials
 
-The current live TB3 defaults are recorded in `results/environment.md`. Standard and `/cheat` trials have not been run; no model or reward result is being claimed.
+The current live defaults are recorded in `results/environment.md`: three trials each for Claude Code / Opus 5 max and Codex / GPT-5.6 Sol xhigh under the configured backend, with the same trial count used for `/cheat`.
+
+Standard and adversarial trials have not been run on the current frozen task. No model-failure or reward result is being claimed.
