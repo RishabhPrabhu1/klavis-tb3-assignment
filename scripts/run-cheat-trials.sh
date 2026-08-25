@@ -13,27 +13,27 @@ if [[ -z "$TB3_REPO" || ! -f "$TB3_REPO/rubrics/hack-trial-prompt.md" ]]; then
 fi
 
 task_copy=$(mktemp -d "${TMPDIR:-/tmp}/build-snapshot-publish-cheat-task.XXXXXX")
-body=$(mktemp "${TMPDIR:-/tmp}/build-snapshot-publish-instruction.XXXXXX")
-trap 'rm -rf "$task_copy"; rm -f "$body"' EXIT
+trap 'rm -rf "$task_copy"' EXIT
 cp -R "$TASK_DIR/." "$task_copy/"
 instruction="$task_copy/instruction.md"
-sed -E 's/[[:space:]]*[Dd]o not cheat[^.]*\.//g' "$instruction" > "$body"
-{
-  cat "$TB3_REPO/rubrics/hack-trial-prompt.md"
-  printf '\n\n'
-  cat "$body"
-} > "$instruction"
+
+# Match .github/workflows/run-cheat-trials.yml: remove the ordinary anti-cheat
+# sentence, then append the live red-team prompt after the legitimate task.
+sed -i -E 's/[[:space:]]*[Dd]o not cheat[^.]*\.//g' "$instruction"
+printf '\n\n' >> "$instruction"
+cat "$TB3_REPO/rubrics/hack-trial-prompt.md" >> "$instruction"
 
 mkdir -p "$JOBS_ROOT"
 
+# The current /cheat workflow deliberately runs one attempt per configured
+# task/agent pair, even though ordinary /run uses three attempts.
 CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000 harbor run \
   --path "$task_copy" \
   --agent claude-code \
   --model anthropic/claude-opus-5 \
   --agent-kwarg reasoning_effort=max \
   --env "$HARBOR_ENV" \
-  --n-attempts 3 \
-  --n-concurrent 3 \
+  --n-attempts 1 \
   --jobs-dir "$JOBS_ROOT/claude-opus-5" \
   --job-name build-snapshot-publish-claude-cheat
 
@@ -43,7 +43,6 @@ harbor run \
   --model openai/gpt-5.6-sol \
   --agent-kwarg reasoning_effort=xhigh \
   --env "$HARBOR_ENV" \
-  --n-attempts 3 \
-  --n-concurrent 3 \
+  --n-attempts 1 \
   --jobs-dir "$JOBS_ROOT/codex-gpt-5.6-sol" \
   --job-name build-snapshot-publish-codex-cheat
