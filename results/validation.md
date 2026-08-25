@@ -38,7 +38,7 @@ Historical result before the latest hardening: 6 focused generation-publication 
 The current verifier additionally includes:
 
 - complete-snapshot checks for all four named failpoints;
-- a strict two-target FIFO probe proving a named failpoint cannot fire at an earlier target;
+- a strict two-target probe proving a named failpoint cannot fire at an earlier target;
 - a verifier-controlled external SIGKILL on a strict dependency chain with no `BUILDSYS_FAILPOINT` in the candidate environment;
 - a Linux/root self-test proving detached `setsid()` candidate processes are cleaned up;
 - a Linux/root self-test proving candidate code cannot rename the sibling reference workspace;
@@ -106,6 +106,6 @@ Official result: pending Docker/Harbor environment provisioning.
 
 ### Standard and adversarial trials
 
-The current live defaults are recorded in `results/environment.md`: three trials each for Claude Code / Opus 5 max and Codex / GPT-5.6 Sol xhigh under the configured backend, with the same trial count used for `/cheat`.
+The current live trial matrix is recorded in `results/environment.md`. Ordinary `/run` uses three trials each for Claude Code / Opus 5 max and Codex / GPT-5.6 Sol xhigh. The current `/cheat` workflow is intentionally different: it runs one adversarial attempt for each configured agent.
 
 Standard and adversarial trials have not been run on the current frozen task. No model-failure or reward result is being claimed.
