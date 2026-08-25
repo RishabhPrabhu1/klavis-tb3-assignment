@@ -101,7 +101,14 @@ def make_workspace_pair() -> tuple[Path, Path, Path]:
     for relative, text in files.items():
         _write(candidate / relative, text)
         _write(reference / relative, text)
-    _set_permissions(candidate, 0o777, 0o666)
+
+    # The project root is sticky and world-writable so the build can create its
+    # own cache/output namespaces without being able to replace root-owned source
+    # entries. This prevents a malicious prior run from planting source symlinks
+    # that later verifier mutations would follow as root.
+    candidate.chmod(0o1777)
+    (candidate / "manifest.json").chmod(0o644)
+    _set_permissions(candidate / "src", 0o755, 0o644)
     _set_permissions(reference, 0o700, 0o600)
     return candidate, reference, base
 
@@ -178,6 +185,44 @@ def _cleanup_candidate_processes(pid: int, baseline_uid_pids: set[int]) -> None:
     assert not survivors, f"candidate processes survived cleanup: {sorted(survivors)}"
 
 
+def _run_candidate_fs_action(code: str, *args: str) -> None:
+    """Mutate candidate-owned state with candidate privileges, never as verifier root."""
+
+    baseline_uid_pids = _pids_for_uid(_NOBODY.pw_uid)
+    proc = subprocess.Popen(
+        [sys.executable, "-c", code, *args],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+        preexec_fn=_drop_privileges,
+        text=True,
+    )
+    try:
+        _, stderr = proc.communicate(timeout=5)
+    except subprocess.TimeoutExpired:
+        _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
+        proc.wait(timeout=5)
+        pytest.fail("candidate-state mutation helper timed out")
+    finally:
+        _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
+    assert proc.returncode == 0, stderr
+
+
+def _candidate_write(path: Path, text: str) -> None:
+    _run_candidate_fs_action(
+        "from pathlib import Path; import sys; Path(sys.argv[1]).write_text(sys.argv[2], encoding='utf-8')",
+        str(path),
+        text,
+    )
+
+
+def _candidate_unlink(path: Path) -> None:
+    _run_candidate_fs_action(
+        "from pathlib import Path; import sys; Path(sys.argv[1]).unlink()",
+        str(path),
+    )
+
+
 def run_candidate(
     project: Path,
     *,
@@ -245,6 +290,8 @@ def run_candidate(
 
 
 def _write_both(candidate: Path, reference: Path, relative: str, text: str) -> None:
+    # Source entries are root-owned and candidate code cannot replace them because
+    # the project root is sticky and source directories are non-writable.
     _write(candidate / relative, text)
     _write(reference / relative, text)
 
@@ -375,7 +422,8 @@ def test_cache_object_and_materialized_output_recovery() -> None:
         first = run_candidate(candidate)
         expected = clean_build(reference, "fingerprint")
         app_event = next(event for event in first["events"] if event["target"] == "app")
-        _write(candidate / ".build-cache" / "objects" / f"{app_event['key']}.bin", "CORRUPTED\n")
+        object_path = candidate / ".build-cache" / "objects" / f"{app_event['key']}.bin"
+        _candidate_write(object_path, "CORRUPTED\n")
         report = run_candidate(candidate)
         _assert_report(
             candidate,
@@ -384,14 +432,14 @@ def test_cache_object_and_materialized_output_recovery() -> None:
             {"app": "built", "docs": "cached", "package": "cached", "fingerprint": "cached"},
         )
 
-        (candidate / "out/app.txt").unlink()
+        _candidate_unlink(candidate / "out/app.txt")
         report = run_candidate(candidate)
         _assert_report(candidate, report, expected, {name: "cached" for name in expected})
         assert _output_tree(candidate, expected) == {
             name: result["bytes"] for name, result in expected.items()
         }
 
-        _write(candidate / "out/app.txt", "CORRUPTED-MATERIALIZED\n")
+        _candidate_write(candidate / "out/app.txt", "CORRUPTED-MATERIALIZED\n")
         report = run_candidate(candidate)
         _assert_report(candidate, report, expected, {name: "cached" for name in expected})
     finally:
