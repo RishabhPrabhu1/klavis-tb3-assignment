@@ -83,6 +83,16 @@ def _replace_manifest(project: Path, targets: dict) -> None:
 def _watch_directory(path: Path) -> int:
     """Return a nonblocking Linux inotify descriptor for visible output changes."""
 
+    # A correct implementation may expose `out/` through a symlink owned by the
+    # unprivileged candidate inside the sticky project root. Linux protected-
+    # symlink policy can deny a privileged inotify_add_watch on that user-facing
+    # symlink even though ordinary verifier reads succeed. Resolve the current
+    # physical directory first. For in-place publishers this is the same directory;
+    # for generation publishers it is the old committed generation, which is
+    # intentionally quiet until an atomic selector switch makes the new snapshot
+    # visible.
+    watched = path.resolve(strict=True)
+
     libc = ctypes.CDLL(None, use_errno=True)
     init = libc.inotify_init1
     init.argtypes = [ctypes.c_int]
@@ -96,10 +106,10 @@ def _watch_directory(path: Path) -> int:
         err = ctypes.get_errno()
         raise OSError(err, os.strerror(err))
     mask = _IN_CLOSE_WRITE | _IN_MOVED_TO | _IN_CREATE | _IN_DELETE_SELF | _IN_MOVE_SELF
-    if add(fd, os.fsencode(path), mask) < 0:
+    if add(fd, os.fsencode(watched), mask) < 0:
         err = ctypes.get_errno()
         os.close(fd)
-        raise OSError(err, os.strerror(err), str(path))
+        raise OSError(err, os.strerror(err), str(watched))
     return fd
 
 
