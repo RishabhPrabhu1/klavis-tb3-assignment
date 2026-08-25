@@ -16,8 +16,7 @@ from pathlib import Path
 
 import pytest
 
-from reference import clean_build
-from test_build_cache import (
+from harness import (
     APP_ROOT,
     _NOBODY,
     _assert_complete_snapshot,
@@ -30,6 +29,7 @@ from test_build_cache import (
     make_workspace_pair,
     run_candidate,
 )
+from reference import clean_build
 
 _IN_CLOSE_WRITE = 0x00000008
 _IN_MOVED_TO = 0x00000080
@@ -239,9 +239,6 @@ def test_normal_build_never_exposes_new_producer_with_old_downstream() -> None:
                     if watch_fd is not None:
                         publication_changed = _publication_event(watch_fd)
                     else:
-                        # Portable development fallback. The official verifier is
-                        # Linux and uses inotify; the wide graph keeps this polling
-                        # fallback useful on macOS without changing task semantics.
                         publication_changed = early_path.read_bytes() != old["early"]["bytes"]
                         if not publication_changed:
                             time.sleep(0.001)
