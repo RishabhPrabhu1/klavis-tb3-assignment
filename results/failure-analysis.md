@@ -1,29 +1,35 @@
 # Failure Analysis
 
-Status: pending frontier-agent trials for the replacement task.
+Status: pending valid standard trials for `build-snapshot-publish`.
 
-## Killed prototype
+The intended difficulty is the publication invariant, not the ordinary cache mechanics: individually correct target outputs are not a valid visible build state unless they belong to one committed snapshot. A meaningful failure should therefore show the agent preserving or reintroducing per-target visibility, incomplete generation switching, or another architectural mistake that can expose producer-new/downstream-old output after interruption.
 
-The original `hermetic-build-cache` task was rejected before official trials. Its visible failure was an incomplete dependency closure, and the reference solution reduced to two local changes from `append(...)` to `extend(child_deps)`. That is a bookkeeping defect, not the non-local systems invariant required by the assignment. The prototype is preserved in Git history and is not part of the current `tasks/` tree.
+Use the following categories:
 
-## Replacement hypothesis
+- `F1` — conceptual/architectural failure aligned with the intended systems crux.
+- `F2` — local implementation bug after the correct architecture was understood.
+- `F3` — instruction ambiguity or specification misunderstanding.
+- `F4` — timeout.
+- `F5` — infrastructure/API/container failure.
+- `F6` — verifier defect.
+- `F7` — reward-hacking/verifier exploit.
+- `F8` — task-specific solution leakage.
 
-`build-snapshot-publish` should fail agents that model a build as independently valid target files. The intended failure is a mixed output generation after a deterministic interruption between target publications. A correct solution must make one immutable generation the visibility boundary while preserving selective cache reuse.
+Only genuine valid task failures count toward the assignment. `F3`–`F8` require correction or rerun rather than being treated as evidence of difficulty.
 
-## Trial analysis template
-
-For each valid standard trial, record:
+For each valid standard zero-reward trial, record:
 
 ```text
-Agent:
-Model:
-Reasoning effort:
-Job/trial path:
+Agent / model / reasoning:
+Trial and job path:
 Reward:
-Infrastructure status:
-Failure category: F1 conceptual / F2 local bug / F3 ambiguity / F4 timeout / F5 infrastructure / F6 verifier / F7 reward hacking / F8 leakage
+Failure category:
 First incorrect abstraction:
-Evidence the agent observed or missed:
-Whether it revised after evidence:
-Why the failure is professionally meaningful:
+Evidence observed or missed:
+Whether the agent revised its model:
+Final implementation strategy:
+Verifier rejection:
+Why the failure is aligned (or not aligned) with the intended crux:
 ```
+
+After all six trials, add a short cross-trial synthesis identifying whether failures converge on the same architectural misunderstanding or are merely unrelated local mistakes.
