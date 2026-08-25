@@ -4,7 +4,7 @@ This is a **reviewer-side assessment**, not a claim that Terminal-Bench's automa
 
 ## Summary
 
-- Clear pass: 32 criteria
+- Clear pass: 31 criteria
 - Pass with concern: 3 criteria
 - Fail: 0 criteria
 - Not applicable: 1 criterion
