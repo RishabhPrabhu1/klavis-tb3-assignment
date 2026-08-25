@@ -29,6 +29,19 @@ HARBOR_ENV=modal ./scripts/run-oracle.sh
 HARBOR_ENV=modal ./scripts/run-nop.sh
 ```
 
+Before spending the final six standard trials, run one diagnostic attempt for each live default agent:
+
+```bash
+HARBOR_ENV=modal N_ATTEMPTS=1 JOB_NAME=build-snapshot-publish-diagnostic ./scripts/run-standard-trials.sh
+```
+
+If both fail for the intended systems reason, run the final standard matrix with the script defaults and then the live `/cheat` reproduction:
+
+```bash
+HARBOR_ENV=modal ./scripts/run-standard-trials.sh
+TB3_REPO=/path/to/terminal-bench HARBOR_ENV=modal ./scripts/run-cheat-trials.sh
+```
+
 The current upstream snapshot and exact trial configuration are recorded in `results/environment.md`. Standard and adversarial trial evidence belongs in `results/standard-trials.md` and `results/cheat-trials.md`; no pending or infrastructure-invalid run is counted as a model failure.
 
 ## Evidence
