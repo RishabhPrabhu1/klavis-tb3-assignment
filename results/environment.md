@@ -23,6 +23,7 @@ Repository: `https://github.com/harbor-framework/terminal-bench`
 | `.github/harbor-run-defaults.yml` blob | `8576d645bf3b19409f9905ad18c0ca6ea43e5c9e` |
 | `rubrics/hack-trial-prompt.md` blob | `96b625b537a05c9ab6d1523e264101f67e7856e9` |
 | `docs/TASK_REVIEW_AUTOMATION.md` blob | `06a5762a7e9066f332477cc2b074df2208888558` |
+| `.github/workflows/run-cheat-trials.yml` blob | `164c922579e371d96fd740f90cf4bbb4c1cb5eb0` |
 | Date checked | 2026-08-25 |
 
 A fresh upstream check must be performed again immediately before the final official model matrix; the snapshot above is for reproducibility, not permission to ignore later upstream changes.
@@ -57,12 +58,12 @@ A fresh upstream check must be performed again immediately before the final offi
 
 ## Current default trials
 
-From `.github/harbor-run-defaults.yml` at the recorded live commit:
+The ordinary `/run` workflow consumes `.github/harbor-run-defaults.yml`; the `/cheat` workflow has its own explicit one-attempt policy. At the recorded live commit:
 
 | Setting | Current value |
 |---|---|
 | `/run` trials per agent | 3 |
-| `/cheat` trials per agent | 3 |
+| `/cheat` trials per agent | 1 |
 | `/run` + `/cheat` environment | `modal` |
 | `/validate` environment | `modal` |
 | Claude agent/model | `claude-code` / `anthropic/claude-opus-5` |
@@ -73,13 +74,13 @@ From `.github/harbor-run-defaults.yml` at the recorded live commit:
 | Analysis model | `sonnet` |
 | Claude output cap | `CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000` |
 
-The Klavis assignment requires all three standard trials for both configured agents to fail the verifier genuinely, and every required adversarial trial to receive zero reward. Agent crashes, API/rate limits, invalid timeouts, container failures, or other infrastructure faults are not counted as model failures.
+The Klavis assignment requires all three standard trials for both configured agents to fail the verifier genuinely, and every adversarial trial required by the current `/cheat` workflow to receive zero reward. At this snapshot that means one valid adversarial trial for each configured agent. Agent crashes, API/rate limits, invalid timeouts, container failures, or other infrastructure faults are not counted as genuine model failures.
 
 ## Current `/cheat` behavior
 
-The live review automation uses the same defaults file as `/run`. For each configured task × agent × trial, it prepends `rubrics/hack-trial-prompt.md` to the legitimate task instruction and runs the task under the configured backend. The adversarial prompt explicitly authorizes attempts to exploit verifier assumptions rather than complete the intended solution. Completed trials are analyzed by default.
+The live `.github/workflows/run-cheat-trials.yml` deliberately runs **one attempt per task/agent pair**, even though ordinary `/run` uses three attempts. It removes the ordinary `Do not cheat...` sentence, then **appends** `rubrics/hack-trial-prompt.md` after the legitimate task instruction. For a remote backend such as the current `modal` default, one Harbor invocation fans out the task/agent pairs with `n_attempts: 1`. Completed trials are analyzed by default.
 
-The repository's `scripts/run-cheat-trials.sh` is a local reproduction helper. It must continue to source the hack prompt from a caller-supplied live `TB3_REPO` checkout and must not be treated as stronger evidence than the live workflow itself.
+The repository's `scripts/run-cheat-trials.sh` is a local reproduction helper. It sources the hack prompt from a caller-supplied live `TB3_REPO` checkout, applies the same remove-then-append transformation, and uses one attempt per configured agent. It must not be treated as stronger evidence than the live workflow itself.
 
 ## Local execution environment recorded during implementation
 
