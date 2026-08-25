@@ -6,21 +6,28 @@ TASK_DIR="$ROOT_DIR/tasks/build-snapshot-publish"
 HARBOR_ENV=${HARBOR_ENV:-modal}
 JOBS_ROOT=${JOBS_ROOT:-"${TMPDIR:-/tmp}/build-snapshot-publish-jobs/standard"}
 JOB_NAME=${JOB_NAME:-build-snapshot-publish-standard}
+N_ATTEMPTS=${N_ATTEMPTS:-3}
+
+if ! [[ "$N_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] || (( N_ATTEMPTS > 10 )); then
+  echo "N_ATTEMPTS must be an integer from 1 to 10" >&2
+  exit 2
+fi
+N_CONCURRENT=${N_CONCURRENT:-$((N_ATTEMPTS * 2))}
 
 mkdir -p "$JOBS_ROOT"
 config=$(mktemp "${TMPDIR:-/tmp}/build-snapshot-publish-standard.XXXXXX.json")
 trap 'rm -f "$config"' EXIT
 
-python3 - "$config" "$TASK_DIR" "$HARBOR_ENV" "$JOBS_ROOT" "$JOB_NAME" <<'PY'
+python3 - "$config" "$TASK_DIR" "$HARBOR_ENV" "$JOBS_ROOT" "$JOB_NAME" "$N_ATTEMPTS" "$N_CONCURRENT" <<'PY'
 import json
 import sys
 
-config, task, env_type, jobs_dir, job_name = sys.argv[1:]
+config, task, env_type, jobs_dir, job_name, attempts, concurrent = sys.argv[1:]
 payload = {
     "job_name": job_name,
     "jobs_dir": jobs_dir,
-    "n_attempts": 3,
-    "n_concurrent_trials": 6,
+    "n_attempts": int(attempts),
+    "n_concurrent_trials": int(concurrent),
     "environment": {"type": env_type},
     "agents": [
         {
