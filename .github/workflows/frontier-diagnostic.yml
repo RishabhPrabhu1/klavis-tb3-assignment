@@ -2,6 +2,9 @@ name: Frontier Diagnostic
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/frontier-diagnostic-trigger"
 
 jobs:
   diagnostic:
