@@ -7,7 +7,7 @@ HARBOR_ENV=${HARBOR_ENV:-modal}
 JOBS_DIR=${JOBS_DIR:-"${TMPDIR:-/tmp}/build-snapshot-publish-jobs/oracle"}
 
 harbor run \
-  --path "$TASK_DIR" \
+  -p "$TASK_DIR" \
   --agent oracle \
   --env "$HARBOR_ENV" \
   --n-attempts 1 \
