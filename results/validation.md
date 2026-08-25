@@ -1,6 +1,6 @@
 # Validation
 
-Status: task design, oracle behavior, and verifier hardening are substantially complete. The remaining gates are live static execution, one final local oracle/mutation rerun after verifier pruning, the Harbor implementation check, official Oracle/NOP runs, and the frontier/adversarial model matrix.
+Status: task design, oracle behavior, and verifier hardening are substantially complete. The remaining gates are live static execution, the current implementation-rubric review, official Harbor Oracle/NOP, and the frontier/adversarial model matrix.
 
 ## Environment
 
@@ -11,9 +11,7 @@ Status: task design, oracle behavior, and verifier hardening are substantially c
 - Live `/validate` Oracle/NOP workflow pins Harbor: `0.18.0`
 - Docker: unavailable at the recorded development-machine snapshot
 - Modal credentials: not stored in this repository
-- Python: `3.14.6`
-- pytest: `9.1.1` in the recorded isolated environment
-- pytest-json-ctrf: `0.5.2` in the same isolated environment
+- Python test execution: Linux container, Python 3.13, pytest 9.x
 
 ## Commands and evidence
 
@@ -25,7 +23,7 @@ TB3_REPO=/path/to/current/terminal-bench ./scripts/run-static-checks.sh
 
 Historical result: all static checks passed against an earlier upstream snapshot.
 
-A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd62374ace87461b004b97ccd`: the task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. All canary-scoped task files were also rechecked after the latest pruning. The task instruction was subsequently shortened without changing those structural properties. This is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final static execution remains pending.
+A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd62374ace87461b004b97ccd`: the task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. All canary-scoped task files were rechecked after verifier pruning/refactoring. The task instruction was subsequently shortened without changing those structural properties. This is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final live static execution remains pending.
 
 ### Local oracle regression
 
@@ -33,21 +31,26 @@ A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd623
 TEST_PYTHON=/path/to/isolated/python ./scripts/run-local-reference-tests.sh
 ```
 
-After the main verifier hardening pass, the then-complete verifier was executed against the reference solution and produced:
+The final runtime verifier was split from its development-only harness self-tests so reward assertions now focus on task outcomes. A reconstructed post-refactor verifier using the current oracle/reference behavior was executed in Linux in two groups:
 
 ```text
-15 passed
+7 passed  # incremental/cache/recovery cases
+5 passed  # cooperative + external publication cases
 ```
 
-That run contained the 12 task-outcome cases retained in the final runtime verifier plus three development-only harness/isolation self-tests. The self-tests verified detached-process cleanup and filesystem trust boundaries; they were then removed from runtime grading because they do not distinguish candidate solutions and therefore do not belong in instruction-to-outcome scoring. The underlying isolation mechanisms remain in the verifier harness and execute on every candidate invocation.
+All **12 runtime cases passed**. The earlier pre-prune run had also produced `15 passed`; the three removed cases were verifier-harness self-tests rather than candidate-solution requirements.
 
-The retained runtime cases cover ordinary incremental behavior, selective invalidation, missing/corrupt cache and materialized-output recovery, all named cooperative interruption boundaries, and a normal-build publication observer with no `BUILDSYS_FAILPOINT` visible to candidate code. Because the runtime test set was pruned after the `15 passed` run, one final post-prune oracle rerun is required before freeze even though all retained cases were included in that successful run.
-
-The normal-build observer uses only regular source files and an intentionally wide graph. It was separately stress-checked against toy in-place and atomic publishers: the in-place publisher exposed the producer-new/downstream-old state on 10/10 runs, while the atomic publisher avoided it on 10/10 runs.
+The external normal-build publication test now uses Linux `inotify` to observe visible producer publication and immediately `SIGSTOP` the candidate process before inspecting the snapshot. The hidden graph still provides a long downstream window, but official Linux verification no longer depends on a 1 ms polling loop. A polling fallback exists only for local non-Linux development. The candidate never receives `BUILDSYS_FAILPOINT` in this test.
 
 ### Starter / NOP behavior
 
-The untouched starter was rechecked on the current verifier family. Its ordinary incremental/cache/recovery cases pass, while the interrupted-publication case fails for the intended reason: per-target in-place publication can expose a new producer together with the previous downstream snapshot.
+The untouched current starter was executed against the post-refactor runtime verifier. Result:
+
+```text
+6 passed, 6 failed
+```
+
+The failures were publication failures: cooperative interruptions at producer/intermediate boundaries exposed mixed old/new output, and the external normal-build observer froze a producer-new/downstream-old state. Ordinary incremental/cache/recovery behavior continued to pass. This is the intended NOP failure mode.
 
 Official Harbor NOP remains pending; no official NOP reward is claimed yet.
 
@@ -70,18 +73,31 @@ no-selector
 failpoint-only-staging
 ```
 
-`failpoint-only-staging` is an adversarial verifier probe: it hides unsafe publication only when `BUILDSYS_FAILPOINT` is present while remaining unsafe during an ordinary build. The full eight-mutant matrix requires one final rerun against the pruned runtime verifier; historical mutation results are not presented as final evidence.
+Post-refactor targeted killing tests were executed for every current mutant. All eight were rejected:
+
+| Mutant | Killing behavior |
+|---|---|
+| `starter` | cooperative and external publication checks |
+| `always-rebuild` | unchanged-repeat cache-status check |
+| `ignore-upstream` | transitive edit / required-output propagation |
+| `ignore-definition` | selective target-definition invalidation |
+| `trust-object` | corrupt cache-object recovery |
+| `publish-in-place` | interrupted snapshot check |
+| `no-selector` | initial materialized-output/report check |
+| `failpoint-only-staging` | normal-build external publication observer |
+
+The `failpoint-only-staging` probe is the important adversarial case: it hides unsafe publication whenever `BUILDSYS_FAILPOINT` exists but remains unsafe during an ordinary build. The event-driven external observer rejected it by freezing a mixed snapshot.
 
 ### Harbor implementation rubric
 
-Current command:
+Current contributor-side command:
 
 ```bash
 harbor check tasks/build-snapshot-publish \
   -r /path/to/current/terminal-bench/rubrics/task-implementation.toml
 ```
 
-The earlier attempt was blocked before the check trial because Docker was unavailable. This remains an execution gate, not a rubric pass or failure.
+The live TB3 review workflow currently pins Harbor `0.18.0` and performs the implementation review with the current rubric/reviewer path. The earlier local attempt was blocked because Docker was unavailable, so a current rubric result remains pending.
 
 ### Oracle and NOP
 
