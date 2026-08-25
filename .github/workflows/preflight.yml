@@ -1,0 +1,43 @@
+name: Qualification Preflight
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tasks/build-snapshot-publish/**"
+      - "scripts/run-static-checks.sh"
+      - "scripts/run-local-reference-tests.sh"
+      - "scripts/run-mutation-checks.sh"
+      - ".github/workflows/preflight.yml"
+  workflow_dispatch:
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install verifier test tooling
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --disable-pip-version-check \
+            pytest==9.1.1 pytest-json-ctrf==0.5.2
+
+      - name: Checkout live Terminal-Bench
+        run: |
+          git clone --depth 1 https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
+          echo "TB3_HEAD=$(git -C /tmp/terminal-bench rev-parse HEAD)"
+
+      - name: Run live static checks
+        run: TB3_REPO=/tmp/terminal-bench ./scripts/run-static-checks.sh
+
+      - name: Run oracle regression as verifier root
+        run: sudo env TEST_PYTHON="$GITHUB_WORKSPACE/.venv/bin/python" ./scripts/run-local-reference-tests.sh
+
+      - name: Run mutation matrix as verifier root
+        run: sudo env TEST_PYTHON="$GITHUB_WORKSPACE/.venv/bin/python" ./scripts/run-mutation-checks.sh
