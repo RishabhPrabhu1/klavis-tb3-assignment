@@ -10,7 +10,7 @@ The reference solution stages every reached target into an immutable generation,
 
 ## Verification explanation
 
-The separate verifier owns an independent clean reference workspace and checks output bytes, reports, cache reuse, selective invalidation, corruption recovery, all named cooperative interruption boundaries, and an externally controlled SIGKILL that is not exposed through `BUILDSYS_FAILPOINT`. Candidate code runs unprivileged. Hidden tests and reference truth remain root-only, candidate-owned mutations run with candidate privileges, and verifier cleanup removes detached candidate processes before grading continues.
+The separate verifier owns an independent clean reference workspace and checks output bytes, reports, cache reuse, selective invalidation, corruption recovery, and every named cooperative interruption boundary. A second normal-build test uses only regular source files and observes an intentionally wide dependency graph; if a new producer becomes visible while the old downstream fingerprint is still visible, the verifier interrupts the process and rejects the mixed snapshot. Candidate code runs unprivileged, hidden tests and reference truth remain root-only, candidate-owned mutations run with candidate privileges, and verifier cleanup removes detached candidate processes before grading continues.
 
 ## Relevant experience
 
