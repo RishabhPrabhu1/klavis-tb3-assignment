@@ -6,7 +6,7 @@ TB3_REPO=${TB3_REPO:-}
 TASK_DIR="$ROOT_DIR/tasks/build-snapshot-publish"
 
 if [[ -z "$TB3_REPO" ]]; then
-  echo "Set TB3_REPO to a checkout of terminal-bench-3." >&2
+  echo "Set TB3_REPO to a checkout of terminal-bench." >&2
   exit 2
 fi
 if [[ ! -d "$TB3_REPO/checks" ]]; then
@@ -16,7 +16,7 @@ fi
 
 check_root=$(mktemp -d "${TMPDIR:-/tmp}/tb3-static-task.XXXXXX")
 check_task="$check_root/build-snapshot-publish"
-trap 'find "$check_root" -type f -name "*.pyc" -delete 2>/dev/null || true; find "$check_root" -depth -type d -empty -delete 2>/dev/null || true' EXIT
+trap 'rm -rf "$check_root"' EXIT
 cp -R "$TASK_DIR" "$check_task"
 
 for check in "$TB3_REPO"/checks/check-*.sh; do
