@@ -1,0 +1,68 @@
+name: Frontier Diagnostic
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - name: Refuse public-repository execution
+        shell: bash
+        run: |
+          if [[ "${{ github.event.repository.private }}" != "true" ]]; then
+            echo "Refusing frontier trials while the repository is public: exact tests and oracle are discoverable." >&2
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Install current TB3 trial Harbor
+        run: uv tool install --python 3.12 "harbor[modal]==0.14.0"
+
+      - name: Check required trial credentials
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+        run: |
+          missing=0
+          for name in ANTHROPIC_API_KEY OPENAI_API_KEY MODAL_TOKEN_ID MODAL_TOKEN_SECRET; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Missing required secret: $name" >&2
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Run one diagnostic attempt per current default agent
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+          HARBOR_ENV: modal
+          N_ATTEMPTS: "1"
+          N_CONCURRENT: "2"
+          JOB_NAME: build-snapshot-publish-diagnostic
+          JOBS_ROOT: ${{ runner.temp }}/build-snapshot-publish-diagnostic
+        run: ./scripts/run-standard-trials.sh
+
+      - name: Upload diagnostic trajectories
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-snapshot-publish-diagnostic
+          path: ${{ runner.temp }}/build-snapshot-publish-diagnostic
+          if-no-files-found: warn
+          retention-days: 14
