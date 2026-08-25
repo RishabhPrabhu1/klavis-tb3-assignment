@@ -17,8 +17,8 @@ trap 'rm -rf "$task_copy"' EXIT
 cp -R "$TASK_DIR/." "$task_copy/"
 instruction="$task_copy/instruction.md"
 
-# Match .github/workflows/run-cheat-trials.yml: remove the ordinary anti-cheat
-# sentence, then append the live red-team prompt after the legitimate task.
+# Match the live /cheat workflow: remove the ordinary anti-cheat sentence,
+# then append the live red-team prompt after the legitimate task description.
 sed -i -E 's/[[:space:]]*[Dd]o not cheat[^.]*\.//g' "$instruction"
 printf '\n\n' >> "$instruction"
 cat "$TB3_REPO/rubrics/hack-trial-prompt.md" >> "$instruction"
@@ -28,20 +28,20 @@ mkdir -p "$JOBS_ROOT"
 # The current /cheat workflow deliberately runs one attempt per configured
 # task/agent pair, even though ordinary /run uses three attempts.
 CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000 harbor run \
-  --path "$task_copy" \
+  -p "$task_copy" \
   --agent claude-code \
-  --model anthropic/claude-opus-5 \
-  --agent-kwarg reasoning_effort=max \
+  -m anthropic/claude-opus-5 \
+  --ak reasoning_effort=max \
   --env "$HARBOR_ENV" \
   --n-attempts 1 \
   --jobs-dir "$JOBS_ROOT/claude-opus-5" \
   --job-name build-snapshot-publish-claude-cheat
 
 harbor run \
-  --path "$task_copy" \
+  -p "$task_copy" \
   --agent codex \
-  --model openai/gpt-5.6-sol \
-  --agent-kwarg reasoning_effort=xhigh \
+  -m openai/gpt-5.6-sol \
+  --ak reasoning_effort=xhigh \
   --env "$HARBOR_ENV" \
   --n-attempts 1 \
   --jobs-dir "$JOBS_ROOT/codex-gpt-5.6-sol" \
