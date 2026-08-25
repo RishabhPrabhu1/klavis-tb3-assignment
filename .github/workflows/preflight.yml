@@ -24,9 +24,10 @@ jobs:
 
       - name: Install verifier test tooling
         run: |
-          python -m venv .venv
-          .venv/bin/python -m pip install --disable-pip-version-check \
+          python -m venv /tmp/tb3-preflight-venv
+          /tmp/tb3-preflight-venv/bin/python -m pip install --disable-pip-version-check \
             pytest==9.1.1 pytest-json-ctrf==0.5.2
+          chmod -R a+rX /tmp/tb3-preflight-venv
 
       - name: Checkout live Terminal-Bench
         run: |
@@ -37,7 +38,7 @@ jobs:
         run: TB3_REPO=/tmp/terminal-bench ./scripts/run-static-checks.sh
 
       - name: Run oracle regression as verifier root
-        run: sudo env TEST_PYTHON="$GITHUB_WORKSPACE/.venv/bin/python" ./scripts/run-local-reference-tests.sh
+        run: sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-local-reference-tests.sh
 
       - name: Run mutation matrix as verifier root
-        run: sudo env TEST_PYTHON="$GITHUB_WORKSPACE/.venv/bin/python" ./scripts/run-mutation-checks.sh
+        run: sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-mutation-checks.sh
