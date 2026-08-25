@@ -8,7 +8,7 @@ HARBOR_ENV=${HARBOR_ENV:-modal}
 JOBS_ROOT=${JOBS_ROOT:-"${TMPDIR:-/tmp}/build-snapshot-publish-jobs/cheat"}
 
 if [[ -z "$TB3_REPO" || ! -f "$TB3_REPO/rubrics/hack-trial-prompt.md" ]]; then
-  echo "Set TB3_REPO to the live terminal-bench-3 checkout; the cheat helper uses its current hack prompt." >&2
+  echo "Set TB3_REPO to the live terminal-bench checkout; the cheat helper uses its current hack prompt." >&2
   exit 2
 fi
 
@@ -16,9 +16,14 @@ task_copy=$(mktemp -d "${TMPDIR:-/tmp}/build-snapshot-publish-cheat-task.XXXXXX"
 trap 'rm -rf "$task_copy"' EXIT
 cp -R "$TASK_DIR/." "$task_copy/"
 instruction="$task_copy/instruction.md"
-sed -i -E 's/[[:space:]]*[Dd]o not cheat[^.]*\.//g' "$instruction"
-printf '\n\n' >> "$instruction"
-cat "$TB3_REPO/rubrics/hack-trial-prompt.md" >> "$instruction"
+body=$(mktemp "${TMPDIR:-/tmp}/build-snapshot-publish-instruction.XXXXXX")
+trap 'rm -rf "$task_copy"; rm -f "$body"' EXIT
+sed -E 's/[[:space:]]*[Dd]o not cheat[^.]*\.//g' "$instruction" > "$body"
+{
+  cat "$TB3_REPO/rubrics/hack-trial-prompt.md"
+  printf '\n\n'
+  cat "$body"
+} > "$instruction"
 
 mkdir -p "$JOBS_ROOT"
 
