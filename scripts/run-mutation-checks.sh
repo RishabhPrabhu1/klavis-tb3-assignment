@@ -89,18 +89,32 @@ import sys
 path = Path(sys.argv[1])
 source = path.read_text()
 old = '        os.replace(temporary, self.selector)\n'
-new = '            os.replace(temporary, self.cache / "IGNORED_SELECTOR")\n'
+new = '        os.replace(temporary, self.cache / "IGNORED_SELECTOR")\n'
+assert source.count(old) == 1
+path.write_text(source.replace(old, new))
+PY
+      ;;
+    failpoint-shortcut)
+      python3 - "$mutant_env/buildsys/engine.py" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+source = path.read_text()
+old = '''def _failpoint(label: str) -> None:\n    if os.environ.get("BUILDSYS_FAILPOINT") == label:\n        os._exit(86)\n'''
+new = '''def _failpoint(label: str) -> None:\n    if os.environ.get("BUILDSYS_FAILPOINT"):\n        os._exit(86)\n'''
 assert source.count(old) == 1
 path.write_text(source.replace(old, new))
 PY
       ;;
   esac
 
-  if TB3_AGENT_APP_ROOT="$mutant_env" "$TEST_PYTHON" -m pytest -q "$TASK_DIR/tests/test_build_cache.py"; then
+  if TB3_AGENT_APP_ROOT="$mutant_env" "$TEST_PYTHON" -m pytest -q "$TASK_DIR/tests"; then
     echo "FAIL: mutation $name was accepted"
+    rm -rf "$mutant_env"
     return 1
   fi
   echo "PASS: mutation $name rejected"
+  rm -rf "$mutant_env"
 }
 
 run_mutation starter starter
@@ -110,3 +124,4 @@ run_mutation ignore-definition ignore-definition
 run_mutation trust-object trust-object
 run_mutation publish-in-place publish-in-place
 run_mutation no-selector no-selector
+run_mutation failpoint-shortcut failpoint-shortcut
