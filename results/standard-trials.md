@@ -10,7 +10,20 @@ A one-attempt diagnostic run for both agents is available first:
 HARBOR_ENV=modal N_ATTEMPTS=1 JOB_NAME=build-snapshot-publish-diagnostic ./scripts/run-standard-trials.sh
 ```
 
-If either agent solves the task cleanly, do not spend the final matrix yet; inspect the trajectory and reassess intrinsic difficulty. If both fail for the intended systems reason, freeze the task and run the required matrix with the script's default `N_ATTEMPTS=3`:
+## Diagnostic execution record
+
+A private-repository diagnostic was triggered on 2026-08-25 at commit `00ddd90d8a91a15ef34d92d80bc118b3cf615172` through GitHub Actions run `32869754495`.
+
+The privacy guard passed, confirming the workflow was running against a private repository. The run then stopped before any model trial because the standalone repository had none of the four credentials required by the current Modal trial configuration:
+
+- `ANTHROPIC_API_KEY`
+- `OPENAI_API_KEY`
+- `MODAL_TOKEN_ID`
+- `MODAL_TOKEN_SECRET`
+
+The model-trial step was skipped and no trajectory artifact was produced. This is an infrastructure-invalid attempt and **does not count** as a failure for either frontier model.
+
+Once the four repository secrets are present, update `.github/frontier-diagnostic-trigger` to launch a fresh one-attempt diagnostic. If either agent solves the task cleanly, do not spend the final matrix yet; inspect the trajectory and reassess intrinsic difficulty. If both fail for the intended systems reason, freeze the task and run the required matrix with the script's default `N_ATTEMPTS=3`:
 
 ```bash
 HARBOR_ENV=modal ./scripts/run-standard-trials.sh
