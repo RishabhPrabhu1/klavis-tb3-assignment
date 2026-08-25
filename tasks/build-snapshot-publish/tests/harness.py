@@ -232,6 +232,7 @@ def _candidate_unlink(path: Path) -> None:
 def run_candidate(
     project: Path,
     *,
+    target: str = "fingerprint",
     failpoint: str | None = None,
     expect_returncode: int = 0,
     require_report: bool = True,
@@ -261,7 +262,7 @@ def run_candidate(
         "--project",
         str(project),
         "--target",
-        "fingerprint",
+        target,
         "--report",
         str(report),
     ]
@@ -312,10 +313,15 @@ def _statuses(report: dict) -> dict[str, str]:
 
 
 def _assert_report(
-    project: Path, report: dict, expected: dict, statuses: dict[str, str]
+    project: Path,
+    report: dict,
+    expected: dict,
+    statuses: dict[str, str],
+    *,
+    requested_target: str = "fingerprint",
 ) -> None:
     assert set(report) == {"target", "events", "outputs"}
-    assert report["target"] == "fingerprint"
+    assert report["target"] == requested_target
     assert isinstance(report["events"], list)
     assert isinstance(report["outputs"], dict)
     assert _statuses(report) == statuses
