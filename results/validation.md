@@ -1,137 +1,141 @@
 # Validation
 
-Status: task design, oracle behavior, and verifier hardening are substantially complete. The remaining gates are live static execution, the current implementation-rubric review, official Harbor Oracle/NOP, and the frontier/adversarial model matrix.
+Status: the task implementation is qualified through current static checks, local verifier regression, mutation testing, Docker build, and version-matched Harbor Oracle/NOP. The remaining gates are the current implementation-rubric judgment and the frontier/adversarial model trials.
 
-## Environment
+## Qualified revision
 
-- Current live TB3 snapshot recorded in `results/environment.md`: `405a783ea111ab855718ce93b2b0cadaa2e8d47f`
-- Earlier static execution snapshot: `45e819259a95fb10e43dcebcc11b73140ace3b32`
-- Local Harbor previously installed: `0.22.0`
-- Live `/run` and `/cheat` workflows pin Harbor: `0.14.0`
-- Live `/validate` Oracle/NOP workflow pins Harbor: `0.18.0`
-- Docker: unavailable at the recorded development-machine snapshot
-- Modal credentials: not stored in this repository
-- Python test execution: Linux container, Python 3.13, pytest 9.x
+- Task/runtime/test revision qualified by CI: `48ad719d72a8c623ae77c21acefdc6e65ef9062d`
+- Current repository HEAD at this record: `44421479203c93c4f52dd9a52fa34596162f2efd`
+- The only change between those revisions is reviewer documentation in `results/contract-coverage.md`; task files, verifier files, scripts, and workflow code are unchanged.
+- Live Terminal-Bench snapshot used by the qualification run: `405a783ea111ab855718ce93b2b0cadaa2e8d47f`
 
-## Commands and evidence
+## Version-matched GitHub Actions qualification
 
-### Static checks
+Workflow: `.github/workflows/preflight.yml`
 
-```bash
-TB3_REPO=/path/to/current/terminal-bench ./scripts/run-static-checks.sh
-```
+Run `32815877598` completed successfully on the qualified task revision. Both jobs succeeded:
 
-Historical result: all static checks passed against an earlier upstream snapshot.
+- `preflight`: live static checks, local oracle regression, and mutation matrix.
+- `harbor-docker`: task Docker build, Harbor Oracle, and Harbor NOP.
 
-A source-level audit was refreshed through live TB3 commit `405a783ea111ab855718ce93b2b0cadaa2e8d47f`. Upstream changes since the prior `c48c033...` snapshot are task-local and do not change the static-check scripts or requirements. The task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. All canary-scoped task files were rechecked after verifier pruning/refactoring. This source audit is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final live static execution remains pending.
+### Live static checks
+
+The workflow cloned the live `harbor-framework/terminal-bench` repository at `405a783ea111ab855718ce93b2b0cadaa2e8d47f` and executed `scripts/run-static-checks.sh` against that checkout.
+
+All current static checks passed, including:
+
+- internet-policy checks
+- canary and canonical instruction suffix
+- Dockerfile platform/reference/sanity checks
+- GPU/resource checks
+- no bare `nproc`
+- pinned pip/uv tooling and pytest version
+- separate-verifier configuration
+- absolute task paths
+- required task fields, package name, slug, and timeout
+- test-file references and `test.sh` sanity
+- no trial-time verifier network fetch
+- verifier tooling baked into the verifier image
 
 ### Local oracle regression
 
-```bash
-TEST_PYTHON=/path/to/isolated/python ./scripts/run-local-reference-tests.sh
-```
-
-The final runtime verifier was split from its development-only harness self-tests so reward assertions now focus on task outcomes. A reconstructed post-refactor verifier using the current oracle/reference behavior was executed in Linux in two groups:
+The verifier regression ran as verifier root under Python 3.13 with the pinned pytest tooling.
 
 ```text
-7 passed  # incremental/cache/recovery cases
-5 passed  # cooperative + external publication cases
+13 passed
 ```
 
-All **12 runtime cases passed**. The earlier pre-prune run had also produced `15 passed`; the three removed cases were verifier-harness self-tests rather than candidate-solution requirements.
+This includes incremental/cache/recovery behavior plus cooperative and externally observed publication safety.
 
-The external normal-build publication test now uses Linux `inotify` to observe visible producer publication and immediately `SIGSTOP` the candidate process before inspecting the snapshot. The hidden graph still provides a long downstream window, but official Linux verification no longer depends on a 1 ms polling loop. A polling fallback exists only for local non-Linux development. The candidate never receives `BUILDSYS_FAILPOINT` in this test.
+### Mutation matrix
 
-### Starter / NOP behavior
+The qualification run exercised all eight current negative implementations and rejected every one:
 
-The untouched current starter was executed against the post-refactor runtime verifier. Result:
-
-```text
-6 passed, 6 failed
-```
-
-The failures were publication failures: cooperative interruptions at producer/intermediate boundaries exposed mixed old/new output, and the external normal-build observer froze a producer-new/downstream-old state. Ordinary incremental/cache/recovery behavior continued to pass. This is the intended NOP failure mode.
-
-Official Harbor NOP remains pending; no official NOP reward is claimed yet.
-
-### Mutation checks
-
-```bash
-TEST_PYTHON=/path/to/isolated/python ./scripts/run-mutation-checks.sh
-```
-
-The current mutation matrix contains eight invalid variants:
-
-```text
-starter
-always-rebuild
-ignore-upstream
-ignore-definition
-trust-object
-publish-in-place
-no-selector
-failpoint-only-staging
-```
-
-Post-refactor targeted killing tests were executed for every current mutant. All eight were rejected:
-
-| Mutant | Killing behavior |
+| Mutant | Intended defect |
 |---|---|
-| `starter` | cooperative and external publication checks |
-| `always-rebuild` | unchanged-repeat cache-status check |
-| `ignore-upstream` | transitive edit / required-output propagation |
-| `ignore-definition` | selective target-definition invalidation |
-| `trust-object` | corrupt cache-object recovery |
-| `publish-in-place` | interrupted snapshot check |
-| `no-selector` | initial materialized-output/report check |
-| `failpoint-only-staging` | normal-build external publication observer |
+| `starter` | ordinary per-target publication exposes mixed snapshots |
+| `always-rebuild` | destroys unchanged cache reuse |
+| `ignore-upstream` | misses required-output invalidation |
+| `ignore-definition` | misses target-definition invalidation |
+| `trust-object` | trusts missing/corrupt cache state |
+| `publish-in-place` | publishes target outputs independently |
+| `no-selector` | never exposes a committed output snapshot |
+| `failpoint-only-staging` | becomes safe only when the cooperative failpoint variable exists |
 
-The `failpoint-only-staging` probe is the important adversarial case: it hides unsafe publication whenever `BUILDSYS_FAILPOINT` exists but remains unsafe during an ordinary build. The event-driven external observer rejected it by freezing a mixed snapshot.
+The last mutant is the key regression for the earlier failpoint-short-circuit weakness: the normal-build Linux publication observer runs without `BUILDSYS_FAILPOINT`, freezes candidate processes when rebuilt producer output becomes visible, and rejects a mixed producer/downstream snapshot.
 
-### Harbor implementation rubric
+### Docker build
 
-Current contributor-side command:
+The task environment built successfully from `tasks/build-snapshot-publish/environment` on the GitHub Ubuntu runner.
 
-```bash
-harbor check tasks/build-snapshot-publish \
-  -r /path/to/current/terminal-bench/rubrics/task-implementation.toml
+### Harbor Oracle and NOP
+
+The Docker qualification job installed Harbor `0.18.0`, matching the current TB3 validation-workflow pin, and ran the task through Harbor in Docker mode.
+
+Oracle:
+
+```text
+1/1 Mean: 1.000
+Exceptions: 0
+Reward: 1.0
 ```
 
-The live TB3 review workflow currently pins Harbor `0.18.0` and performs the implementation review with the current rubric/reviewer path. The earlier local attempt was blocked because Docker was unavailable, so a current rubric result remains pending.
+NOP:
 
-### Oracle and NOP
-
-The live validation workflow currently installs Harbor `0.18.0` and then uses the same direct command shape as these helpers:
-
-```bash
-HARBOR_ENV=modal ./scripts/run-oracle.sh
-HARBOR_ENV=modal ./scripts/run-nop.sh
+```text
+1/1 Mean: 0.000
+Exceptions: 0
+Reward: 0.0
 ```
 
-Required outcome: Oracle reward `1`; NOP reward `0`. Official Harbor results remain pending.
+These are valid execution results, not inferred local outcomes. Current TB3 defaults use Modal for `/validate`, so a Modal `/validate` run may still be useful as an environment-parity check, but the Docker execution already establishes that the environment builds and the separate verifier distinguishes the oracle from the untouched starter under the current Harbor validation version.
 
-### Standard diagnostic and final trials
+## Implementation rubric
 
-The live `/run` workflow currently installs Harbor `0.14.0`. Run one diagnostic attempt for each live default agent first:
+The authoritative rubric is the live `rubrics/task-implementation.toml` at the recorded upstream commit. The live TB3 automated `/review` workflow runs a Sonnet reviewer through Harbor `0.18.0` and requires repository-side model credentials.
+
+This standalone assignment repository does not claim that TB3's automated `/review` job has run. A reviewer-side assessment against the same current rubric is recorded separately in `results/implementation-rubric-review.md`; any model-generated rubric result must remain labeled separately from the official TB3 workflow.
+
+## Standard diagnostic and final trials
+
+Current TB3 `/run` defaults are:
+
+- `claude-code` / `anthropic/claude-opus-5`, reasoning `max`
+- `codex` / `openai/gpt-5.6-sol`, reasoning `xhigh`
+- Modal environment
+- three trials per agent for the final matrix
+
+Before spending the final six trials, run one valid diagnostic attempt for each agent:
 
 ```bash
 HARBOR_ENV=modal N_ATTEMPTS=1 JOB_NAME=build-snapshot-publish-diagnostic ./scripts/run-standard-trials.sh
 ```
 
-If both valid runs fail for the intended systems reason, freeze the task and run the default three attempts per agent:
+Only genuine verifier failures count. API errors, rate limits, agent crashes, environment failures, verifier failures, or timeouts caused by infrastructure do not count as model failures.
+
+If both diagnostics fail for the intended systems reason, freeze the task and run the final matrix:
 
 ```bash
 HARBOR_ENV=modal ./scripts/run-standard-trials.sh
 ```
 
-The required final standard matrix is three valid failures for Claude Code / Opus 5 max and three valid failures for Codex / GPT-5.6 Sol xhigh. Crashes, API/rate limits, container failures, verifier errors, and other infrastructure faults do not count.
+The Klavis acceptance target is three valid failures for Opus 5 max and three valid failures for GPT-5.6 Sol xhigh.
 
-### Adversarial trials
+## Adversarial trials
 
-The current live `/cheat` workflow also installs Harbor `0.14.0` and runs one adversarial attempt for each configured agent. The repository helper mirrors the live remote JobConfig shape: one Harbor invocation, `n_attempts: 1`, two configured agents, and concurrency `2`, after applying the live remove-then-append adversarial instruction transformation. The helper uses Python for that transform so it behaves consistently on both GNU/Linux and macOS/BSD development machines.
+The current `/cheat` workflow runs one adversarial attempt for each configured agent. It strips the ordinary `Do not cheat...` sentence and appends the live `rubrics/hack-trial-prompt.md` after the task instruction. The repository helper mirrors that transformation and the current model configuration:
 
 ```bash
 TB3_REPO=/path/to/current/terminal-bench HARBOR_ENV=modal ./scripts/run-cheat-trials.sh
 ```
 
-Every valid adversarial trial must receive reward `0`. No adversarial reward is currently claimed.
+Every valid adversarial trial must receive reward `0`. No adversarial reward is claimed until those trials actually run.
+
+## Remaining gates
+
+1. Complete the current-rubric judgment and resolve any blocker it identifies.
+2. Prevent public solution/test discovery before frontier trials.
+3. Run one valid Opus 5 max diagnostic and one valid GPT-5.6 Sol xhigh diagnostic.
+4. If both genuinely fail, freeze the task and run the final 3+3 standard matrix.
+5. Run the current one-attempt-per-agent adversarial matrix; every reward must be `0`.
+6. Record trajectories and classify failures in `results/standard-trials.md`, `results/cheat-trials.md`, and `results/failure-analysis.md`.
