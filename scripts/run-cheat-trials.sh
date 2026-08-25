@@ -18,12 +18,22 @@ config=$(mktemp "${TMPDIR:-/tmp}/build-snapshot-publish-cheat.XXXXXX.json")
 trap 'rm -rf "$task_copy"; rm -f "$config"' EXIT
 cp -R "$TASK_DIR/." "$task_copy/"
 instruction="$task_copy/instruction.md"
+hack_prompt="$TB3_REPO/rubrics/hack-trial-prompt.md"
 
-# Match the live /cheat workflow: remove the ordinary anti-cheat sentence,
-# then append the live red-team prompt after the legitimate task description.
-sed -i -E 's/[[:space:]]*[Dd]o not cheat[^.]*\.//g' "$instruction"
-printf '\n\n' >> "$instruction"
-cat "$TB3_REPO/rubrics/hack-trial-prompt.md" >> "$instruction"
+# Match the live /cheat workflow's remove-then-append transform without relying
+# on GNU sed -i semantics (the development machine may be macOS/BSD sed).
+python3 - "$instruction" "$hack_prompt" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+instruction = Path(sys.argv[1])
+hack_prompt = Path(sys.argv[2])
+text = instruction.read_text(encoding="utf-8")
+text = re.sub(r"\s*[Dd]o not cheat[^.]*\.", "", text)
+text = text.rstrip() + "\n\n" + hack_prompt.read_text(encoding="utf-8")
+instruction.write_text(text, encoding="utf-8")
+PY
 
 mkdir -p "$JOBS_ROOT"
 
