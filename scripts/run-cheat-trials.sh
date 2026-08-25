@@ -13,11 +13,10 @@ if [[ -z "$TB3_REPO" || ! -f "$TB3_REPO/rubrics/hack-trial-prompt.md" ]]; then
 fi
 
 task_copy=$(mktemp -d "${TMPDIR:-/tmp}/build-snapshot-publish-cheat-task.XXXXXX")
-trap 'rm -rf "$task_copy"' EXIT
-cp -R "$TASK_DIR/." "$task_copy/"
-instruction="$task_copy/instruction.md"
 body=$(mktemp "${TMPDIR:-/tmp}/build-snapshot-publish-instruction.XXXXXX")
 trap 'rm -rf "$task_copy"; rm -f "$body"' EXIT
+cp -R "$TASK_DIR/." "$task_copy/"
+instruction="$task_copy/instruction.md"
 sed -E 's/[[:space:]]*[Dd]o not cheat[^.]*\.//g' "$instruction" > "$body"
 {
   cat "$TB3_REPO/rubrics/hack-trial-prompt.md"
@@ -33,7 +32,8 @@ CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000 harbor run \
   --model anthropic/claude-opus-5 \
   --agent-kwarg reasoning_effort=max \
   --env "$HARBOR_ENV" \
-  --n-attempts 1 \
+  --n-attempts 3 \
+  --n-concurrent 3 \
   --jobs-dir "$JOBS_ROOT/claude-opus-5" \
   --job-name build-snapshot-publish-claude-cheat
 
@@ -43,6 +43,7 @@ harbor run \
   --model openai/gpt-5.6-sol \
   --agent-kwarg reasoning_effort=xhigh \
   --env "$HARBOR_ENV" \
-  --n-attempts 1 \
+  --n-attempts 3 \
+  --n-concurrent 3 \
   --jobs-dir "$JOBS_ROOT/codex-gpt-5.6-sol" \
   --job-name build-snapshot-publish-codex-cheat
