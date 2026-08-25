@@ -7,7 +7,8 @@ Status: task design, oracle behavior, and verifier hardening are substantially c
 - Current live TB3 snapshot recorded in `results/environment.md`: `c48c033cf1829b2fd62374ace87461b004b97ccd`
 - Earlier static execution snapshot: `45e819259a95fb10e43dcebcc11b73140ace3b32`
 - Local Harbor previously installed: `0.22.0`
-- Live TB3 remote workflows pin Harbor: `0.14.0`
+- Live `/run` and `/cheat` workflows pin Harbor: `0.14.0`
+- Live `/validate` Oracle/NOP workflow pins Harbor: `0.18.0`
 - Docker: unavailable at the recorded development-machine snapshot
 - Modal credentials: not stored in this repository
 - Python: `3.14.6`
@@ -24,7 +25,7 @@ TB3_REPO=/path/to/current/terminal-bench ./scripts/run-static-checks.sh
 
 Historical result: all static checks passed against an earlier upstream snapshot.
 
-A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd62374ace87461b004b97ccd`: the task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. All canary-scoped task files were also rechecked after the latest pruning. This is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final static execution remains pending.
+A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd62374ace87461b004b97ccd`: the task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. All canary-scoped task files were also rechecked after the latest pruning. The task instruction was subsequently shortened without changing those structural properties. This is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final static execution remains pending.
 
 ### Local oracle regression
 
@@ -84,7 +85,7 @@ The earlier attempt was blocked before the check trial because Docker was unavai
 
 ### Oracle and NOP
 
-Planned commands:
+The live validation workflow currently installs Harbor `0.18.0` and then uses the same direct command shape as these helpers:
 
 ```bash
 HARBOR_ENV=modal ./scripts/run-oracle.sh
@@ -95,7 +96,7 @@ Required outcome: Oracle reward `1`; NOP reward `0`. Official Harbor results rem
 
 ### Standard diagnostic and final trials
 
-Run one diagnostic attempt for each live default agent first:
+The live `/run` workflow currently installs Harbor `0.14.0`. Run one diagnostic attempt for each live default agent first:
 
 ```bash
 HARBOR_ENV=modal N_ATTEMPTS=1 JOB_NAME=build-snapshot-publish-diagnostic ./scripts/run-standard-trials.sh
@@ -111,7 +112,7 @@ The required final standard matrix is three valid failures for Claude Code / Opu
 
 ### Adversarial trials
 
-The current live `/cheat` workflow runs one adversarial attempt for each configured agent. The repository helper mirrors the live remote JobConfig shape: one Harbor invocation, `n_attempts: 1`, two configured agents, and concurrency `2`, after applying the live remove-then-append adversarial instruction transformation. The helper uses Python for that transform so it behaves consistently on both GNU/Linux and macOS/BSD development machines.
+The current live `/cheat` workflow also installs Harbor `0.14.0` and runs one adversarial attempt for each configured agent. The repository helper mirrors the live remote JobConfig shape: one Harbor invocation, `n_attempts: 1`, two configured agents, and concurrency `2`, after applying the live remove-then-append adversarial instruction transformation. The helper uses Python for that transform so it behaves consistently on both GNU/Linux and macOS/BSD development machines.
 
 ```bash
 TB3_REPO=/path/to/current/terminal-bench HARBOR_ENV=modal ./scripts/run-cheat-trials.sh
