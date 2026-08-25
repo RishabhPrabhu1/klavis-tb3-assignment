@@ -1,12 +1,13 @@
 # Validation
 
-Status: task design, oracle behavior, and verifier hardening are substantially complete. The remaining gates are live static execution, the Harbor implementation check, official Oracle/NOP runs, the mutation rerun, and the frontier/adversarial model matrix.
+Status: task design, oracle behavior, and verifier hardening are substantially complete. The remaining gates are live static execution, one final local oracle/mutation rerun after verifier pruning, the Harbor implementation check, official Oracle/NOP runs, and the frontier/adversarial model matrix.
 
 ## Environment
 
 - Current live TB3 snapshot recorded in `results/environment.md`: `c48c033cf1829b2fd62374ace87461b004b97ccd`
 - Earlier static execution snapshot: `45e819259a95fb10e43dcebcc11b73140ace3b32`
-- Harbor: `0.22.0` at the recorded local run
+- Local Harbor previously installed: `0.22.0`
+- Live TB3 remote workflows pin Harbor: `0.14.0`
 - Docker: unavailable at the recorded development-machine snapshot
 - Modal credentials: not stored in this repository
 - Python: `3.14.6`
@@ -23,7 +24,7 @@ TB3_REPO=/path/to/current/terminal-bench ./scripts/run-static-checks.sh
 
 Historical result: all static checks passed against an earlier upstream snapshot.
 
-A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd62374ace87461b004b97ccd`: the task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. This is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final static execution remains pending.
+A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd62374ace87461b004b97ccd`: the task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. All canary-scoped task files were also rechecked after the latest pruning. This is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final static execution remains pending.
 
 ### Local oracle regression
 
@@ -31,15 +32,17 @@ A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd623
 TEST_PYTHON=/path/to/isolated/python ./scripts/run-local-reference-tests.sh
 ```
 
-After the latest verifier hardening, the complete reconstructed verifier was executed against the reference solution and produced:
+After the main verifier hardening pass, the then-complete verifier was executed against the reference solution and produced:
 
 ```text
 15 passed
 ```
 
-The current verifier covers ordinary incremental behavior, selective invalidation, missing/corrupt cache and materialized-output recovery, all named cooperative interruption boundaries, a normal-build publication observer with no `BUILDSYS_FAILPOINT` visible to candidate code, and verifier-isolation checks.
+That run contained the 12 task-outcome cases retained in the final runtime verifier plus three development-only harness/isolation self-tests. The self-tests verified detached-process cleanup and filesystem trust boundaries; they were then removed from runtime grading because they do not distinguish candidate solutions and therefore do not belong in instruction-to-outcome scoring. The underlying isolation mechanisms remain in the verifier harness and execute on every candidate invocation.
 
-The normal-build observer uses only regular source files and an intentionally wide graph. It was separately stress-checked against toy in-place and atomic publishers: the in-place publisher exposed the producer-new/downstream-old state on 10/10 runs, while the atomic publisher avoided it on 10/10 runs. That stress check validates the observer mechanism; the `15 passed` result is the oracle regression evidence.
+The retained runtime cases cover ordinary incremental behavior, selective invalidation, missing/corrupt cache and materialized-output recovery, all named cooperative interruption boundaries, and a normal-build publication observer with no `BUILDSYS_FAILPOINT` visible to candidate code. Because the runtime test set was pruned after the `15 passed` run, one final post-prune oracle rerun is required before freeze even though all retained cases were included in that successful run.
+
+The normal-build observer uses only regular source files and an intentionally wide graph. It was separately stress-checked against toy in-place and atomic publishers: the in-place publisher exposed the producer-new/downstream-old state on 10/10 runs, while the atomic publisher avoided it on 10/10 runs.
 
 ### Starter / NOP behavior
 
@@ -66,7 +69,7 @@ no-selector
 failpoint-only-staging
 ```
 
-`failpoint-only-staging` is an adversarial verifier probe: it hides unsafe publication only when `BUILDSYS_FAILPOINT` is present while remaining unsafe during an ordinary build. The current full eight-mutant matrix still requires one final rerun after the latest verifier edits; historical mutation results are not presented as final evidence.
+`failpoint-only-staging` is an adversarial verifier probe: it hides unsafe publication only when `BUILDSYS_FAILPOINT` is present while remaining unsafe during an ordinary build. The full eight-mutant matrix requires one final rerun against the pruned runtime verifier; historical mutation results are not presented as final evidence.
 
 ### Harbor implementation rubric
 
@@ -108,7 +111,7 @@ The required final standard matrix is three valid failures for Claude Code / Opu
 
 ### Adversarial trials
 
-The current live `/cheat` workflow runs one adversarial attempt for each configured agent. The repository helper now mirrors the live remote JobConfig shape: one Harbor invocation, `n_attempts: 1`, two configured agents, and concurrency `2`, after applying the live remove-then-append adversarial instruction transformation.
+The current live `/cheat` workflow runs one adversarial attempt for each configured agent. The repository helper mirrors the live remote JobConfig shape: one Harbor invocation, `n_attempts: 1`, two configured agents, and concurrency `2`, after applying the live remove-then-append adversarial instruction transformation. The helper uses Python for that transform so it behaves consistently on both GNU/Linux and macOS/BSD development machines.
 
 ```bash
 TB3_REPO=/path/to/current/terminal-bench HARBOR_ENV=modal ./scripts/run-cheat-trials.sh
