@@ -129,9 +129,39 @@ def _proc_children(root_pid: int) -> set[int]:
     return found
 
 
-def _cleanup_process_group(pid: int) -> None:
+def _pids_for_uid(uid: int) -> set[int]:
+    """Return Linux processes whose effective uid matches the candidate uid."""
+    proc_root = Path("/proc")
+    if not proc_root.is_dir():
+        return set()
+    found: set[int] = set()
+    for entry in proc_root.iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            status = (entry / "status").read_text()
+            uid_line = next(line for line in status.splitlines() if line.startswith("Uid:"))
+            fields = uid_line.split()[1:]
+            effective_uid = int(fields[1])
+        except (OSError, StopIteration, ValueError, IndexError):
+            continue
+        if effective_uid == uid:
+            found.add(int(entry.name))
+    return found
+
+
+def _cleanup_candidate_processes(pid: int, baseline_uid_pids: set[int]) -> None:
+    """Kill the candidate session plus any detached processes it created.
+
+    A child can escape a process group with setsid(). Because the verifier container
+    reserves the nobody uid for candidate execution, we also remove every new process
+    running as that uid while preserving any process that existed before launch.
+    """
     for sig in (signal.SIGTERM, signal.SIGKILL):
-        for child in _proc_children(pid):
+        targets = _proc_children(pid) | (
+            _pids_for_uid(_NOBODY.pw_uid) - baseline_uid_pids
+        )
+        for child in targets:
             try:
                 os.kill(child, sig)
             except ProcessLookupError:
@@ -142,8 +172,8 @@ def _cleanup_process_group(pid: int) -> None:
             pass
         if sig == signal.SIGTERM:
             time.sleep(0.05)
-    survivors = _proc_children(pid)
-    assert not survivors, f"candidate descendants survived cleanup: {sorted(survivors)}"
+    survivors = _pids_for_uid(_NOBODY.pw_uid) - baseline_uid_pids
+    assert not survivors, f"candidate processes survived cleanup: {sorted(survivors)}"
 
 
 def run_candidate(
@@ -182,6 +212,7 @@ def run_candidate(
         "--report",
         str(report),
     ]
+    baseline_uid_pids = _pids_for_uid(_NOBODY.pw_uid)
     with tempfile.TemporaryDirectory(prefix="tb3-snapshot-logs-") as log_dir:
         stdout_path = Path(log_dir) / "stdout"
         stderr_path = Path(log_dir) / "stderr"
@@ -198,11 +229,11 @@ def run_candidate(
             try:
                 returncode = proc.wait(timeout=20)
             except subprocess.TimeoutExpired as exc:
-                _cleanup_process_group(proc.pid)
+                _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
                 proc.wait(timeout=5)
                 pytest.fail(f"candidate build timed out: {exc}")
             finally:
-                _cleanup_process_group(proc.pid)
+                _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
         stderr_text = stderr_path.read_text(errors="replace")
     assert returncode == expect_returncode, stderr_text
     if not require_report:
