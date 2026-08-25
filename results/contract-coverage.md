@@ -8,7 +8,7 @@ This matrix is maintained against `tasks/build-snapshot-publish/instruction.md`.
 | Recursive `@include` expansion | `test_initial_repeat_and_report_contract`, `test_transitive_edit_and_new_include_rebuild_affected_closure` | incomplete dependency closure fails dependency/output assertions | yes |
 | `concat` and `sha256` target semantics | every report/output assertion | independent `reference.py` derives expected bytes | yes |
 | Outputs remain beneath `out/`; report paths and SHA-256 fields are correct | `_assert_report` in every successful-build test | `no-selector`, `trust-object`, and `publish-in-place` fail physical/output checks | yes |
-| Depth-first event order and sorted complete dependencies | `_assert_report`; initial report | event order and dependency assertions are checked independently of candidate source shape | yes |
+| Exact report schema: top-level `target`/`events`/`outputs`, exact event and output-object keys, field types, requested target, depth-first order, and sorted complete dependencies | `_assert_report` in every successful-build test; missing-object recovery also checks the requested target | exact-key/type assertions reject undocumented report shapes; output objects are compared exactly | yes |
 | Clean output matches a deterministic build | every successful-build test | reference workspace is separate and cache-free | yes |
 | Unchanged repeat reuses valid work | `test_initial_repeat_and_report_contract` | `always-rebuild` rejected | yes |
 | Direct and transitive edits rebuild only affected closure | `test_transitive_edit_and_new_include_rebuild_affected_closure` | `ignore-upstream` rejected | yes |
@@ -18,7 +18,6 @@ This matrix is maintained against `tasks/build-snapshot-publish/instruction.md`.
 | Required-target output identity propagates | transitive-edit and recovery tests | `ignore-upstream` rejected | yes |
 | Missing/corrupt cache object recovery | `test_missing_cache_object_is_rebuilt_without_invalidating_downstream`; first half of `test_cache_object_and_materialized_output_recovery` | missing and corrupt object cases both exercised; `trust-object` rejected | yes |
 | Missing/corrupt materialized output recovery | second half of `test_cache_object_and_materialized_output_recovery` | `trust-object` and `no-selector` rejected | yes |
-| Existing report top-level target and output/event shape remain intact | `_assert_report` throughout; missing-object recovery also asserts top-level target | target, paths, digests, events, statuses, and dependency lists are executed and checked | yes |
 | Cooperative interruption leaves only a complete old or new snapshot | `test_interrupted_publication_exposes_only_complete_snapshot`; all four cases in `test_all_named_failpoints_preserve_complete_snapshot` | starter and `publish-in-place` rejected | yes |
 | Snapshot safety is not implemented only when `BUILDSYS_FAILPOINT` is present | `test_normal_build_never_exposes_new_producer_with_old_downstream` | normal build uses regular files and no failpoint variable; `failpoint-only-staging` rejected | yes |
 | Interrupted/staged state recovers on the next ordinary build | every cooperative interruption case performs a following successful build | generation solution converges to the new complete snapshot | yes |
