@@ -4,7 +4,7 @@ Status: task design, oracle behavior, and verifier hardening are substantially c
 
 ## Environment
 
-- Current live TB3 snapshot recorded in `results/environment.md`: `c48c033cf1829b2fd62374ace87461b004b97ccd`
+- Current live TB3 snapshot recorded in `results/environment.md`: `405a783ea111ab855718ce93b2b0cadaa2e8d47f`
 - Earlier static execution snapshot: `45e819259a95fb10e43dcebcc11b73140ace3b32`
 - Local Harbor previously installed: `0.22.0`
 - Live `/run` and `/cheat` workflows pin Harbor: `0.14.0`
@@ -23,7 +23,7 @@ TB3_REPO=/path/to/current/terminal-bench ./scripts/run-static-checks.sh
 
 Historical result: all static checks passed against an earlier upstream snapshot.
 
-A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd62374ace87461b004b97ccd`: the task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. All canary-scoped task files were rechecked after verifier pruning/refactoring. The task instruction was subsequently shortened without changing those structural properties. This is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final live static execution remains pending.
+A source-level audit was refreshed through live TB3 commit `405a783ea111ab855718ce93b2b0cadaa2e8d47f`. Upstream changes since the prior `c48c033...` snapshot are task-local and do not change the static-check scripts or requirements. The task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. All canary-scoped task files were rechecked after verifier pruning/refactoring. This source audit is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final live static execution remains pending.
 
 ### Local oracle regression
 
