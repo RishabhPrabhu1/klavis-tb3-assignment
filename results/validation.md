@@ -37,9 +37,13 @@ Historical result before the latest hardening: 6 focused generation-publication 
 
 The current verifier additionally includes:
 
-- progress validation for all four `after-target:TARGET` failpoint boundaries;
-- a verifier-controlled external SIGKILL test that does not expose `BUILDSYS_FAILPOINT` to candidate code;
-- a Linux/root verifier self-test proving detached `setsid()` candidate processes are cleaned up;
+- complete-snapshot checks for all four named failpoints;
+- a strict two-target FIFO probe proving a named failpoint cannot fire at an earlier target;
+- a verifier-controlled external SIGKILL on a strict dependency chain with no `BUILDSYS_FAILPOINT` in the candidate environment;
+- a Linux/root self-test proving detached `setsid()` candidate processes are cleaned up;
+- a Linux/root self-test proving candidate code cannot rename the sibling reference workspace;
+- sticky/read-only verifier-controlled project inputs so a prior candidate run cannot plant source or manifest symlinks for a later root mutation;
+- candidate-owned cache/output corruption performed only after dropping to the candidate UID, avoiding a verifier-root confused-deputy path;
 - UID-based cleanup of candidate processes on every verifier invocation.
 
 Current status: **rerun required**. The oracle must pass the complete current `tests/` directory before the next gate.
@@ -56,7 +60,7 @@ The current external-kill guard is specifically designed to reject failpoint-onl
 TEST_PYTHON=/path/to/isolated/python ./scripts/run-mutation-checks.sh
 ```
 
-The current mutation matrix contains eight invalid variants:
+The current mutation matrix contains nine invalid variants:
 
 ```text
 starter
@@ -67,7 +71,10 @@ trust-object
 publish-in-place
 no-selector
 failpoint-shortcut
+failpoint-only-staging
 ```
+
+The last two are adversarial verifier probes rather than ordinary implementation mistakes: one exits on the first target whenever a failpoint variable exists, and the other hides in-place publication only during cooperative failpoint runs while remaining unsafe under a normal externally killed build.
 
 Historical result: the earlier seven-mutant matrix was rejected before the latest failpoint/external-crash hardening.
 
