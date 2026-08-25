@@ -1,45 +1,40 @@
 # Build Snapshot Publication
 
-This repository contains one original Terminal-Bench 3 task for the Klavis Founding Engineer assignment.
+This repository contains one original Terminal-Bench 3 task for the Klavis Founding Engineer coding assignment.
 
-## Summary
+## Task
 
-The task repairs an incremental build tool under `/app/buildsys/`. Its target graph and content-addressed cache are ordinary and useful on normal builds, but publication is initially performed target by target. The intended systems invariant is that a materialized output tree is one committed generation: an interruption may leave unreachable staging data, never a producer output combined with an old downstream artifact.
+`tasks/build-snapshot-publish/` contains an incremental build tool whose ordinary caching behavior is useful but whose starter publishes rebuilt targets independently. The required invariant is that the visible `out/` tree is one committed snapshot: interruption may leave unreachable work, but never a new producer output combined with an old downstream artifact.
+
+The task uses a separate verifier image. Candidate code receives only the declared `/app/buildsys/` artifact; hidden tests and independent reference logic remain verifier-owned.
 
 ## Repository structure
 
 ```text
-tasks/build-snapshot-publish/   TB3 task, environment, reference solution, verifier
-results/                        design, coverage, validation, and trial records
-scripts/                        reproducible local/Harbor command wrappers
+tasks/build-snapshot-publish/   Terminal-Bench task, starter, oracle, verifier
+scripts/                        validation and trial command wrappers
+results/                        validation, coverage, trials, failure analysis
 ```
-
-The verifier uses a separate image. Hidden reference logic and fixtures are root-only in that image; the candidate receives only the declared `/app/buildsys/` artifact and a writable candidate workspace.
 
 ## Validation
 
-Run live static checks with a checkout of the recorded TB3 snapshot:
+Use a fresh checkout of the live Terminal-Bench repository for final qualification:
 
 ```bash
-TB3_REPO=/path/to/terminal-bench-3 ./scripts/run-static-checks.sh
-```
-
-Run the local independent verifier and mutation suite without Docker:
-
-```bash
+TB3_REPO=/path/to/terminal-bench ./scripts/run-static-checks.sh
 ./scripts/run-local-reference-tests.sh
 ./scripts/run-mutation-checks.sh
+harbor check tasks/build-snapshot-publish -r "$TB3_REPO/rubrics/task-implementation.toml"
+HARBOR_ENV=modal ./scripts/run-oracle.sh
+HARBOR_ENV=modal ./scripts/run-nop.sh
 ```
 
-Docker/Harbor commands are in `scripts/`. Official `/run` and `/cheat` results are intentionally not reported as complete until they have executed on the live configured backend.
+The current upstream snapshot and exact trial configuration are recorded in `results/environment.md`. Standard and adversarial trial evidence belongs in `results/standard-trials.md` and `results/cheat-trials.md`; no pending or infrastructure-invalid run is counted as a model failure.
 
-## Quality gates
+## Evidence
 
-- Oracle output must match the independent reference on every focused case.
-- The starter and plausible wrong-abstraction mutants must fail.
-- Interrupted publication must expose only a complete old or new snapshot.
-- Static checks and the implementation rubric must pass.
-- The verifier must keep `/tests`, reference truth, candidate inputs, reward output, and child processes within their intended trust boundaries.
-- Required standard and adversarial trial results must be recorded before submission.
-
-See `results/contract-coverage.md`, `results/redesign-decision-memo.md`, and `results/validation.md` for the design and evidence trail.
+- `results/contract-coverage.md` — instruction-to-verifier coverage and anti-cheat boundaries.
+- `results/validation.md` — static, local, Harbor, oracle, nop, and mutation status.
+- `results/standard-trials.md` — required standard model trials.
+- `results/cheat-trials.md` — required adversarial trials.
+- `results/failure-analysis.md` — classification of genuine model failures.
