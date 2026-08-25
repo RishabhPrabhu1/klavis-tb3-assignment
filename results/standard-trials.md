@@ -2,7 +2,19 @@
 
 Status: pending execution for the frozen `build-snapshot-publish` task.
 
-Before running, record the final task commit SHA and refresh `results/environment.md` against live Terminal-Bench. The assignment requires all three valid standard trials for both current default agents to receive reward `0` for genuine task failure.
+Before the final matrix, record the final task commit SHA and refresh `results/environment.md` against live Terminal-Bench. The assignment requires all three valid standard trials for both current default agents to receive reward `0` for genuine task failure.
+
+A one-attempt diagnostic run for both agents is available first:
+
+```bash
+HARBOR_ENV=modal N_ATTEMPTS=1 JOB_NAME=build-snapshot-publish-diagnostic ./scripts/run-standard-trials.sh
+```
+
+If either agent solves the task cleanly, do not spend the final matrix yet; inspect the trajectory and reassess intrinsic difficulty. If both fail for the intended systems reason, freeze the task and run the required matrix with the script's default `N_ATTEMPTS=3`:
+
+```bash
+HARBOR_ENV=modal ./scripts/run-standard-trials.sh
+```
 
 | Agent | Model | Reasoning | Trial | Reward | Valid run? | Job/result path |
 |---|---|---|---:|---:|---|---|
@@ -12,11 +24,5 @@ Before running, record the final task commit SHA and refresh `results/environmen
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 | Pending | Pending | Pending |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | Pending | Pending | Pending |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | Pending | Pending | Pending |
-
-Run:
-
-```bash
-HARBOR_ENV=modal ./scripts/run-standard-trials.sh
-```
 
 Do not count agent crashes, API/rate limits, container failures, invalid timeouts, verifier failures, or other infrastructure errors as model failures. Rerun invalid trials. Classify every valid zero-reward trajectory in `results/failure-analysis.md` and verify that the failures reflect the task's systems crux rather than ambiguity or incidental coding errors.
