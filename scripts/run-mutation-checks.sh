@@ -15,6 +15,9 @@ run_mutation() {
   local mode=$2
   local mutant_env
   mutant_env=$(mktemp -d "${TMPDIR:-/tmp}/tb3-snapshot-mutant-${name}.XXXXXX")
+  # A root-run preflight drops candidate executions to nobody. Keep this /app
+  # analogue traversable so the local harness matches the verifier container.
+  chmod 755 "$mutant_env"
   cp -R "$TASK_DIR/environment/." "$mutant_env/"
 
   case "$mode" in
