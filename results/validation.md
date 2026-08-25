@@ -1,17 +1,17 @@
 # Validation
 
-Status: implementation and verifier hardening are substantially complete, but the current suite still needs execution on the recorded live TB3 snapshot before any final pass claim. Docker/Harbor and frontier trials remain pending because Docker was unavailable and Modal credentials were not configured on the recorded development machine.
+Status: task design, oracle behavior, and verifier hardening are substantially complete. The remaining gates are live static execution, the Harbor implementation check, official Oracle/NOP runs, the mutation rerun, and the frontier/adversarial model matrix.
 
 ## Environment
 
-- Current live TB3 snapshot recorded in `results/environment.md`: `82981590d6a1015a9db3bd7952e8465215933683`
-- Earlier static/local execution snapshot: `45e819259a95fb10e43dcebcc11b73140ace3b32`
+- Current live TB3 snapshot recorded in `results/environment.md`: `c48c033cf1829b2fd62374ace87461b004b97ccd`
+- Earlier static execution snapshot: `45e819259a95fb10e43dcebcc11b73140ace3b32`
 - Harbor: `0.22.0` at the recorded local run
-- Docker: unavailable at the time of the recorded run
-- Modal credentials: unavailable at the time of the recorded run
+- Docker: unavailable at the recorded development-machine snapshot
+- Modal credentials: not stored in this repository
 - Python: `3.14.6`
-- pytest: `9.1.1` in the recorded isolated temporary environment
-- pytest-json-ctrf: `0.5.2` in the same temporary environment
+- pytest: `9.1.1` in the recorded isolated environment
+- pytest-json-ctrf: `0.5.2` in the same isolated environment
 
 ## Commands and evidence
 
@@ -21,36 +21,31 @@ Status: implementation and verifier hardening are substantially complete, but th
 TB3_REPO=/path/to/current/terminal-bench ./scripts/run-static-checks.sh
 ```
 
-Historical result: all 22 static checks passed for `build-snapshot-publish` against an earlier upstream snapshot.
+Historical result: all static checks passed against an earlier upstream snapshot.
 
-Current status: **rerun required** against the live snapshot recorded in `results/environment.md`. The task has since gained the currently required task-level README and the instruction/verifier changed, so the historical result is not final CI evidence.
+A source-level audit was refreshed against live TB3 commit `c48c033cf1829b2fd62374ace87461b004b97ccd`: the task has the currently required metadata and task README sections, canonical instruction suffix, three-word slug/package name, separate-verifier configuration, pinned verifier tooling, no explicit `allow_internet`, no bare `nproc`, and no verifier-time network install. This is useful preflight evidence but is **not** a substitute for executing the complete live `checks/check-*.sh` set. Final static execution remains pending.
 
-### Local reference regression
+### Local oracle regression
 
 ```bash
 TEST_PYTHON=/path/to/isolated/python ./scripts/run-local-reference-tests.sh
 ```
 
-Historical result before the latest hardening: 6 focused generation-publication tests passed.
+After the latest verifier hardening, the complete reconstructed verifier was executed against the reference solution and produced:
 
-The current verifier additionally includes:
+```text
+15 passed
+```
 
-- complete-snapshot checks for all four named cooperative failpoints;
-- a normal-build publication observer using only regular source files and a wide dependency graph, with no `BUILDSYS_FAILPOINT` exposed to candidate code;
-- a Linux/root self-test proving detached `setsid()` candidate processes are cleaned up;
-- Linux/root self-tests proving candidate code cannot rename the sibling reference workspace or verifier-controlled source/manifest entries;
-- candidate-owned cache/output corruption performed only after dropping to the candidate UID, avoiding a verifier-root confused-deputy path;
-- UID-based cleanup of candidate processes on every verifier invocation.
+The current verifier covers ordinary incremental behavior, selective invalidation, missing/corrupt cache and materialized-output recovery, all named cooperative interruption boundaries, a normal-build publication observer with no `BUILDSYS_FAILPOINT` visible to candidate code, and verifier-isolation checks.
 
-The normal-build observer was also stress-checked independently against toy in-place and atomic publishers: the in-place publisher exposed the producer-new/downstream-old state on 10/10 runs, while the atomic publisher avoided it on 10/10 runs. This is a verifier-mechanism check only, not an oracle or Harbor result.
+The normal-build observer uses only regular source files and an intentionally wide graph. It was separately stress-checked against toy in-place and atomic publishers: the in-place publisher exposed the producer-new/downstream-old state on 10/10 runs, while the atomic publisher avoided it on 10/10 runs. That stress check validates the observer mechanism; the `15 passed` result is the oracle regression evidence.
 
-Current status: **full current-suite rerun required**. The oracle must pass the complete current `tests/` directory before the next gate.
+### Starter / NOP behavior
 
-### Starter / nop behavior
+The untouched starter was rechecked on the current verifier family. Its ordinary incremental/cache/recovery cases pass, while the interrupted-publication case fails for the intended reason: per-target in-place publication can expose a new producer together with the previous downstream snapshot.
 
-Historical result: the untouched v2 starter failed interrupted-publication cases while passing ordinary cache/output behavior.
-
-The current regular-file observer is designed to reject ordinary per-target in-place publication even when a candidate behaves differently only during cooperative failpoint runs. Official Harbor nop remains pending.
+Official Harbor NOP remains pending; no official NOP reward is claimed yet.
 
 ### Mutation checks
 
@@ -71,11 +66,7 @@ no-selector
 failpoint-only-staging
 ```
 
-`failpoint-only-staging` is an adversarial verifier probe: it hides in-place publication only when `BUILDSYS_FAILPOINT` is present while remaining unsafe during an ordinary build.
-
-Historical result: an earlier seven-mutant matrix was rejected before the latest publication-observer hardening.
-
-Current status: **rerun required**. Every current invalid variant must be rejected by the complete verifier suite.
+`failpoint-only-staging` is an adversarial verifier probe: it hides unsafe publication only when `BUILDSYS_FAILPOINT` is present while remaining unsafe during an ordinary build. The current full eight-mutant matrix still requires one final rerun after the latest verifier edits; historical mutation results are not presented as final evidence.
 
 ### Harbor implementation rubric
 
@@ -86,9 +77,9 @@ harbor check tasks/build-snapshot-publish \
   -r /path/to/current/terminal-bench/rubrics/task-implementation.toml
 ```
 
-Recorded result on 2026-08-24: blocked before the check trial because Harbor could not find a `docker` executable. This is an infrastructure blocker, not a rubric pass or failure.
+The earlier attempt was blocked before the check trial because Docker was unavailable. This remains an execution gate, not a rubric pass or failure.
 
-### Oracle and nop
+### Oracle and NOP
 
 Planned commands:
 
@@ -97,10 +88,30 @@ HARBOR_ENV=modal ./scripts/run-oracle.sh
 HARBOR_ENV=modal ./scripts/run-nop.sh
 ```
 
-Official result: pending Harbor/Modal execution.
+Required outcome: Oracle reward `1`; NOP reward `0`. Official Harbor results remain pending.
 
-### Standard and adversarial trials
+### Standard diagnostic and final trials
 
-The current live trial matrix is recorded in `results/environment.md`. Ordinary `/run` uses three trials each for Claude Code / Opus 5 max and Codex / GPT-5.6 Sol xhigh. The current `/cheat` workflow runs one adversarial attempt for each configured agent.
+Run one diagnostic attempt for each live default agent first:
 
-Standard and adversarial trials have not been run on the current frozen task. No model-failure or reward result is being claimed.
+```bash
+HARBOR_ENV=modal N_ATTEMPTS=1 JOB_NAME=build-snapshot-publish-diagnostic ./scripts/run-standard-trials.sh
+```
+
+If both valid runs fail for the intended systems reason, freeze the task and run the default three attempts per agent:
+
+```bash
+HARBOR_ENV=modal ./scripts/run-standard-trials.sh
+```
+
+The required final standard matrix is three valid failures for Claude Code / Opus 5 max and three valid failures for Codex / GPT-5.6 Sol xhigh. Crashes, API/rate limits, container failures, verifier errors, and other infrastructure faults do not count.
+
+### Adversarial trials
+
+The current live `/cheat` workflow runs one adversarial attempt for each configured agent. The repository helper now mirrors the live remote JobConfig shape: one Harbor invocation, `n_attempts: 1`, two configured agents, and concurrency `2`, after applying the live remove-then-append adversarial instruction transformation.
+
+```bash
+TB3_REPO=/path/to/current/terminal-bench HARBOR_ENV=modal ./scripts/run-cheat-trials.sh
+```
+
+Every valid adversarial trial must receive reward `0`. No adversarial reward is currently claimed.
