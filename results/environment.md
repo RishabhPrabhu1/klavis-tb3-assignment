@@ -1,6 +1,6 @@
 # TB3 Environment and Assignment Snapshot
 
-Checked against the live upstream repository on 2026-08-25.
+Checked against the live upstream repository on 2026-08-25 UTC.
 
 ## Authority order
 
@@ -16,17 +16,17 @@ Repository: `https://github.com/harbor-framework/terminal-bench`
 
 | Item | Value |
 |---|---|
-| Upstream commit | `2d58e0374d2de102181f080c5a9d77af29f3717c` |
+| Upstream commit | `82981590d6a1015a9db3bd7952e8465215933683` |
 | `CONTRIBUTING.md` blob | `1f84dfbc9242d8f3b5081179d5dd612e9bd255e2` |
 | `rubrics/task-proposal.md` blob | `51cc73f61dc756d47e61117d5c893e26d06c400a` |
 | `rubrics/task-implementation.toml` blob | `5a88f5f89bdfc3b633c06e3dc06486fc9385e2b7` |
 | `.github/harbor-run-defaults.yml` blob | `8576d645bf3b19409f9905ad18c0ca6ea43e5c9e` |
 | `rubrics/hack-trial-prompt.md` blob | `96b625b537a05c9ab6d1523e264101f67e7856e9` |
 | `docs/TASK_REVIEW_AUTOMATION.md` blob | `06a5762a7e9066f332477cc2b074df2208888558` |
-| `.github/workflows/run-cheat-trials.yml` blob | `164c922579e371d96fd740f90cf4bbb4c1cb5eb0` |
-| Date checked | 2026-08-25 |
+| `.github/workflows/run-cheat-trials.yml` blob | `a8261629afd14556d5789641551dd984abbeda2a` |
+| Date checked | 2026-08-25 UTC |
 
-A fresh upstream check must be performed again immediately before the final official model matrix; the snapshot above is for reproducibility, not permission to ignore later upstream changes.
+A fresh upstream check must be performed again immediately before the final official model matrix; this snapshot is for reproducibility, not permission to ignore later upstream changes.
 
 ## Current TB3 requirements that affect this task
 
@@ -101,4 +101,4 @@ Docker/Modal availability is an execution dependency, not a reason to weaken the
 
 The earlier design audit checked the then-current TB3 catalog for close neighbors including WAL recovery, MVCC/LSM compaction, live database cutover, payment-pipeline recovery, streaming parsers, event-time windows, clean-room reimplementation, replay/parity tasks, and generic performance tasks. No task centered on atomic publication of a multi-target incremental-build output snapshot was found.
 
-A current code search at the 2026-08-25 upstream snapshot also found no direct task centered on the `build-snapshot-publish` invariant. This is directional evidence only; the catalog must be rechecked before final freeze because Terminal-Bench changes continuously.
+A current code search at the recorded upstream snapshot also found no direct task centered on the `build-snapshot-publish` invariant. This is directional evidence only; the catalog must be rechecked before final freeze because Terminal-Bench changes continuously.
