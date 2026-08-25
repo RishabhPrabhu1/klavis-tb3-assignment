@@ -15,4 +15,4 @@ correct_env=$(mktemp -d "${TMPDIR:-/tmp}/tb3-build-reference.XXXXXX")
 trap 'find "$correct_env" -type f -name "*.pyc" -delete 2>/dev/null || true; find "$correct_env" -depth -type d -empty -delete 2>/dev/null || true' EXIT
 cp -R "$TASK_DIR/environment/." "$correct_env/"
 BUILD_SYS_ROOT="$correct_env/buildsys" "$TASK_DIR/solution/solve.sh"
-TB3_AGENT_APP_ROOT="$correct_env" "$TEST_PYTHON" -m pytest -q "$TASK_DIR/tests/test_build_cache.py"
+TB3_AGENT_APP_ROOT="$correct_env" "$TEST_PYTHON" -m pytest -q "$TASK_DIR/tests"
