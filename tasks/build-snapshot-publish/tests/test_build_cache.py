@@ -59,7 +59,9 @@ def _set_permissions(root: Path, directory_mode: int, file_mode: int) -> None:
 
 def make_workspace_pair() -> tuple[Path, Path, Path]:
     base = Path(tempfile.mkdtemp(prefix="tb3-snapshot-project-"))
-    base.chmod(0o777)
+    # Candidate code needs traversal into its own workspace, not permission to
+    # rename or replace the root-owned sibling reference directory.
+    base.chmod(0o711)
     candidate = base / "candidate"
     reference = base / "reference"
     candidate.mkdir()
