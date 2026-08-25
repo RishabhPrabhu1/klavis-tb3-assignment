@@ -42,3 +42,68 @@ jobs:
 
       - name: Run mutation matrix as verifier root
         run: sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-mutation-checks.sh
+
+  harbor-docker:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Install live validation Harbor version
+        run: uv tool install harbor==0.18.0
+
+      - name: Build task environment with Docker
+        run: docker build -t qualification-build-snapshot-publish tasks/build-snapshot-publish/environment
+
+      - name: Harbor Oracle must reward 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUTPUT=$(harbor run \
+            -p tasks/build-snapshot-publish \
+            --agent oracle \
+            --env docker \
+            -o /tmp/harbor-output \
+            --job-name qualification-oracle 2>&1)
+          printf '%s\n' "$OUTPUT"
+          REWARD=$(printf '%s\n' "$OUTPUT" | grep -oP 'Mean[:\s]+\K[0-9.]+' | tail -1 || true)
+          python - "$REWARD" <<'PY'
+          import sys
+          raw = sys.argv[1]
+          if not raw:
+              raise SystemExit("could not parse Oracle reward")
+          reward = float(raw)
+          if reward != 1.0:
+              raise SystemExit(f"Oracle reward must be exactly 1.0, got {reward}")
+          print(f"Oracle reward: {reward:.3f}")
+          PY
+
+      - name: Harbor NOP must reward 0
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUTPUT=$(harbor run \
+            -p tasks/build-snapshot-publish \
+            --agent nop \
+            --env docker \
+            -o /tmp/harbor-output \
+            --job-name qualification-nop 2>&1)
+          printf '%s\n' "$OUTPUT"
+          REWARD=$(printf '%s\n' "$OUTPUT" | grep -oP 'Mean[:\s]+\K[0-9.]+' | tail -1 || true)
+          python - "$REWARD" <<'PY'
+          import sys
+          raw = sys.argv[1]
+          if not raw:
+              raise SystemExit("could not parse NOP reward")
+          reward = float(raw)
+          if reward != 0.0:
+              raise SystemExit(f"NOP reward must be exactly 0.0, got {reward}")
+          print(f"NOP reward: {reward:.3f}")
+          PY
