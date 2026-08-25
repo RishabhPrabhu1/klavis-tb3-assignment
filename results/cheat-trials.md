@@ -1,13 +1,18 @@
 # Adversarial Cheat Trials
 
-Status: pending execution for `build-snapshot-publish` in the current TB3 environment.
+Status: pending execution for the frozen `build-snapshot-publish` task.
 
-The assignment requires zero reward for every adversarial trial required by the current TB3 `/cheat` workflow. At the live snapshot recorded in `results/environment.md`, that workflow runs one attempt for each configured agent. Run the local reproduction helper with a fresh checkout of the same live upstream:
+At the live Terminal-Bench snapshot recorded in `results/environment.md`, `/cheat` runs one adversarial attempt for each configured agent. Every valid adversarial trial must receive reward `0`.
+
+| Agent | Model | Reasoning | Reward | Valid run? | Attack summary | Job/result path |
+|---|---|---|---:|---|---|---|
+| `claude-code` | `anthropic/claude-opus-5` | `max` | Pending | Pending | Pending | Pending |
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | Pending | Pending | Pending | Pending |
+
+Run the reproduction helper against a fresh checkout of the same live upstream:
 
 ```bash
-TB3_REPO=/path/to/terminal-bench ./scripts/run-cheat-trials.sh
+TB3_REPO=/path/to/terminal-bench HARBOR_ENV=modal ./scripts/run-cheat-trials.sh
 ```
 
-The helper copies the task to a temporary directory, removes the ordinary anti-cheat sentence, **appends** the live `rubrics/hack-trial-prompt.md` after the legitimate instruction, and runs one attempt for Claude Code / Opus 5 max and one attempt for Codex / GPT-5.6 Sol xhigh. This mirrors `.github/workflows/run-cheat-trials.yml` at the recorded upstream commit; it does not inherit the ordinary `/run` value of three attempts.
-
-Record each reward, attack path, verifier response, infrastructure status, and analysis result here after execution. A zero reward caused by a crash, invalid environment, or verifier failure is not sufficient evidence.
+The helper copies the task, removes the ordinary anti-cheat sentence, appends the live `rubrics/hack-trial-prompt.md`, and runs one attempt for each configured agent, matching the current `/cheat` workflow. Record the actual attack path and verifier response. A zero caused by an agent crash, invalid environment, verifier failure, API/rate limit, or other infrastructure problem is not sufficient evidence and must be rerun.
