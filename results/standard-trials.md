@@ -1,18 +1,22 @@
 # Standard Trials
 
-Status: pending execution for `build-snapshot-publish` in the current TB3 environment.
+Status: pending execution for the frozen `build-snapshot-publish` task.
 
-The assignment requires three genuine failures for each current default configuration:
+Before running, record the final task commit SHA and refresh `results/environment.md` against live Terminal-Bench. The assignment requires all three valid standard trials for both current default agents to receive reward `0` for genuine task failure.
 
-| Agent | Model | Reasoning | Required trials | Result |
-|---|---|---:|---:|---|
-| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | Pending |
-| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | Pending |
+| Agent | Model | Reasoning | Trial | Reward | Valid run? | Job/result path |
+|---|---|---|---:|---:|---|---|
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | Pending | Pending | Pending |
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | Pending | Pending | Pending |
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | Pending | Pending | Pending |
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 | Pending | Pending | Pending |
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | Pending | Pending | Pending |
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | Pending | Pending | Pending |
 
 Run:
 
 ```bash
-./scripts/run-standard-trials.sh
+HARBOR_ENV=modal ./scripts/run-standard-trials.sh
 ```
 
-Do not count agent crashes, API/rate limits, container failures, invalid timeouts, or other infrastructure errors as model failures. Save the Harbor job paths and classify every trajectory in `results/failure-analysis.md` after execution.
+Do not count agent crashes, API/rate limits, container failures, invalid timeouts, verifier failures, or other infrastructure errors as model failures. Rerun invalid trials. Classify every valid zero-reward trajectory in `results/failure-analysis.md` and verify that the failures reflect the task's systems crux rather than ambiguity or incidental coding errors.
