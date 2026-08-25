@@ -16,7 +16,7 @@ Repository: `https://github.com/harbor-framework/terminal-bench`
 
 | Item | Value |
 |---|---|
-| Upstream commit | `c48c033cf1829b2fd62374ace87461b004b97ccd` |
+| Upstream commit | `405a783ea111ab855718ce93b2b0cadaa2e8d47f` |
 | `CONTRIBUTING.md` blob | `1f84dfbc9242d8f3b5081179d5dd612e9bd255e2` |
 | `rubrics/task-proposal.md` blob | `51cc73f61dc756d47e61117d5c893e26d06c400a` |
 | `rubrics/task-implementation.toml` blob | `5a88f5f89bdfc3b633c06e3dc06486fc9385e2b7` |
@@ -28,7 +28,7 @@ Repository: `https://github.com/harbor-framework/terminal-bench`
 | `docs/TASK_REVIEW_AUTOMATION.md` blob | `06a5762a7e9066f332477cc2b074df2208888558` |
 | Date checked | 2026-08-25 UTC |
 
-The only upstream commit after the previously recorded snapshot changed the rubric-review instruction path; the default model matrix, static requirements relevant to this task, and `/cheat` execution semantics remained unchanged. A fresh upstream check must still be performed immediately before the final official model matrix.
+Compared with the previous recorded source-of-truth commit `c48c033cf1829b2fd62374ace87461b004b97ccd`, upstream advanced by 11 commits. The comparison contains only task-specific changes; none of the static checks, implementation rubric, default-agent configuration, trial workflows, validation workflow, or adversarial prompt changed. The configuration below therefore remains current at this snapshot. A fresh upstream check must still be performed immediately before the final official model matrix.
 
 ## Current TB3 requirements that affect this task
 
