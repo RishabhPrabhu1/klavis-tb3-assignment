@@ -160,16 +160,14 @@ def _pids_for_uid(uid: int) -> set[int]:
 
 
 def _cleanup_candidate_processes(pid: int, baseline_uid_pids: set[int]) -> None:
-    """Kill the candidate session plus any detached processes it created.
+    """Kill and reap the candidate session plus detached processes it created."""
 
-    A child can escape a process group with setsid(). Because the verifier container
-    reserves the nobody uid for candidate execution, we also remove every new process
-    running as that uid while preserving any process that existed before launch.
-    """
+    seen: set[int] = set()
     for sig in (signal.SIGTERM, signal.SIGKILL):
         targets = _proc_children(pid) | (
             _pids_for_uid(_NOBODY.pw_uid) - baseline_uid_pids
         )
+        seen.update(targets)
         for child in targets:
             try:
                 os.kill(child, sig)
@@ -181,8 +179,33 @@ def _cleanup_candidate_processes(pid: int, baseline_uid_pids: set[int]) -> None:
             pass
         if sig == signal.SIGTERM:
             time.sleep(0.05)
-    survivors = _pids_for_uid(_NOBODY.pw_uid) - baseline_uid_pids
-    assert not survivors, f"candidate processes survived cleanup: {sorted(survivors)}"
+
+    # The verifier is a Linux child subreaper. A candidate can double-fork or
+    # setsid(), but once its original parent exits those detached descendants are
+    # adopted here. Reap them after killing so zombie /proc entries do not survive
+    # cleanup and poison later trials.
+    deadline = time.monotonic() + 1.0
+    while True:
+        survivors = _pids_for_uid(_NOBODY.pw_uid) - baseline_uid_pids
+        seen.update(survivors)
+        for child in seen:
+            if child == pid:
+                continue
+            try:
+                os.waitpid(child, os.WNOHANG)
+            except ChildProcessError:
+                pass
+        survivors = _pids_for_uid(_NOBODY.pw_uid) - baseline_uid_pids
+        if not survivors:
+            return
+        if time.monotonic() >= deadline:
+            assert not survivors, f"candidate processes survived cleanup: {sorted(survivors)}"
+        for child in survivors:
+            try:
+                os.kill(child, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        time.sleep(0.01)
 
 
 def _run_candidate_fs_action(code: str, *args: str) -> None:
