@@ -215,7 +215,8 @@ def test_normal_build_never_exposes_new_producer_with_old_downstream() -> None:
         report = reports / "normal-publication-observer.json"
         command, env = _async_command(candidate, report)
         baseline_uid_pids = _pids_for_uid(_NOBODY.pw_uid)
-        watch_fd = _watch_directory(candidate / "out")
+        if sys.platform.startswith("linux"):
+            watch_fd = _watch_directory(candidate / "out")
 
         with tempfile.TemporaryDirectory(prefix="tb3-publication-observer-") as log_dir:
             with (Path(log_dir) / "stdout").open("wb") as stdout, (
@@ -231,15 +232,26 @@ def test_normal_build_never_exposes_new_producer_with_old_downstream() -> None:
                     preexec_fn=_drop_privileges,
                 )
 
+                early_path = candidate / old["early"]["output"]
                 deadline = time.monotonic() + 20
                 froze_publication = False
                 while proc.poll() is None:
-                    if _publication_event(watch_fd):
+                    if watch_fd is not None:
+                        publication_changed = _publication_event(watch_fd)
+                    else:
+                        # Portable development fallback. The official verifier is
+                        # Linux and uses inotify; the wide graph keeps this polling
+                        # fallback useful on macOS without changing task semantics.
+                        publication_changed = early_path.read_bytes() != old["early"]["bytes"]
+                        if not publication_changed:
+                            time.sleep(0.001)
+
+                    if publication_changed:
                         try:
                             os.killpg(proc.pid, signal.SIGSTOP)
                         except ProcessLookupError:
                             continue
-                        early = (candidate / old["early"]["output"]).read_bytes()
+                        early = early_path.read_bytes()
                         if early == old["early"]["bytes"]:
                             os.killpg(proc.pid, signal.SIGCONT)
                             continue
@@ -259,8 +271,6 @@ def test_normal_build_never_exposes_new_producer_with_old_downstream() -> None:
                 proc = None
 
         if froze_publication:
-            # A complete old/new snapshot at the externally selected crash point
-            # is valid, but the next ordinary build must still converge to new.
             run_candidate(candidate)
             _assert_new_snapshot(candidate, new)
         else:
