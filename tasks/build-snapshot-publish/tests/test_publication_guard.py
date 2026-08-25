@@ -81,16 +81,13 @@ def _replace_manifest(project: Path, targets: dict) -> None:
 
 
 def _watch_directory(path: Path) -> int:
-    """Return a nonblocking Linux inotify descriptor for visible output changes."""
+    """Return a nonblocking Linux inotify descriptor for physical output changes."""
 
-    # A correct implementation may expose `out/` through a symlink owned by the
-    # unprivileged candidate inside the sticky project root. Linux protected-
-    # symlink policy can deny a privileged inotify_add_watch on that user-facing
-    # symlink even though ordinary verifier reads succeed. Resolve the current
-    # physical directory first. For in-place publishers this is the same directory;
-    # for generation publishers it is the old committed generation, which is
-    # intentionally quiet until an atomic selector switch makes the new snapshot
-    # visible.
+    # A correct implementation may expose `out/` through a candidate-owned symlink
+    # inside the sticky project root. Resolve its current physical directory before
+    # adding the watch to avoid Linux protected-symlink policy. The verifier also
+    # polls the user-visible producer path, so a selector/symlink visibility change
+    # that does not touch this old physical directory is still observed.
     watched = path.resolve(strict=True)
 
     libc = ctypes.CDLL(None, use_errno=True)
@@ -113,7 +110,7 @@ def _watch_directory(path: Path) -> int:
     return fd
 
 
-def _publication_event(fd: int, timeout_ms: int = 100) -> bool:
+def _publication_event(fd: int, timeout_ms: int = 1) -> bool:
     poller = select.poll()
     poller.register(fd, select.POLLIN)
     if not poller.poll(timeout_ms):
@@ -135,6 +132,22 @@ def _publication_event(fd: int, timeout_ms: int = 100) -> bool:
         if name == "early.txt" and mask & (_IN_CLOSE_WRITE | _IN_MOVED_TO | _IN_CREATE):
             return True
     return False
+
+
+def _signal_candidate_processes(
+    pid: int, baseline_uid_pids: set[int], sig: signal.Signals
+) -> None:
+    """Signal the original process group and any detached candidate-UID children."""
+
+    try:
+        os.killpg(pid, sig)
+    except ProcessLookupError:
+        pass
+    for child in _pids_for_uid(_NOBODY.pw_uid) - baseline_uid_pids:
+        try:
+            os.kill(child, sig)
+        except ProcessLookupError:
+            pass
 
 
 @pytest.mark.parametrize(
@@ -246,30 +259,38 @@ def test_normal_build_never_exposes_new_producer_with_old_downstream() -> None:
                 deadline = time.monotonic() + 20
                 froze_publication = False
                 while proc.poll() is None:
-                    if watch_fd is not None:
-                        publication_changed = _publication_event(watch_fd)
-                    else:
-                        publication_changed = early_path.read_bytes() != old["early"]["bytes"]
-                        if not publication_changed:
-                            time.sleep(0.001)
+                    physical_event = (
+                        _publication_event(watch_fd) if watch_fd is not None else False
+                    )
+                    visible_early = early_path.read_bytes()
+                    publication_changed = (
+                        physical_event or visible_early != old["early"]["bytes"]
+                    )
+                    if watch_fd is None and not publication_changed:
+                        time.sleep(0.001)
 
                     if publication_changed:
-                        try:
-                            os.killpg(proc.pid, signal.SIGSTOP)
-                        except ProcessLookupError:
-                            continue
+                        _signal_candidate_processes(
+                            proc.pid, baseline_uid_pids, signal.SIGSTOP
+                        )
                         early = early_path.read_bytes()
                         if early == old["early"]["bytes"]:
-                            os.killpg(proc.pid, signal.SIGCONT)
+                            _signal_candidate_processes(
+                                proc.pid, baseline_uid_pids, signal.SIGCONT
+                            )
                             continue
                         assert early == new["early"]["bytes"], "publication exposed partial producer bytes"
                         froze_publication = True
                         _assert_complete_snapshot(candidate, old, new)
-                        os.killpg(proc.pid, signal.SIGKILL)
+                        _signal_candidate_processes(
+                            proc.pid, baseline_uid_pids, signal.SIGKILL
+                        )
                         proc.wait(timeout=5)
                         break
                     if time.monotonic() >= deadline:
-                        os.killpg(proc.pid, signal.SIGKILL)
+                        _signal_candidate_processes(
+                            proc.pid, baseline_uid_pids, signal.SIGKILL
+                        )
                         proc.wait(timeout=5)
                         pytest.fail("normal build did not complete within observer deadline")
 
@@ -287,10 +308,7 @@ def test_normal_build_never_exposes_new_producer_with_old_downstream() -> None:
         if watch_fd is not None:
             os.close(watch_fd)
         if proc is not None:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            _signal_candidate_processes(proc.pid, baseline_uid_pids, signal.SIGKILL)
             try:
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
