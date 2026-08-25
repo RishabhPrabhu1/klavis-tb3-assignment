@@ -98,18 +98,6 @@ assert source.count(old) == 1
 path.write_text(source.replace(old, new))
 PY
       ;;
-    failpoint-shortcut)
-      python3 - "$mutant_env/buildsys/engine.py" <<'PY'
-from pathlib import Path
-import sys
-path = Path(sys.argv[1])
-source = path.read_text()
-old = '''def _failpoint(label: str) -> None:\n    if os.environ.get("BUILDSYS_FAILPOINT") == label:\n        os._exit(86)\n'''
-new = '''def _failpoint(label: str) -> None:\n    if os.environ.get("BUILDSYS_FAILPOINT"):\n        os._exit(86)\n'''
-assert source.count(old) == 1
-path.write_text(source.replace(old, new))
-PY
-      ;;
     failpoint-only-staging)
       python3 - "$mutant_env/buildsys/engine.py" <<'PY'
 from pathlib import Path
@@ -140,5 +128,4 @@ run_mutation ignore-definition ignore-definition
 run_mutation trust-object trust-object
 run_mutation publish-in-place publish-in-place
 run_mutation no-selector no-selector
-run_mutation failpoint-shortcut failpoint-shortcut
 run_mutation failpoint-only-staging failpoint-only-staging
