@@ -101,6 +101,22 @@ assert source.count(old) == 1
 path.write_text(source.replace(old, new))
 PY
       ;;
+    aborted-cache-reusable)
+      python3 - "$mutant_env/buildsys/engine.py" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+source = path.read_text()
+old_read = '''    def _read_record(self, name: str) -> dict[str, Any] | None:\n        if self.current is None:\n            return None\n        try:\n            record = json.loads(self._record_path(self.current, name).read_text())\n        except (OSError, ValueError):\n            return None\n        return record if isinstance(record, dict) and isinstance(record.get("dependencies"), list) else None\n'''
+new_read = '''    def _read_record(self, name: str) -> dict[str, Any] | None:\n        persistent = self._record_path(self.cache, name)\n        if persistent.is_file():\n            source_path = persistent\n        elif self.current is not None:\n            source_path = self._record_path(self.current, name)\n        else:\n            return None\n        try:\n            record = json.loads(source_path.read_text())\n        except (OSError, ValueError):\n            return None\n        return record if isinstance(record, dict) and isinstance(record.get("dependencies"), list) else None\n'''
+old_write = '        _atomic_write(self._record_path(self.stage, name), _json_bytes(record) + b"\\n")\n'
+new_write = old_write + '        _atomic_write(self._record_path(self.cache, name), _json_bytes(record) + b"\\n")\n'
+assert source.count(old_read) == 1
+assert source.count(old_write) == 1
+source = source.replace(old_read, new_read).replace(old_write, new_write)
+path.write_text(source)
+PY
+      ;;
     failpoint-only-staging)
       python3 - "$mutant_env/buildsys/engine.py" <<'PY'
 from pathlib import Path
@@ -115,8 +131,17 @@ PY
       ;;
   esac
 
-  if TB3_AGENT_APP_ROOT="$mutant_env" "$TEST_PYTHON" -m pytest -q "$TASK_DIR/tests"; then
+  set +e
+  TB3_AGENT_APP_ROOT="$mutant_env" "$TEST_PYTHON" -m pytest -q "$TASK_DIR/tests"
+  local status=$?
+  set -e
+  if [[ $status -eq 0 ]]; then
     echo "FAIL: mutation $name was accepted"
+    rm -rf "$mutant_env"
+    return 1
+  fi
+  if [[ $status -ne 1 ]]; then
+    echo "FAIL: mutation $name produced pytest infrastructure/collection status $status"
     rm -rf "$mutant_env"
     return 1
   fi
@@ -131,4 +156,5 @@ run_mutation ignore-definition ignore-definition
 run_mutation trust-object trust-object
 run_mutation publish-in-place publish-in-place
 run_mutation no-selector no-selector
+run_mutation aborted-cache-reusable aborted-cache-reusable
 run_mutation failpoint-only-staging failpoint-only-staging
