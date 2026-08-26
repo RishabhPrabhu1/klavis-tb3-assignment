@@ -6,6 +6,7 @@ TASK_REL="tasks/build-snapshot-publish"
 TASK_DIR="$ROOT_DIR/$TASK_REL"
 EXPECTED_SHA=${EXPECTED_SHA:-}
 RUNS_ROOT=${RUNS_ROOT:-"${TMPDIR:-/tmp}/build-snapshot-publish-sol-runs"}
+PREFLIGHT_ONLY=${PREFLIGHT_ONLY:-0}
 
 fail() {
   echo "ERROR: $*" >&2
@@ -45,12 +46,12 @@ JOB_NAME="sol-xhigh-${SHORT_SHA}"
 mkdir -p "$RUN_DIR" "$HARBOR_OUTPUT"
 cp -R "$TASK_DIR" "$TASK_COPY"
 
-python3 - "$RUN_DIR/metadata.json" "$REPO_SHA" "$TASK_TREE" "$HARBOR_VERSION" "$CODEX_VERSION" <<'PY'
+python3 - "$RUN_DIR/metadata.json" "$REPO_SHA" "$TASK_TREE" "$HARBOR_VERSION" "$CODEX_VERSION" "$PREFLIGHT_ONLY" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-path, repo_sha, task_tree, harbor_version, codex_version = sys.argv[1:]
+path, repo_sha, task_tree, harbor_version, codex_version, preflight_only = sys.argv[1:]
 Path(path).write_text(json.dumps({
     "repository_sha": repo_sha,
     "task_tree": task_tree,
@@ -61,10 +62,78 @@ Path(path).write_text(json.dumps({
     "harbor_version": harbor_version,
     "codex_version": codex_version,
     "auth": "CODEX_FORCE_AUTH_JSON=1",
-    "attempts_requested": 1,
+    "attempts_requested": 0 if preflight_only == "1" else 1,
     "harbor_analyze": False,
+    "preflight_only": preflight_only == "1",
 }, indent=2) + "\n", encoding="utf-8")
 PY
+
+if [[ "$PREFLIGHT_ONLY" == "1" ]]; then
+  cat <<EOF
+Zero-Sol frontier preflight
+
+Repository SHA:  $REPO_SHA
+Task tree:       $TASK_TREE
+Harbor:          $HARBOR_VERSION
+Codex:           $CODEX_VERSION
+Output:          $RUN_DIR
+
+This mode does NOT launch Codex or GPT-5.6 Sol.
+It validates the exact Harbor 0.14.0 + Docker task path with Oracle and NOP only.
+EOF
+
+  run_reference_agent() {
+    local agent=$1
+    local expected=$2
+    local output="$RUN_DIR/harbor-$agent"
+    local console="$RUN_DIR/$agent-console.log"
+    mkdir -p "$output"
+    set +e
+    harbor run \
+      -p "$TASK_COPY" \
+      --agent "$agent" \
+      --env docker \
+      --yes \
+      -o "$output" \
+      --job-name "preflight-${agent}-${SHORT_SHA}" \
+      2>&1 | tee "$console"
+    local status=${PIPESTATUS[0]}
+    set -e
+    [[ $status -eq 0 ]] || fail "$agent preflight exited with status $status"
+    local reward
+    reward=$(python3 - "$console" <<'PY'
+import re, sys
+text = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+values = re.findall(r"Mean[:\s]+([0-9]+(?:\.[0-9]+)?)", text)
+if not values:
+    raise SystemExit(2)
+print(values[-1])
+PY
+    ) || fail "could not parse $agent reward"
+    python3 - "$agent" "$reward" "$expected" <<'PY'
+import sys
+agent, raw, expected = sys.argv[1:]
+reward = float(raw)
+wanted = float(expected)
+if reward != wanted:
+    raise SystemExit(f"{agent} reward must be {wanted}, got {reward}")
+print(f"{agent} reward: {reward:.3f}")
+PY
+  }
+
+  run_reference_agent oracle 1
+  run_reference_agent nop 0
+  cat > "$RUN_DIR/PREFLIGHT-PASSED.txt" <<EOF
+repository_sha=$REPO_SHA
+task_tree=$TASK_TREE
+harbor=$HARBOR_VERSION
+oracle_reward=1
+nop_reward=0
+sol_calls=0
+EOF
+  printf '\nZero-Sol preflight passed. Evidence directory: %s\n' "$RUN_DIR"
+  exit 0
+fi
 
 cat > "$RUN_DIR/command.txt" <<EOF
 harbor run \\
@@ -91,6 +160,8 @@ Output:          $RUN_DIR
 Only the Harbor child agent below uses GPT-5.6 Sol/xhigh.
 There is no outer Codex session and this script never invokes harbor analyze.
 Exactly one Harbor task/agent trial is requested.
+
+For a no-Sol infrastructure check first, run this script with PREFLIGHT_ONLY=1.
 EOF
 
 set +e
