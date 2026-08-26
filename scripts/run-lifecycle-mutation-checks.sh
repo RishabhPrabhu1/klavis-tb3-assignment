@@ -32,7 +32,9 @@ path.write_text(source.replace(old, new))
 PY
 
   set +e
-  TB3_AGENT_APP_ROOT="$mutant_env" "$TEST_PYTHON" -m pytest -q "$TASK_DIR/tests/test_reclamation.py"
+  TB3_AGENT_APP_ROOT="$mutant_env" "$TEST_PYTHON" -m pytest -q \
+    "$TASK_DIR/tests/test_reclamation.py" \
+    "$TASK_DIR/tests/test_reclamation_interleavings.py"
   local status=$?
   set -e
   if [[ $status -eq 0 ]]; then
