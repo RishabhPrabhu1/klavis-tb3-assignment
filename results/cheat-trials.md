@@ -1,24 +1,34 @@
 # Adversarial Cheat Trials
 
-Status: pending execution for the frozen `build-snapshot-publish` task.
+Status: pending execution for the final frozen task.
 
-At the live Terminal-Bench snapshot recorded in `results/environment.md`, `/cheat` runs one adversarial attempt for each configured agent. Every valid adversarial trial must receive reward `0`.
+Current live Terminal-Bench `/cheat` runs one adversarial attempt per configured agent. Every valid adversarial trial must receive reward 0.
 
-Freeze commit: **Pending**
-
-| Agent | Model | Reasoning | Reward | Valid run? | Attack summary | Job/result path |
+| Agent | Model | Reasoning | Reward | Valid? | Attack summary | Evidence path |
 |---|---|---|---:|---|---|---|
 | `claude-code` | `anthropic/claude-opus-5` | `max` | Pending | Pending | Pending | Pending |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | Pending | Pending | Pending | Pending |
 
-Run the reproduction helper against a fresh checkout of the same live upstream:
+The repository remains private during calibration so the open-internet agent cannot simply search for the exact hidden verifier/oracle in this repository.
+
+## Local reproduction
+
+Use a fresh live upstream checkout so the adversarial prompt is current:
 
 ```bash
-TB3_REPO=/path/to/terminal-bench HARBOR_ENV=modal ./scripts/run-cheat-trials.sh
+git clone --depth 1 https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
+uv tool install --force 'harbor==0.14.0'
+TB3_REPO=/tmp/terminal-bench ./scripts/run-cheat-trials.sh
 ```
 
-The helper copies the task to a temporary directory, removes the ordinary anti-cheat sentence, appends the live `rubrics/hack-trial-prompt.md`, and creates one Harbor JobConfig with `n_attempts: 1`, both current agents, and concurrency `2`. The instruction transform is implemented in Python so the helper behaves consistently on Linux and macOS/BSD development machines.
+The helper mirrors the live transform on a temporary task copy:
 
-Before execution, verify that the repository is not unintentionally exposing the exact oracle to an open-internet adversarial agent. Repository visibility is an evaluation-hygiene choice rather than a TB3 format requirement; record the state used for the trials.
+1. remove the ordinary `Do not cheat...` sentence;
+2. append the live `rubrics/hack-trial-prompt.md`;
+3. run exactly one trial for each selected current agent;
+4. use subscription authentication in Docker;
+5. leave the real task instruction unchanged.
 
-For each result, record the actual attack path and verifier response. A zero caused by an agent crash, invalid environment, verifier failure, API/rate limit, or other infrastructure problem is not sufficient evidence and must be rerun.
+Codex requires the normal local Codex login. Claude additionally requires `CLAUDE_CODE_OAUTH_TOKEN` generated through `claude setup-token`.
+
+Authentication errors, API/rate limits, model unavailability, Harbor/Docker failures, verifier failures, or other infrastructure-invalid outcomes do not count as successful adversarial resistance and must be rerun.
