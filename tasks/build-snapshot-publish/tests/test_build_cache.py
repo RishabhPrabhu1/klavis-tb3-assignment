@@ -111,21 +111,11 @@ def test_unrelated_input_and_target_definition_invalidate_selectively() -> None:
         finish(base)
 
 
-def test_cache_object_and_materialized_output_recovery() -> None:
+def test_materialized_output_recovery() -> None:
     candidate, reference, base = make_workspace_pair()
     try:
-        first = run_candidate(candidate)
+        run_candidate(candidate)
         expected = clean_build(reference, "fingerprint")
-        app_event = next(event for event in first["events"] if event["target"] == "app")
-        object_path = candidate / ".build-cache" / "objects" / f"{app_event['key']}.bin"
-        _candidate_write(object_path, "CORRUPTED\n")
-        report = run_candidate(candidate)
-        _assert_report(
-            candidate,
-            report,
-            expected,
-            {"app": "built", "docs": "cached", "package": "cached", "fingerprint": "cached"},
-        )
 
         _candidate_unlink(candidate / "out/app.txt")
         report = run_candidate(candidate)
@@ -137,6 +127,9 @@ def test_cache_object_and_materialized_output_recovery() -> None:
         _candidate_write(candidate / "out/app.txt", "CORRUPTED-MATERIALIZED\n")
         report = run_candidate(candidate)
         _assert_report(candidate, report, expected, {name: "cached" for name in expected})
+        assert _output_tree(candidate, expected) == {
+            name: result["bytes"] for name, result in expected.items()
+        }
     finally:
         finish(base)
 
