@@ -12,6 +12,10 @@ on:
       - ".github/workflows/preflight.yml"
   workflow_dispatch:
 
+concurrency:
+  group: qualification-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   preflight:
     runs-on: ubuntu-latest
