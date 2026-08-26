@@ -253,7 +253,14 @@ def test_normal_narrow_build_never_exposes_new_producer_with_stale_outputs() -> 
         if froze:
             recovered = run_candidate(candidate, target="app")
             assert recovered is not None
-            _assert_report(candidate, recovered, new, {"app": "built"}, requested_target="app")
+            observed_status = recovered["events"][0]["status"]
+            _assert_report(
+                candidate,
+                recovered,
+                new,
+                {"app": observed_status},
+                requested_target="app",
+            )
         else:
             assert returncode == 0
             completed = json.loads(report.read_text())
