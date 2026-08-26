@@ -71,8 +71,8 @@ from pathlib import Path
 import sys
 path = Path(sys.argv[1])
 source = path.read_text()
-old = '''        if self.current is not None:\n            current_records = self.current / "records"\n            if current_records.is_dir():\n                shutil.copytree(current_records, staged_records, dirs_exist_ok=True)\n'''
-new = old + '''            current_out = self.current / "out"\n            if current_out.is_dir():\n                shutil.copytree(current_out, self.stage / "out", dirs_exist_ok=True)\n'''
+old = '        (self.stage / "records").mkdir()\n'
+new = old + '''        if self.current is not None:\n            current_out = self.current / "out"\n            if current_out.is_dir():\n                shutil.copytree(current_out, self.stage / "out", dirs_exist_ok=True)\n'''
 assert source.count(old) == 1
 path.write_text(source.replace(old, new))
 PY
@@ -117,6 +117,22 @@ source = source.replace(old_read, new_read).replace(old_write, new_write)
 path.write_text(source)
 PY
       ;;
+    stale-base-commit)
+      python3 - "$mutant_env/buildsys/engine.py" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+source = path.read_text()
+old_stage = '        (self.stage / "records").mkdir()\n'
+new_stage = old_stage + '''        if self.current is not None:\n            current_records = self.current / "records"\n            if current_records.is_dir():\n                shutil.copytree(current_records, self.stage / "records", dirs_exist_ok=True)\n'''
+old_merge = '                self._merge_latest_records()\n'
+new_merge = '                pass  # stale-base mutant intentionally skips commit-time merge\n'
+assert source.count(old_stage) == 1
+assert source.count(old_merge) == 1
+source = source.replace(old_stage, new_stage).replace(old_merge, new_merge)
+path.write_text(source)
+PY
+      ;;
     failpoint-only-staging)
       python3 - "$mutant_env/buildsys/engine.py" <<'PY'
 from pathlib import Path
@@ -157,4 +173,5 @@ run_mutation retain-unreached-outputs retain-unreached-outputs
 run_mutation publish-in-place publish-in-place
 run_mutation no-selector no-selector
 run_mutation aborted-cache-reusable aborted-cache-reusable
+run_mutation stale-base-commit stale-base-commit
 run_mutation failpoint-only-staging failpoint-only-staging
