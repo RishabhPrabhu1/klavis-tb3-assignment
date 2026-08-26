@@ -12,6 +12,9 @@ on:
       - ".github/workflows/preflight.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: qualification-${{ github.ref }}
   cancel-in-progress: true
@@ -173,3 +176,53 @@ jobs:
               raise SystemExit(f"NOP reward must be exactly 0.0, got {reward}")
           print(f"NOP reward: {reward:.3f}")
           PY
+
+  record-status:
+    needs: [preflight, harbor-docker]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Record qualification outcome
+        env:
+          RUN_SHA: ${{ github.sha }}
+          PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          HARBOR_RESULT: ${{ needs.harbor-docker.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p results
+          TASK_TREE=$(git rev-parse HEAD:tasks/build-snapshot-publish)
+          python - "$RUN_SHA" "$TASK_TREE" "$PREFLIGHT_RESULT" "$HARBOR_RESULT" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          run_sha, task_tree, preflight, harbor = sys.argv[1:]
+          status = {
+              "workflow_commit": run_sha,
+              "task_tree": task_tree,
+              "preflight": preflight,
+              "harbor_docker": harbor,
+              "qualified": preflight == "success" and harbor == "success",
+          }
+          Path("results/preflight-status.json").write_text(
+              json.dumps(status, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          print(json.dumps(status, indent=2, sort_keys=True))
+          PY
+
+      - name: Commit qualification outcome
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add results/preflight-status.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Record qualification preflight status [skip ci]"
+          git push origin HEAD:main
