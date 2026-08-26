@@ -75,6 +75,22 @@ assert source.count(old) == 1
 path.write_text(source.replace(old, new))
 PY
       ;;
+    non-atomic-narrow-prune)
+      python3 - "$mutant_env/buildsys/engine.py" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+source = path.read_text()
+old_stage = '        (self.stage / "records").mkdir()\n'
+new_stage = old_stage + '''        if self.current is not None:\n            current_out = self.current / "out"\n            if current_out.is_dir():\n                shutil.copytree(current_out, self.stage / "out", dirs_exist_ok=True)\n'''
+old_swap = '                        self._swap_selector(generation.name)\n'
+new_swap = old_swap + '''                        reached = {item["output"] for item in self.results.values()}\n                        for visible_path in sorted(self.output_root.rglob("*"), reverse=True):\n                            if visible_path.is_file():\n                                relative = visible_path.relative_to(self.project).as_posix()\n                                if relative not in reached:\n                                    visible_path.unlink()\n'''
+assert source.count(old_stage) == 1
+assert source.count(old_swap) == 1
+source = source.replace(old_stage, new_stage).replace(old_swap, new_swap)
+path.write_text(source)
+PY
+      ;;
     publish-in-place)
       python3 - "$mutant_env/buildsys/engine.py" <<'PY'
 from pathlib import Path
@@ -204,6 +220,7 @@ run_mutation always-rebuild always-rebuild
 run_mutation ignore-upstream ignore-upstream
 run_mutation ignore-definition ignore-definition
 run_mutation retain-unreached-outputs retain-unreached-outputs
+run_mutation non-atomic-narrow-prune non-atomic-narrow-prune
 run_mutation publish-in-place publish-in-place
 run_mutation no-selector no-selector
 run_mutation aborted-cache-reusable aborted-cache-reusable
