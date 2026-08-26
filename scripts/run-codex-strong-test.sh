@@ -5,6 +5,7 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TASK_REL="tasks/build-snapshot-publish"
 TASK_DIR="$ROOT_DIR/$TASK_REL"
 EXPECTED_SHA=${EXPECTED_SHA:-}
+EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-}
 RUNS_ROOT=${RUNS_ROOT:-"${TMPDIR:-/tmp}/build-snapshot-publish-sol-runs"}
 PREFLIGHT_ONLY=${PREFLIGHT_ONLY:-0}
 
@@ -25,6 +26,9 @@ SHORT_SHA=${REPO_SHA:0:12}
 
 if [[ -n "$EXPECTED_SHA" && "$REPO_SHA" != "$EXPECTED_SHA" ]]; then
   fail "expected repository SHA $EXPECTED_SHA, found $REPO_SHA"
+fi
+if [[ -n "$EXPECTED_TASK_TREE" && "$TASK_TREE" != "$EXPECTED_TASK_TREE" ]]; then
+  fail "expected task tree $EXPECTED_TASK_TREE, found $TASK_TREE"
 fi
 
 if [[ -n "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]]; then
