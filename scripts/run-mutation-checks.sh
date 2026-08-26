@@ -15,8 +15,6 @@ run_mutation() {
   local mode=$2
   local mutant_env
   mutant_env=$(mktemp -d "${TMPDIR:-/tmp}/tb3-snapshot-mutant-${name}.XXXXXX")
-  # A root-run preflight drops candidate executions to nobody. Keep this /app
-  # analogue traversable so the local harness matches the verifier container.
   chmod 755 "$mutant_env"
   cp -R "$TASK_DIR/environment/." "$mutant_env/"
 
@@ -125,12 +123,24 @@ path = Path(sys.argv[1])
 source = path.read_text()
 old_stage = '        (self.stage / "records").mkdir()\n'
 new_stage = old_stage + '''        if self.current is not None:\n            current_records = self.current / "records"\n            if current_records.is_dir():\n                shutil.copytree(current_records, self.stage / "records", dirs_exist_ok=True)\n'''
-old_merge = '                self._merge_latest_records()\n'
-new_merge = '                pass  # stale-base mutant intentionally skips commit-time merge\n'
+old_merge = '                        self._merge_latest_records()\n'
+new_merge = '                        pass  # stale-base mutant intentionally skips commit-time merge\n'
 assert source.count(old_stage) == 1
 assert source.count(old_merge) == 1
 source = source.replace(old_stage, new_stage).replace(old_merge, new_merge)
 path.write_text(source)
+PY
+      ;;
+    no-input-revalidation)
+      python3 - "$mutant_env/buildsys/engine.py" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+source = path.read_text()
+old = '                    if not self._inputs_unchanged():\n'
+new = '                    if False:\n'
+assert source.count(old) == 1
+path.write_text(source.replace(old, new))
 PY
       ;;
     failpoint-only-staging)
@@ -174,4 +184,5 @@ run_mutation publish-in-place publish-in-place
 run_mutation no-selector no-selector
 run_mutation aborted-cache-reusable aborted-cache-reusable
 run_mutation stale-base-commit stale-base-commit
+run_mutation no-input-revalidation no-input-revalidation
 run_mutation failpoint-only-staging failpoint-only-staging
