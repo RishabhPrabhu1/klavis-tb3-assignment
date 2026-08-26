@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import tempfile
+import time
 from pathlib import Path, PurePosixPath
 from typing import Any
 
@@ -37,6 +38,20 @@ def _failpoint(label: str) -> None:
     """Deterministic interruption hook used by the verifier."""
     if os.environ.get("BUILDSYS_FAILPOINT") == label:
         os._exit(86)
+
+
+def _pausepoint(label: str) -> None:
+    """Deterministic concurrency barrier used by the verifier."""
+    if os.environ.get("BUILDSYS_PAUSEPOINT") != label:
+        return
+    raw = os.environ.get("BUILDSYS_PAUSE_DIR")
+    if not raw:
+        raise BuildError("BUILDSYS_PAUSE_DIR is required for a pausepoint")
+    directory = Path(raw)
+    _atomic_write(directory / "reached", (label + "\n").encode("utf-8"))
+    release = directory / "release"
+    while not release.exists():
+        time.sleep(0.01)
 
 
 class Builder:
@@ -127,6 +142,8 @@ class Builder:
                     }
                 )
                 self._results[name] = result
+                _pausepoint(f"after-target:{name}")
+                _failpoint(f"after-target:{name}")
                 return result
 
             data, discovered = self._execute(name, definition, dependencies)
@@ -143,7 +160,6 @@ class Builder:
                     "output_digest": output_digest,
                 },
             )
-            _failpoint(f"after-target:{name}")
             result = {"output": output, "output_digest": output_digest, "bytes": data}
             self.events.append(
                 {
@@ -154,6 +170,8 @@ class Builder:
                 }
             )
             self._results[name] = result
+            _pausepoint(f"after-target:{name}")
+            _failpoint(f"after-target:{name}")
             return result
         finally:
             self._active.pop()
