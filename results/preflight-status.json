@@ -1,0 +1,7 @@
+{
+  "harbor_docker": "skipped",
+  "preflight": "failure",
+  "qualified": false,
+  "task_tree": "eb497b609e4395c97e4c6707ac2cc55385344a30",
+  "workflow_commit": "d2a407406f51d816105da8dd1abce6b837c5ec99"
+}
