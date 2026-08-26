@@ -1,41 +1,56 @@
 # Standard Trials
 
-Status: pending execution for the frozen `build-snapshot-publish` task.
+Status: final frontier matrix not yet executed for the redesigned task.
 
-Before the final matrix, record the final task commit SHA and refresh `results/environment.md` against live Terminal-Bench. The assignment requires all three valid standard trials for both current default agents to receive reward `0` for genuine task failure.
+The assignment requires three **valid** standard trials for each current default agent to receive reward 0 because the model genuinely fails the task:
 
-A one-attempt diagnostic run for both agents is available first:
+| Agent | Model | Reasoning | Required trials |
+|---|---|---|---:|
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 |
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 |
 
-```bash
-HARBOR_ENV=modal N_ATTEMPTS=1 JOB_NAME=build-snapshot-publish-diagnostic ./scripts/run-standard-trials.sh
-```
+Live `/run` uses Harbor 0.14.0. The local wrapper uses Docker plus the subscription-auth mechanisms documented by the Klavis assignment.
 
-## Diagnostic execution record
+## Usage-conserving diagnostic
 
-A private-repository diagnostic was triggered on 2026-08-25 at commit `00ddd90d8a91a15ef34d92d80bc118b3cf615172` through GitHub Actions run `32869754495`.
-
-The privacy guard passed, confirming the workflow was running against a private repository. The run then stopped before any model trial because the standalone repository had none of the four credentials required by the current Modal trial configuration:
-
-- `ANTHROPIC_API_KEY`
-- `OPENAI_API_KEY`
-- `MODAL_TOKEN_ID`
-- `MODAL_TOKEN_SECRET`
-
-The model-trial step was skipped and no trajectory artifact was produced. This is an infrastructure-invalid attempt and **does not count** as a failure for either frontier model.
-
-Once the four repository secrets are present, update `.github/frontier-diagnostic-trigger` to launch a fresh one-attempt diagnostic. If either agent solves the task cleanly, do not spend the final matrix yet; inspect the trajectory and reassess intrinsic difficulty. If both fail for the intended systems reason, freeze the task and run the required matrix with the script's default `N_ATTEMPTS=3`:
+Before spending the six final attempts, run one Codex diagnostic against the exact frozen task revision:
 
 ```bash
-HARBOR_ENV=modal ./scripts/run-standard-trials.sh
+uv tool install --force 'harbor==0.14.0'
+AGENTS=codex N_ATTEMPTS=1 ./scripts/run-standard-trials.sh
 ```
 
-| Agent | Model | Reasoning | Trial | Reward | Valid run? | Job/result path |
-|---|---|---|---:|---:|---|---|
-| `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | Pending | Pending | Pending |
-| `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | Pending | Pending | Pending |
-| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | Pending | Pending | Pending |
-| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 | Pending | Pending | Pending |
-| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | Pending | Pending | Pending |
-| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | Pending | Pending | Pending |
+Do not change the task during that trial. If it is a valid reward-0, inspect the trajectory and confirm the failure is caused by an explicitly stated benchmark invariant. If it is a clean solve, treat that as difficulty evidence rather than adding a trajectory-specific test.
 
-Do not count agent crashes, API/rate limits, container failures, invalid timeouts, verifier failures, or other infrastructure errors as model failures. Rerun invalid trials. Classify every valid zero-reward trajectory in `results/failure-analysis.md` and verify that the failures reflect the task's systems crux rather than ambiguity or incidental coding errors.
+Claude can be run separately when subscription OAuth is available:
+
+```bash
+export CLAUDE_CODE_OAUTH_TOKEN='...'
+AGENTS=claude N_ATTEMPTS=1 ./scripts/run-standard-trials.sh
+```
+
+## Historical runs excluded from final evidence
+
+Earlier diagnostics were useful for benchmark development but **do not count** toward the final matrix:
+
+- an API-key/Modal GitHub workflow stopped before any model ran because repository provider credentials were absent;
+- an early Sol run tested an obsolete task revision;
+- a later clean Sol/xhigh run on the pre-concurrency task officially received reward 0 but its only failures were verifier artifacts involving an unstated cache-object filename convention;
+- that clean run also established that Sol could solve the earlier single-generation transactional-publication problem, which motivated the deliberate concurrency/stable-input redesign.
+
+The obsolete API-key workflow and trigger have been removed from the repository.
+
+## Final matrix record
+
+Fill this only with valid trials on the exact final task tree:
+
+| Agent | Model | Reasoning | Trial | Reward | Valid? | Evidence path | Failure classification |
+|---|---|---|---:|---:|---|---|---|
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | Pending | Pending | Pending | Pending |
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | Pending | Pending | Pending | Pending |
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | Pending | Pending | Pending | Pending |
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 | Pending | Pending | Pending | Pending |
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | Pending | Pending | Pending | Pending |
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | Pending | Pending | Pending | Pending |
+
+Authentication errors, rate limits, model unavailability, Harbor/Docker failures, verifier infrastructure failures, and unrelated infrastructure timeouts are invalid trials and are never counted as model failures.
