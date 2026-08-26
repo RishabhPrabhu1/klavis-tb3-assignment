@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       detail: ${{ steps.preflight_summary.outputs.detail }}
+      mutation_detail: ${{ steps.mutations.outputs.detail }}
     steps:
       - id: checkout
         uses: actions/checkout@v4
@@ -69,9 +70,34 @@ jobs:
 
       - id: mutations
         name: Run mutation matrices as verifier root
+        shell: bash
         run: |
-          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-mutation-checks.sh
-          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-lifecycle-mutation-checks.sh
+          set -uo pipefail
+
+          set +e
+          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
+            ./scripts/run-mutation-checks.sh 2>&1 | tee /tmp/core-mutations.log
+          core_status=${PIPESTATUS[0]}
+
+          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
+            ./scripts/run-lifecycle-mutation-checks.sh 2>&1 | tee /tmp/lifecycle-mutations.log
+          lifecycle_status=${PIPESTATUS[0]}
+          set -e
+
+          detail=$(
+            {
+              printf 'core_status=%s\n' "$core_status"
+              grep -E '^(PASS|FAIL):' /tmp/core-mutations.log || true
+              printf 'lifecycle_status=%s\n' "$lifecycle_status"
+              grep -E '^(PASS|FAIL):' /tmp/lifecycle-mutations.log || true
+            } | tr '\n' ';' | sed 's/;$//'
+          )
+          echo "detail=$detail" >> "$GITHUB_OUTPUT"
+          printf 'mutation detail: %s\n' "$detail"
+
+          if [[ $core_status -ne 0 || $lifecycle_status -ne 0 ]]; then
+            exit 1
+          fi
 
       - id: preflight_summary
         name: Capture preflight phase outcomes
@@ -245,23 +271,25 @@ jobs:
           RUN_SHA: ${{ github.sha }}
           PREFLIGHT_RESULT: ${{ needs.preflight.result }}
           PREFLIGHT_DETAIL: ${{ needs.preflight.outputs.detail }}
+          MUTATION_DETAIL: ${{ needs.preflight.outputs.mutation_detail }}
           HARBOR_RESULT: ${{ needs['harbor-docker'].result }}
           HARBOR_DETAIL: ${{ needs['harbor-docker'].outputs.detail }}
         run: |
           set -euo pipefail
           mkdir -p results
-          TASK_TREE=$(git rev-parse HEAD:tasks/build-snapshot-publish)
-          python - "$RUN_SHA" "$TASK_TREE" "$PREFLIGHT_RESULT" "$PREFLIGHT_DETAIL" "$HARBOR_RESULT" "$HARBOR_DETAIL" <<'PY'
+          TASK_TREE=$(git rev-parse "${RUN_SHA}:tasks/build-snapshot-publish")
+          python - "$RUN_SHA" "$TASK_TREE" "$PREFLIGHT_RESULT" "$PREFLIGHT_DETAIL" "$MUTATION_DETAIL" "$HARBOR_RESULT" "$HARBOR_DETAIL" <<'PY'
           import json
           import sys
           from pathlib import Path
 
-          run_sha, task_tree, preflight, preflight_detail, harbor, harbor_detail = sys.argv[1:]
+          run_sha, task_tree, preflight, preflight_detail, mutation_detail, harbor, harbor_detail = sys.argv[1:]
           status = {
               "workflow_commit": run_sha,
               "task_tree": task_tree,
               "preflight": preflight,
               "preflight_detail": preflight_detail,
+              "mutation_detail": mutation_detail,
               "harbor_docker": harbor,
               "harbor_detail": harbor_detail,
               "qualified": preflight == "success" and harbor == "success",
