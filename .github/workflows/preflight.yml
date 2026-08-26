@@ -40,6 +40,14 @@ jobs:
       - name: Run oracle regression as verifier root
         run: sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-local-reference-tests.sh
 
+      - name: Stress oracle/verifier determinism
+        run: |
+          set -euo pipefail
+          for iteration in 1 2 3; do
+            echo "oracle stress iteration ${iteration}/3"
+            sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-local-reference-tests.sh
+          done
+
       - name: Run mutation matrix as verifier root
         run: sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-mutation-checks.sh
 
