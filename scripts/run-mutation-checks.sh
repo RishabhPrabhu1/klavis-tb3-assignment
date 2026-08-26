@@ -65,14 +65,14 @@ assert source.count(old) == 1
 path.write_text(source.replace(old, new))
 PY
       ;;
-    trust-object)
+    retain-unreached-outputs)
       python3 - "$mutant_env/buildsys/engine.py" <<'PY'
 from pathlib import Path
 import sys
 path = Path(sys.argv[1])
 source = path.read_text()
-old = '            return _digest(self._read_object(object_key)) == expected\n'
-new = '            return True\n'
+old = '''        if self.current is not None:\n            current_records = self.current / "records"\n            if current_records.is_dir():\n                shutil.copytree(current_records, staged_records, dirs_exist_ok=True)\n'''
+new = old + '''            current_out = self.current / "out"\n            if current_out.is_dir():\n                shutil.copytree(current_out, self.stage / "out", dirs_exist_ok=True)\n'''
 assert source.count(old) == 1
 path.write_text(source.replace(old, new))
 PY
@@ -153,7 +153,7 @@ run_mutation starter starter
 run_mutation always-rebuild always-rebuild
 run_mutation ignore-upstream ignore-upstream
 run_mutation ignore-definition ignore-definition
-run_mutation trust-object trust-object
+run_mutation retain-unreached-outputs retain-unreached-outputs
 run_mutation publish-in-place publish-in-place
 run_mutation no-selector no-selector
 run_mutation aborted-cache-reusable aborted-cache-reusable
