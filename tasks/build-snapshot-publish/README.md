@@ -2,18 +2,24 @@
 
 ## Difficulty explanation
 
-The failure is deliberately below the level of ordinary incremental-build correctness. The starter produces correct bytes, cache hits, dependency invalidation, and recovery during uninterrupted runs, so a local patch to target hashing or file writes does not solve the task. The distinguishing requirement is crash-consistent publication across a dependency closure while retaining selective reuse. The bundled project is synthetic and intentionally small, but its producer/intermediate/downstream shape models the state-publication problem seen in real build and release infrastructure; verifier fixtures vary the graph and inputs rather than depending on the visible sample.
+The starter already implements the ordinary incremental-build mechanics: recursive bundles, target dependencies, action keys, cache hits, selective invalidation, and deterministic output generation. The repair is a systems-state problem above that layer. Outputs, reusable cache state, reports, and the source view that produced them must remain coherent across interrupted builds and concurrent writers. A correct design must also allow disjoint builds to make progress concurrently, avoid stale-base lost updates, and reject an evaluated attempt whose manifest or source view is outdated before publication.
+
+The visible project is intentionally small so the work is reasoning-heavy rather than tedious. Verifier fixtures vary requested closures, graph shapes, failpoint boundaries, commit ordering, and source/manifest changes.
 
 ## Solution explanation
 
-The oracle uses a generation store: it constructs and validates an unreachable complete snapshot, preserves content-addressed objects for reuse, and commits visibility with one atomic selector change. That architecture is included to demonstrate solvability, not as a required implementation. A candidate may use any design that satisfies the observable CLI, report, incremental, recovery, and snapshot guarantees; the verifier does not inspect candidate source structure or require generation directories, symlinks, or a particular cache layout.
+The oracle uses immutable staged generations and a short publication lock. Each attempt evaluates against one committed generation, records the manifest/source digests it observed, and validates that view before commit. Publication briefly serializes, merges still-valid unrelated cache records from the latest committed generation, and atomically switches the visible generation. Stale or interrupted staging stays unreachable; a narrow successful build contains only its reached output closure while reusable records for unrelated work can survive.
+
+That is one valid implementation, not a required architecture. The verifier does not require generations, symlinks, `flock`, a particular cache-object layout, or specific private filenames.
 
 ## Verification explanation
 
-Expected build bytes and recursive bundle dependencies come from verifier-owned `reference.py`, which performs a clean build independently of candidate cache state. Successful runs are checked for exact output bytes, report schema, event order, dependencies, statuses, paths, and digests. Recovery tests remove or corrupt candidate-owned cache/materialized state and require deterministic convergence without unnecessary downstream rebuilds.
+Verifier-owned `reference.py` independently derives clean output bytes and recursive source dependencies. Successful runs are checked for exact report schema, event order, dependency lists, target statuses, paths, digests, and materialized bytes.
 
-Crash publication is checked in two ways. Cooperative cases exercise each `after-target:TARGET` hook and require the visible tree to remain exactly the old or new complete snapshot. Separately, a Linux `inotify` observer runs an ordinary build with no failpoint variable, freezes the candidate when a rebuilt producer becomes visible, and checks the same complete-snapshot invariant before allowing recovery. This second path prevents an implementation from becoming safe only when it detects the cooperative test hook. Candidate execution is dropped to an unprivileged user; verifier truth and the reward channel remain root-owned in the separate verifier container.
+The suite covers ordinary incremental behavior, selective invalidation, new includes, materialized-output recovery, exact narrow snapshots, cooperative crash recovery across two graph shapes, and ordinary publication observed with Linux filesystem events. Deterministic pausepoints exercise disjoint concurrent progress, stale-base cache preservation, and aborted-writer isolation. Separate stable-input tests mutate a source during a cache-hit attempt, mutate only the manifest, and mutate both manifest and a newly expanded transitive include during a rebuilt attempt.
+
+Candidate code executes unprivileged inside the separate verifier; hidden tests/reference truth and reward state remain verifier-owned. Development mutation tests deliberately break independent invariants and require every mutant to be rejected.
 
 ## Relevant experience
 
-The task was developed from hands-on software engineering work with Python/TypeScript services, PostgreSQL/Supabase-backed systems, and GCP/AWS infrastructure, supplemented by targeted research into incremental-build caching and crash-consistent publication. It does not claim prior ownership of a production build system. The design was calibrated with negative implementations covering unconditional rebuilds, stale upstream/definition keys, trusted corrupt objects, in-place publication, missing selector publication, and failpoint-only staging.
+The task was developed from hands-on Python/TypeScript service and cloud-infrastructure work, supplemented by targeted research into incremental-build caching, crash consistency, snapshot publication, and concurrent state updates. It does not claim prior ownership of a production build system.
