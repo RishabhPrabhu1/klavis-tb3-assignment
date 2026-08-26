@@ -8,6 +8,7 @@ on:
       - "scripts/run-static-checks.sh"
       - "scripts/run-local-reference-tests.sh"
       - "scripts/run-mutation-checks.sh"
+      - "scripts/run-lifecycle-mutation-checks.sh"
       - ".github/workflows/preflight.yml"
   workflow_dispatch:
 
@@ -48,8 +49,10 @@ jobs:
             sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-local-reference-tests.sh
           done
 
-      - name: Run mutation matrix as verifier root
-        run: sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-mutation-checks.sh
+      - name: Run mutation matrices as verifier root
+        run: |
+          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-mutation-checks.sh
+          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-lifecycle-mutation-checks.sh
 
   harbor-docker:
     needs: preflight
