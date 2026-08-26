@@ -1,35 +1,51 @@
 # Failure Analysis
 
-Status: pending valid standard trials for `build-snapshot-publish`.
+Status: pending valid standard trials for the redesigned `build-snapshot-publish` task.
 
-The intended difficulty is the publication invariant, not the ordinary cache mechanics: individually correct target outputs are not a valid visible build state unless they belong to one committed snapshot. A meaningful failure should therefore show the agent preserving or reintroducing per-target visibility, incomplete generation switching, or another architectural mistake that can expose producer-new/downstream-old output after interruption.
+## Intended systems crux
 
-Use the following categories:
+The benchmark is no longer calibrated around one atomic-directory trick. A genuine hard-task failure should arise while composing several stated invariants:
 
-- `F1` — conceptual/architectural failure aligned with the intended systems crux.
-- `F2` — local implementation bug after the correct architecture was understood.
-- `F3` — instruction ambiguity or specification misunderstanding.
-- `F4` — timeout.
-- `F5` — infrastructure/API/container failure.
-- `F6` — verifier defect.
-- `F7` — reward-hacking/verifier exploit.
-- `F8` — task-specific solution leakage.
+- incremental dependency/cache correctness;
+- one exact visible snapshot per successful requested closure;
+- crash-safe output/cache/report commit semantics;
+- concurrent disjoint progress;
+- preservation of still-valid cache state across stale-base concurrent commits;
+- isolation of interrupted writers;
+- a manifest/source view that is still current at publication time.
 
-Only genuine valid task failures count toward the assignment. `F3`–`F8` require correction or rerun rather than being treated as evidence of difficulty.
+A strong model may understand some pieces while choosing a transaction boundary that makes another piece incorrect. That kind of cross-invariant architectural failure is the primary intended evidence.
 
-For each valid standard zero-reward trial, record:
+## Categories
+
+- `F1` — substantive architectural failure on one or more stated systems invariants.
+- `F2` — substantive concurrency/recovery implementation bug after the broad architecture was understood.
+- `F3` — incidental local coding bug unrelated to benchmark difficulty.
+- `F4` — instruction ambiguity/specification mismatch.
+- `F5` — verifier defect or implementation-specific verifier assumption.
+- `F6` — authentication/API/Harbor/Docker/model infrastructure failure.
+- `F7` — invalid timeout/crash where the model did not receive a fair completed trial.
+- `F8` — reward hacking, hidden-test exploit, or task-specific solution leakage.
+
+For assignment difficulty evidence, count only valid reward-0 trials whose trajectory supports `F1` or a clearly task-substantive `F2`. `F3` should be treated cautiously; `F4`–`F8` do not count and require correction/rerun.
+
+## Per-trial record
 
 ```text
 Agent / model / reasoning:
-Trial and job path:
-Reward:
+Benchmark commit and task-tree identity:
+Trial/job/evidence path:
+Reward and verifier summary:
+Validity classification:
 Failure category:
-First incorrect abstraction:
-Evidence observed or missed:
-Whether the agent revised its model:
-Final implementation strategy:
-Verifier rejection:
-Why the failure is aligned (or not aligned) with the intended crux:
+Architecture attempted:
+First incorrect assumption or state boundary:
+Which stated invariant(s) failed:
+What the model correctly understood:
+Whether it noticed/revised the mistake:
+Why this is or is not defensible difficulty evidence:
 ```
 
-After all six trials, add a short cross-trial synthesis identifying whether failures converge on the same architectural misunderstanding or are merely unrelated local mistakes.
+## Cross-trial synthesis
+
+After the final matrix, compare the six valid trajectories. Strong evidence is repeated failure on the same underlying composition problem through different implementations. Weaker evidence is six unrelated syntax/local bugs. Also record any model that solves the task cleanly; do not reinterpret a success as a failure or add post-hoc trajectory-specific requirements.
