@@ -190,7 +190,7 @@ jobs:
         env:
           RUN_SHA: ${{ github.sha }}
           PREFLIGHT_RESULT: ${{ needs.preflight.result }}
-          HARBOR_RESULT: ${{ needs.harbor-docker.result }}
+          HARBOR_RESULT: ${{ needs['harbor-docker'].result }}
         run: |
           set -euo pipefail
           mkdir -p results
