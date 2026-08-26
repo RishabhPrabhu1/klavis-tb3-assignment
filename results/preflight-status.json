@@ -1,9 +1,10 @@
 {
   "harbor_detail": "",
   "harbor_docker": "skipped",
+  "mutation_detail": "core_status=1;PASS: mutation starter rejected;PASS: mutation always-rebuild rejected;PASS: mutation ignore-upstream rejected;PASS: mutation ignore-definition rejected;PASS: mutation retain-unreached-outputs rejected;FAIL: mutation non-atomic-narrow-prune was accepted;lifecycle_status=126",
   "preflight": "failure",
   "preflight_detail": "checkout=success,setup_python=success,tooling=success,tb3_checkout=success,static=success,oracle=success,determinism=success,mutations=failure",
   "qualified": false,
   "task_tree": "eb6e08e2bdea9d7e711e3d576cfeb2512d8078be",
-  "workflow_commit": "72a003140eecee1caca0c5135cf4f73735843817"
+  "workflow_commit": "c44a60e3849525ca0346f6de293526e2e90d5bc1"
 }
