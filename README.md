@@ -4,7 +4,9 @@ This repository contains one original Terminal-Bench 3 task for the Klavis Found
 
 ## Task
 
-`tasks/build-snapshot-publish/` contains an incremental build tool whose ordinary caching behavior is useful but whose starter publishes rebuilt targets independently. The required invariant is that the visible `out/` tree is one committed snapshot: interruption may leave unreachable work, but never a new producer output combined with an old downstream artifact.
+`tasks/build-snapshot-publish/` contains an incremental build tool with working ordinary caching behavior but broken publication semantics. The repair must keep incremental correctness while treating outputs, reusable cache state, and reports as transactional build state.
+
+The benchmark covers crash-safe snapshot publication, exact requested-target snapshots, concurrent writers without lost reusable cache state, and stable manifest/source views across evaluation and publication. Deterministic failpoint and pausepoint hooks make the crash and concurrency cases reproducible.
 
 The task uses a separate verifier image. Candidate code receives only the declared `/app/buildsys/` artifact; hidden tests and independent reference logic remain verifier-owned.
 
@@ -16,38 +18,68 @@ scripts/                        validation and trial command wrappers
 results/                        validation, coverage, trials, failure analysis
 ```
 
-## Validation
+## Pre-frontier qualification
 
-Use a fresh checkout of the live Terminal-Bench repository for final qualification:
+The GitHub preflight validates against a fresh checkout of live Terminal-Bench and runs:
+
+- live static checks;
+- Oracle regression plus repeated verifier-determinism runs;
+- a mutation matrix covering independent failure modes;
+- Docker environment build;
+- Oracle = 1 and NOP = 0 under Harbor 0.18.0, matching live `/validate`;
+- Oracle = 1 and NOP = 0 under Harbor 0.14.0, matching live `/run` and `/cheat` agent trials.
+
+Equivalent local checks are:
 
 ```bash
 TB3_REPO=/path/to/terminal-bench ./scripts/run-static-checks.sh
 ./scripts/run-local-reference-tests.sh
 ./scripts/run-mutation-checks.sh
-harbor check tasks/build-snapshot-publish -r "$TB3_REPO/rubrics/task-implementation.toml"
-HARBOR_ENV=modal ./scripts/run-oracle.sh
-HARBOR_ENV=modal ./scripts/run-nop.sh
 ```
 
-Before spending the final six standard trials, run one diagnostic attempt for each live default agent:
+Verifier dependencies are pinned in `tasks/build-snapshot-publish/tests/Dockerfile`; `test.sh` performs no network installs.
+
+## Standard model trials
+
+Current live TB3 defaults are three trials each for:
+
+- `codex` + `openai/gpt-5.6-sol`, `reasoning_effort=xhigh`;
+- `claude-code` + `anthropic/claude-opus-5`, `reasoning_effort=max`.
+
+Live agent trials use Harbor 0.14.0. The local wrappers use subscription authentication rather than API-key billing.
+
+Before spending the full six-run matrix, run a single Codex diagnostic on the frozen benchmark revision:
 
 ```bash
-HARBOR_ENV=modal N_ATTEMPTS=1 JOB_NAME=build-snapshot-publish-diagnostic ./scripts/run-standard-trials.sh
+uv tool install --force 'harbor==0.14.0'
+AGENTS=codex N_ATTEMPTS=1 ./scripts/run-standard-trials.sh
 ```
 
-If both fail for the intended systems reason, run the final standard matrix with the script defaults and then the live `/cheat` reproduction:
+After a defensible diagnostic, the final standard matrix is:
 
 ```bash
-HARBOR_ENV=modal ./scripts/run-standard-trials.sh
-TB3_REPO=/path/to/terminal-bench HARBOR_ENV=modal ./scripts/run-cheat-trials.sh
+./scripts/run-standard-trials.sh
 ```
 
-The current upstream snapshot and exact trial configuration are recorded in `results/environment.md`. Standard and adversarial trial evidence belongs in `results/standard-trials.md` and `results/cheat-trials.md`; no pending or infrastructure-invalid run is counted as a model failure.
+Claude subscription-auth runs additionally require `CLAUDE_CODE_OAUTH_TOKEN`, produced by `claude setup-token`.
+
+## Adversarial trials
+
+The live `/cheat` workflow performs one adversarial run per configured agent. The local helper copies the task, removes the ordinary anti-cheat sentence, appends the current upstream `rubrics/hack-trial-prompt.md`, and leaves the original task unchanged.
+
+```bash
+git clone --depth 1 https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
+TB3_REPO=/tmp/terminal-bench ./scripts/run-cheat-trials.sh
+```
+
+All required adversarial trials must reward 0.
 
 ## Evidence
 
 - `results/contract-coverage.md` — instruction-to-verifier coverage and anti-cheat boundaries.
-- `results/validation.md` — static, local, Harbor, oracle, nop, and mutation status.
+- `results/validation.md` — static, local, Harbor, Oracle/NOP, determinism, and mutation status.
 - `results/standard-trials.md` — required standard model trials.
 - `results/cheat-trials.md` — required adversarial trials.
-- `results/failure-analysis.md` — classification of genuine model failures.
+- `results/failure-analysis.md` — classification of genuine model failures versus specification, verifier, or infrastructure failures.
+
+Infrastructure-invalid runs are never counted as model failures.
