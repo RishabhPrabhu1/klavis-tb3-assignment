@@ -23,34 +23,43 @@ jobs:
   preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      detail: ${{ steps.preflight_summary.outputs.detail }}
     steps:
-      - uses: actions/checkout@v4
+      - id: checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - id: setup_python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Install verifier test tooling
+      - id: tooling
+        name: Install verifier test tooling
         run: |
           python -m venv /tmp/tb3-preflight-venv
           /tmp/tb3-preflight-venv/bin/python -m pip install --disable-pip-version-check \
             pytest==9.1.1 pytest-json-ctrf==0.5.2
           chmod -R a+rX /tmp/tb3-preflight-venv
 
-      - name: Checkout live Terminal-Bench static checks
+      - id: tb3_checkout
+        name: Checkout live Terminal-Bench static checks
         run: |
           git clone --depth 1 --filter=blob:none --sparse \
             https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
           git -C /tmp/terminal-bench sparse-checkout set scripts/checks
           echo "TB3_HEAD=$(git -C /tmp/terminal-bench rev-parse HEAD)"
 
-      - name: Run live static checks
+      - id: static
+        name: Run live static checks
         run: TB3_REPO=/tmp/terminal-bench ./scripts/run-static-checks.sh
 
-      - name: Run oracle regression as verifier root
+      - id: oracle
+        name: Run oracle regression as verifier root
         run: sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-local-reference-tests.sh
 
-      - name: Stress oracle/verifier determinism
+      - id: determinism
+        name: Stress oracle/verifier determinism
         run: |
           set -euo pipefail
           for iteration in 1 2 3; do
@@ -58,31 +67,55 @@ jobs:
             sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-local-reference-tests.sh
           done
 
-      - name: Run mutation matrices as verifier root
+      - id: mutations
+        name: Run mutation matrices as verifier root
         run: |
           sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-mutation-checks.sh
           sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-lifecycle-mutation-checks.sh
+
+      - id: preflight_summary
+        name: Capture preflight phase outcomes
+        if: always()
+        env:
+          CHECKOUT: ${{ steps.checkout.outcome }}
+          SETUP_PYTHON: ${{ steps.setup_python.outcome }}
+          TOOLING: ${{ steps.tooling.outcome }}
+          TB3_CHECKOUT: ${{ steps.tb3_checkout.outcome }}
+          STATIC: ${{ steps.static.outcome }}
+          ORACLE: ${{ steps.oracle.outcome }}
+          DETERMINISM: ${{ steps.determinism.outcome }}
+          MUTATIONS: ${{ steps.mutations.outcome }}
+        run: |
+          echo "detail=checkout=$CHECKOUT,setup_python=$SETUP_PYTHON,tooling=$TOOLING,tb3_checkout=$TB3_CHECKOUT,static=$STATIC,oracle=$ORACLE,determinism=$DETERMINISM,mutations=$MUTATIONS" >> "$GITHUB_OUTPUT"
 
   harbor-docker:
     needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      detail: ${{ steps.harbor_summary.outputs.detail }}
     steps:
-      - uses: actions/checkout@v4
+      - id: checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - id: setup_python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - uses: astral-sh/setup-uv@v4
+      - id: setup_uv
+        uses: astral-sh/setup-uv@v4
 
-      - name: Install live validation Harbor version
+      - id: harbor018_install
+        name: Install live validation Harbor version
         run: uv tool install harbor==0.18.0
 
-      - name: Build task environment with Docker
+      - id: docker_build
+        name: Build task environment with Docker
         run: docker build -t qualification-build-snapshot-publish tasks/build-snapshot-publish/environment
 
-      - name: Harbor 0.18 Oracle must reward 1
+      - id: oracle018
+        name: Harbor 0.18 Oracle must reward 1
         shell: bash
         run: |
           set -euo pipefail
@@ -105,7 +138,8 @@ jobs:
           print(f"Oracle reward: {reward:.3f}")
           PY
 
-      - name: Harbor 0.18 NOP must reward 0
+      - id: nop018
+        name: Harbor 0.18 NOP must reward 0
         shell: bash
         run: |
           set -euo pipefail
@@ -128,10 +162,12 @@ jobs:
           print(f"NOP reward: {reward:.3f}")
           PY
 
-      - name: Install live agent-trial Harbor version
+      - id: harbor014_install
+        name: Install live agent-trial Harbor version
         run: uv tool install --force harbor==0.14.0
 
-      - name: Harbor 0.14 Oracle must reward 1
+      - id: oracle014
+        name: Harbor 0.14 Oracle must reward 1
         shell: bash
         run: |
           set -euo pipefail
@@ -154,7 +190,8 @@ jobs:
           print(f"Oracle reward: {reward:.3f}")
           PY
 
-      - name: Harbor 0.14 NOP must reward 0
+      - id: nop014
+        name: Harbor 0.14 NOP must reward 0
         shell: bash
         run: |
           set -euo pipefail
@@ -177,6 +214,23 @@ jobs:
           print(f"NOP reward: {reward:.3f}")
           PY
 
+      - id: harbor_summary
+        name: Capture Harbor phase outcomes
+        if: always()
+        env:
+          CHECKOUT: ${{ steps.checkout.outcome }}
+          SETUP_PYTHON: ${{ steps.setup_python.outcome }}
+          SETUP_UV: ${{ steps.setup_uv.outcome }}
+          HARBOR018_INSTALL: ${{ steps.harbor018_install.outcome }}
+          DOCKER_BUILD: ${{ steps.docker_build.outcome }}
+          ORACLE018: ${{ steps.oracle018.outcome }}
+          NOP018: ${{ steps.nop018.outcome }}
+          HARBOR014_INSTALL: ${{ steps.harbor014_install.outcome }}
+          ORACLE014: ${{ steps.oracle014.outcome }}
+          NOP014: ${{ steps.nop014.outcome }}
+        run: |
+          echo "detail=checkout=$CHECKOUT,setup_python=$SETUP_PYTHON,setup_uv=$SETUP_UV,harbor018_install=$HARBOR018_INSTALL,docker_build=$DOCKER_BUILD,oracle018=$ORACLE018,nop018=$NOP018,harbor014_install=$HARBOR014_INSTALL,oracle014=$ORACLE014,nop014=$NOP014" >> "$GITHUB_OUTPUT"
+
   record-status:
     needs: [preflight, harbor-docker]
     if: always()
@@ -190,22 +244,26 @@ jobs:
         env:
           RUN_SHA: ${{ github.sha }}
           PREFLIGHT_RESULT: ${{ needs.preflight.result }}
+          PREFLIGHT_DETAIL: ${{ needs.preflight.outputs.detail }}
           HARBOR_RESULT: ${{ needs['harbor-docker'].result }}
+          HARBOR_DETAIL: ${{ needs['harbor-docker'].outputs.detail }}
         run: |
           set -euo pipefail
           mkdir -p results
           TASK_TREE=$(git rev-parse HEAD:tasks/build-snapshot-publish)
-          python - "$RUN_SHA" "$TASK_TREE" "$PREFLIGHT_RESULT" "$HARBOR_RESULT" <<'PY'
+          python - "$RUN_SHA" "$TASK_TREE" "$PREFLIGHT_RESULT" "$PREFLIGHT_DETAIL" "$HARBOR_RESULT" "$HARBOR_DETAIL" <<'PY'
           import json
           import sys
           from pathlib import Path
 
-          run_sha, task_tree, preflight, harbor = sys.argv[1:]
+          run_sha, task_tree, preflight, preflight_detail, harbor, harbor_detail = sys.argv[1:]
           status = {
               "workflow_commit": run_sha,
               "task_tree": task_tree,
               "preflight": preflight,
+              "preflight_detail": preflight_detail,
               "harbor_docker": harbor,
+              "harbor_detail": harbor_detail,
               "qualified": preflight == "success" and harbor == "success",
           }
           Path("results/preflight-status.json").write_text(
