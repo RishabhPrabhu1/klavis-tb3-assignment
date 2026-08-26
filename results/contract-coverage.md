@@ -1,40 +1,42 @@
 # Instruction-to-Test Coverage
 
-This matrix is maintained against `tasks/build-snapshot-publish/instruction.md`. The reference workspace is independent of the candidate workspace in every test that compares output bytes. Runtime reward assertions are limited to behavior required by the task; verifier trust-boundary checks are documented separately below.
+This matrix tracks the current `tasks/build-snapshot-publish/instruction.md`. Expected build bytes are derived by the independent verifier-side `tests/reference.py`; candidate code runs separately as an unprivileged user.
 
-| Instruction requirement | Runtime test(s) | Negative/mutation evidence | Covered? |
-|---|---|---|---|
-| Public `build --project --target --report` command remains usable for the requested target | every verifier test; `test_nondefault_requested_target_preserves_report_contract` explicitly requests `package` instead of the sample final target | a candidate that ignores `--target` or always emits the sample `fingerprint` closure fails the non-default-target report/output assertions | yes |
-| Recursive `@include` expansion | `test_initial_repeat_and_report_contract`, `test_transitive_edit_and_new_include_rebuild_affected_closure` | incomplete dependency closure fails dependency/output assertions | yes |
-| `concat` and `sha256` target semantics | every report/output assertion | independent `reference.py` derives expected bytes | yes |
-| Outputs remain beneath `out/`; report paths and SHA-256 fields are correct | `_assert_report` in every successful-build test | `no-selector`, `trust-object`, and `publish-in-place` fail physical/output checks | yes |
-| Exact report schema: top-level `target`/`events`/`outputs`, exact event and output-object keys, field types, requested target, depth-first order, and sorted complete dependencies | `_assert_report` in every successful-build test; non-default-target and missing-object recovery cases exercise requested-target handling | exact-key/type assertions reject undocumented report shapes; output objects are compared exactly | yes |
-| Clean output matches a deterministic build | every successful-build test | reference workspace is separate and cache-free | yes |
-| Unchanged repeat reuses valid work | `test_initial_repeat_and_report_contract` | `always-rebuild` rejected | yes |
-| Direct and transitive edits rebuild only affected closure | `test_transitive_edit_and_new_include_rebuild_affected_closure` | `ignore-upstream` rejected | yes |
-| Newly introduced includes are discovered | second half of `test_transitive_edit_and_new_include_rebuild_affected_closure` | incomplete closure fails dependency/output checks | yes |
-| Unrelated input stays cached | `test_unrelated_input_and_target_definition_invalidate_selectively` | `always-rebuild` rejected | yes |
-| Target definition participates in cache identity | second half of `test_unrelated_input_and_target_definition_invalidate_selectively` | `ignore-definition` rejected | yes |
-| Required-target output identity propagates | transitive-edit and recovery tests | `ignore-upstream` rejected | yes |
-| Missing/corrupt cache object recovery | `test_missing_cache_object_is_rebuilt_without_invalidating_downstream`; first half of `test_cache_object_and_materialized_output_recovery` | missing and corrupt object cases both exercised; `trust-object` rejected | yes |
-| Missing/corrupt materialized output recovery | second half of `test_cache_object_and_materialized_output_recovery` | `trust-object` and `no-selector` rejected | yes |
-| Cooperative interruption leaves only a complete old or new snapshot | `test_interrupted_publication_exposes_only_complete_snapshot`; all four cases in `test_all_named_failpoints_preserve_complete_snapshot` | starter and `publish-in-place` rejected | yes |
-| Snapshot safety is not implemented only when `BUILDSYS_FAILPOINT` is present | `test_normal_build_never_exposes_new_producer_with_old_downstream` | normal build uses regular files and no failpoint variable; Linux inotify plus user-visible-path observation catches both in-place and selector-based publication; all candidate-UID processes are frozen before the snapshot is checked; `failpoint-only-staging` rejected | yes |
-| Interrupted/staged state recovers on the next ordinary build | every cooperative interruption case and the externally frozen publication case perform a following successful build | generation solution converges to the new complete snapshot | yes |
-| Do not hard-code the visible project | non-default requested target, independent reference workspace, input/definition mutations, and a separate wide hidden graph | verifier changes requested closure, inputs, graph shape, and definitions without changing candidate code | yes |
+| Instruction requirement | Runtime coverage | Negative evidence |
+|---|---|---|
+| Public `build --project --target --report` interface and requested-target behavior | all tests; explicit non-default `package`, `app`, `alpha`, `beta`, and alternate-graph targets | hard-coded final-target implementations fail closure/report assertions |
+| `bundle`, recursive `@include`, `concat`, and `sha256` semantics | initial build, transitive edit/new include, alternate graphs, stable-input retry | independent clean reference model derives expected bytes |
+| Exact report shape, DFS `requires` order, source-dependency semantics, output paths and SHA-256 | `_assert_report` on every successful invocation | exact-key/order/type/dependency assertions |
+| Repeat build caches unchanged work | initial/repeat and post-recovery repeats | `always-rebuild` |
+| Direct/transitive input changes selectively invalidate affected work | transitive edit, new include, concurrency/input-stability cases | `ignore-upstream` |
+| Target-definition changes selectively invalidate | target-definition test; manifest-stability tests | `ignore-definition` |
+| Unrelated source changes do not rebuild targets | unrelated-input test | `always-rebuild` |
+| Missing/corrupt materialized outputs recover deterministically | `test_materialized_output_recovery` | ordinary in-place starter behavior is insufficient for the broader snapshot contract |
+| Successful invocation exposes exactly its reached target closure | narrow `app` and `package` snapshots; concurrent `alpha`/`beta` snapshots | `retain-unreached-outputs` |
+| Reader never observes a mixed old/new producer/downstream snapshot | cooperative failpoints across sample and alternate graphs; Linux normal-build publication observer | `starter`, `publish-in-place`, `failpoint-only-staging`, `no-selector` |
+| Failpoint exit does not commit work produced only by the interrupted attempt | post-failpoint recovery on sample and alternate graphs | `aborted-cache-reusable` |
+| Previously committed unaffected cache state survives recovery | all interruption recovery cases | `always-rebuild`, `aborted-cache-reusable` |
+| Concurrent successful invocations are serializable | deterministic paused `alpha` + completing `beta` sequence | `stale-base-commit` |
+| A paused invocation cannot prevent a disjoint reached closure from completing | deterministic pausepoint concurrency test | implementations holding project-wide exclusion during evaluation time out/fail the concurrent `beta` build |
+| A stale-base later commit preserves still-valid cache state committed concurrently | after `beta` commits and older `alpha` resumes, later full build must cache both leaves | `stale-base-commit` |
+| An interrupted concurrent writer cannot publish or erase another successful commit | paused/failpoint `alpha` with successful concurrent `beta` | starter/in-place and aborted-state designs fail visible/cache assertions |
+| Successful build reflects a stable source-input view, including apparent cache hits | source-only change after paused cache-hit evaluation | `no-input-revalidation`, `ignore-source-revalidation` |
+| Successful build reflects a stable manifest view | manifest-only change after paused cache-hit evaluation | `no-input-revalidation`, `ignore-manifest-revalidation` |
+| A stale rebuilt attempt is retried against fresh manifest/source state and discovers new transitive inputs | built-path pause followed by manifest output-path change plus new recursive include | `no-input-revalidation`; separate manifest/source mutants are independently rejected by the focused tests |
+| Deterministic pause hook remains functional and does not block disjoint progress | all concurrency/stability tests | missing/broken pause hook fails deterministic synchronization |
+| Task is not tied to the visible sample graph | non-default closures, alternate six-target graph, separate concurrent graph, runtime manifest/source rewrites | graph/name-hard-coded solutions fail behavior-derived expectations |
 
-## Verifier trust-boundary evidence
+## Verifier trust boundary
 
-These are properties of the grading harness, not additional task requirements. They are deliberately not separate reward-scoring tests in the final verifier.
+These mechanisms protect grading rather than add hidden task requirements:
 
-| Trust-boundary property | Mechanism / development evidence |
-|---|---|
-| Candidate runs unprivileged | every candidate invocation uses `_drop_privileges` to execute as `nobody` |
-| Hidden verifier truth is unavailable to candidate code | `/tests` is verifier-image-owned and root-only; the independent reference workspace is root-only; only the declared `/app/buildsys/` artifact crosses into the separate verifier |
-| Candidate cannot replace the sibling reference workspace | workspace parent is root-owned `0711`, reference workspace is root-only; a development self-test attempted the rename as `nobody` and was rejected before that self-test was removed from runtime scoring |
-| Candidate cannot replace verifier-controlled manifest/source entries | candidate project root is sticky `01777` while manifest and source entries remain root-owned/read-only; development rename probes were rejected before being removed from runtime scoring |
-| Corruption checks do not turn verifier root into a confused deputy | `_candidate_write`, `_candidate_unlink`, and `_run_candidate_fs_action` mutate candidate-owned cache/output state only after dropping to the candidate UID |
-| Detached descendants cannot outrun the external snapshot check or survive verification | the external observer signals the original process group plus every new candidate-UID process before reading the snapshot; `_cleanup_candidate_processes` then kills/reaps the same process set after every invocation; a detached `setsid()` development self-test was exercised successfully before removal from runtime scoring |
-| Reward and CTRF state remain verifier-owned | `/logs/verifier` is root-only and reward is written by `tests/test.sh` after pytest completes |
+- `[verifier].environment_mode = "separate"`; tests, reference truth, and reward logic are verifier-image-owned.
+- Candidate implementation is executed as `nobody`; verifier/reference state remains root-owned.
+- Candidate project source/manifest fixtures are verifier-controlled while cache/output namespaces remain writable by the candidate process.
+- Candidate filesystem mutation helpers also drop to the candidate UID.
+- Candidate process groups and detached candidate-UID descendants are terminated/reaped after each invocation.
+- The normal-publication observer freezes candidate descendants before inspecting the visible snapshot.
+- `/logs/verifier` and reward generation remain verifier-owned.
+- `tests/test.sh` performs no runtime network installation; verifier dependencies are pinned in `tests/Dockerfile`.
 
-The final adversarial `/cheat` trials remain the external validation that these trust boundaries and the behavioral verifier resist an actively hostile coding agent.
+The mutation matrix is development evidence that each major behavioral invariant is load-bearing. Final `/cheat` trials are still required external evidence against an actively adversarial agent.
