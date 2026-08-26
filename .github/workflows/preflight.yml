@@ -76,11 +76,11 @@ jobs:
 
           set +e
           sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
-            ./scripts/run-mutation-checks.sh 2>&1 | tee /tmp/core-mutations.log
+            bash ./scripts/run-mutation-checks.sh 2>&1 | tee /tmp/core-mutations.log
           core_status=${PIPESTATUS[0]}
 
           sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
-            ./scripts/run-lifecycle-mutation-checks.sh 2>&1 | tee /tmp/lifecycle-mutations.log
+            bash ./scripts/run-lifecycle-mutation-checks.sh 2>&1 | tee /tmp/lifecycle-mutations.log
           lifecycle_status=${PIPESTATUS[0]}
           set -e
 
