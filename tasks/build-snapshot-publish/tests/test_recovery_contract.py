@@ -9,7 +9,6 @@ import pytest
 from harness import (
     _assert_complete_snapshot,
     _assert_report,
-    _candidate_unlink,
     _write,
     _write_both,
     finish,
@@ -19,32 +18,53 @@ from harness import (
 from reference import clean_build
 
 
-def test_missing_cache_object_is_rebuilt_without_invalidating_downstream() -> None:
+@pytest.mark.parametrize(
+    ("target", "statuses", "stale_outputs", "full_statuses"),
+    [
+        (
+            "app",
+            {"app": "built"},
+            ["out/docs.txt", "out/package.txt", "out/package.sha256"],
+            {"app": "cached", "docs": "cached", "package": "built", "fingerprint": "built"},
+        ),
+        (
+            "package",
+            {"app": "built", "docs": "cached", "package": "built"},
+            ["out/package.sha256"],
+            {"app": "cached", "docs": "cached", "package": "cached", "fingerprint": "built"},
+        ),
+    ],
+)
+def test_narrow_success_prunes_unreached_outputs_but_preserves_cache_state(
+    target: str,
+    statuses: dict[str, str],
+    stale_outputs: list[str],
+    full_statuses: dict[str, str],
+) -> None:
     candidate, reference, base = make_workspace_pair()
     try:
-        first = run_candidate(candidate)
-        assert first is not None
-        assert first["target"] == "fingerprint"
+        run_candidate(candidate)
+        _write_both(candidate, reference, "src/parts/common.txt", "COMMON-NARROW-V2\n")
 
-        expected = clean_build(reference, "fingerprint")
-        app_event = next(event for event in first["events"] if event["target"] == "app")
-        object_path = candidate / ".build-cache" / "objects" / f"{app_event['key']}.bin"
-        _candidate_unlink(object_path)
-
-        report = run_candidate(candidate)
-        assert report is not None
-        assert report["target"] == "fingerprint"
+        narrow_expected = clean_build(reference, target)
+        narrow = run_candidate(candidate, target=target)
+        assert narrow is not None
         _assert_report(
             candidate,
-            report,
-            expected,
-            {
-                "app": "built",
-                "docs": "cached",
-                "package": "cached",
-                "fingerprint": "cached",
-            },
+            narrow,
+            narrow_expected,
+            statuses,
+            requested_target=target,
         )
+        for relative in stale_outputs:
+            assert not (candidate / relative).exists(), (
+                f"unreached output from a broader committed snapshot remained visible: {relative}"
+            )
+
+        full_expected = clean_build(reference, "fingerprint")
+        full = run_candidate(candidate)
+        assert full is not None
+        _assert_report(candidate, full, full_expected, full_statuses)
     finally:
         finish(base)
 
