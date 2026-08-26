@@ -30,9 +30,11 @@ jobs:
             pytest==9.1.1 pytest-json-ctrf==0.5.2
           chmod -R a+rX /tmp/tb3-preflight-venv
 
-      - name: Checkout live Terminal-Bench
+      - name: Checkout live Terminal-Bench static checks
         run: |
-          git clone --depth 1 https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
+          git clone --depth 1 --filter=blob:none --sparse \
+            https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
+          git -C /tmp/terminal-bench sparse-checkout set scripts/checks
           echo "TB3_HEAD=$(git -C /tmp/terminal-bench rev-parse HEAD)"
 
       - name: Run live static checks
