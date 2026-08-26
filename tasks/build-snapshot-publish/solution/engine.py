@@ -81,7 +81,12 @@ class Builder:
 
     def build(self, target: str) -> dict[str, Any]:
         self.stage = Path(tempfile.mkdtemp(prefix="generation-", dir=self.staging))
-        (self.stage / "records").mkdir()
+        staged_records = self.stage / "records"
+        staged_records.mkdir()
+        if self.current is not None:
+            current_records = self.current / "records"
+            if current_records.is_dir():
+                shutil.copytree(current_records, staged_records, dirs_exist_ok=True)
         try:
             self._build_target(target)
             self._validate_stage(target)
