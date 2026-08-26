@@ -143,6 +143,30 @@ assert source.count(old) == 1
 path.write_text(source.replace(old, new))
 PY
       ;;
+    ignore-manifest-revalidation)
+      python3 - "$mutant_env/buildsys/engine.py" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+source = path.read_text()
+old = '        if _digest(manifest_now) != self.manifest_digest:\n            return False\n'
+new = '        if False and _digest(manifest_now) != self.manifest_digest:\n            return False\n'
+assert source.count(old) == 1
+path.write_text(source.replace(old, new))
+PY
+      ;;
+    ignore-source-revalidation)
+      python3 - "$mutant_env/buildsys/engine.py" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+source = path.read_text()
+old = '        for relative, expected in self.read_set.items():\n'
+new = '        for relative, expected in {}.items():\n'
+assert source.count(old) == 1
+path.write_text(source.replace(old, new))
+PY
+      ;;
     failpoint-only-staging)
       python3 - "$mutant_env/buildsys/engine.py" <<'PY'
 from pathlib import Path
@@ -185,4 +209,6 @@ run_mutation no-selector no-selector
 run_mutation aborted-cache-reusable aborted-cache-reusable
 run_mutation stale-base-commit stale-base-commit
 run_mutation no-input-revalidation no-input-revalidation
+run_mutation ignore-manifest-revalidation ignore-manifest-revalidation
+run_mutation ignore-source-revalidation ignore-source-revalidation
 run_mutation failpoint-only-staging failpoint-only-staging
