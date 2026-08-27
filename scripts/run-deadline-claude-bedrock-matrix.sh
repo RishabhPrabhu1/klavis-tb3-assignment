@@ -5,14 +5,16 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TASK_REL="tasks/build-snapshot-publish"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 CONFIRM_FREEZE=${CONFIRM_FREEZE:-0}
-TARGET=${TARGET_TRIALS:-3}
+STANDARD_TARGET=${STANDARD_TARGET:-3}
+CHEAT_TARGET=${CHEAT_TARGET:-1}
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
 STANDARD_ROOT=${STANDARD_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-standard"}
 CHEAT_ROOT=${CHEAT_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-cheat"}
 
 fail() { echo "ERROR: $*" >&2; exit 2; }
 [[ "$CONFIRM_FREEZE" == "1" ]] || fail "set CONFIRM_FREEZE=1 only after the current task tree is frozen"
-[[ "$TARGET" =~ ^[1-9][0-9]*$ ]] || fail "TARGET_TRIALS must be a positive integer"
+[[ "$STANDARD_TARGET" =~ ^[1-9][0-9]*$ ]] || fail "STANDARD_TARGET must be a positive integer"
+[[ "$CHEAT_TARGET" =~ ^[1-9][0-9]*$ ]] || fail "CHEAT_TARGET must be a positive integer"
 [[ -z "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]] || fail "task tree is dirty"
 [[ -f "$QUAL_ROOT/QUALIFICATION-PASSED-${TREE}.txt" ]] || fail "same-tree qualification marker missing"
 [[ "${CLAUDE_CODE_USE_BEDROCK:-}" == "1" ]] || fail "set CLAUDE_CODE_USE_BEDROCK=1"
@@ -50,17 +52,17 @@ PY
 }
 
 run_phase() {
-  local mode=$1 root=$2 label=$3
-  local state zero nonzero before after
+  local mode=$1 root=$2 label=$3 target=$4
+  local state zero nonzero before
   state=$(scan "$root" "$mode")
   zero=$(count_key "$state" zero)
   nonzero=$(count_key "$state" nonzero)
   (( nonzero == 0 )) || fail "$label already has a valid nonzero reward; frozen task is not acceptable"
-  printf '%s existing valid reward-0: %s/%s\n' "$label" "$zero" "$TARGET"
+  printf '%s existing valid reward-0: %s/%s\n' "$label" "$zero" "$target"
 
-  while (( zero < TARGET )); do
+  while (( zero < target )); do
     before=$zero
-    printf '\n=== CLAUDE BEDROCK %s TRIAL %s/%s ===\n' "$label" "$((zero+1))" "$TARGET"
+    printf '\n=== CLAUDE BEDROCK %s TRIAL %s/%s ===\n' "$label" "$((zero+1))" "$target"
     set +e
     MODE="$mode" EXPECTED_TASK_TREE="$TREE" RUNS_ROOT="$root" \
       bash "$ROOT_DIR/scripts/run-claude-bedrock-trial.sh"
@@ -85,16 +87,15 @@ run_phase() {
   done
 }
 
-# Standard failures are the difficulty gate; do not spend adversarial calls if Opus solves.
-run_phase standard "$STANDARD_ROOT" "STANDARD"
-run_phase cheat "$CHEAT_ROOT" "CHEAT"
+# Live TB3: three standard trials per agent, but /cheat has no trial matrix and runs once per agent.
+run_phase standard "$STANDARD_ROOT" "STANDARD" "$STANDARD_TARGET"
+run_phase cheat "$CHEAT_ROOT" "CHEAT" "$CHEAT_TARGET"
 
 printf '\n=== CLAUDE BEDROCK DEADLINE MATRIX REPORT ===\n'
 printf 'execution_commit=%s\n' "$(git -C "$ROOT_DIR" rev-parse HEAD)"
 printf 'task_tree=%s\n' "$TREE"
-printf 'standard_valid_reward_zero=%s\n' "$(count_key "$(scan "$STANDARD_ROOT" standard)" zero)"
-printf 'cheat_valid_reward_zero=%s\n' "$(count_key "$(scan "$CHEAT_ROOT" cheat)" zero)"
-printf 'target_each=%s\n' "$TARGET"
+printf 'standard_valid_reward_zero=%s/%s\n' "$(count_key "$(scan "$STANDARD_ROOT" standard)" zero)" "$STANDARD_TARGET"
+printf 'cheat_valid_reward_zero=%s/%s\n' "$(count_key "$(scan "$CHEAT_ROOT" cheat)" zero)" "$CHEAT_TARGET"
 printf 'standard_root=%s\n' "$STANDARD_ROOT"
 printf 'cheat_root=%s\n' "$CHEAT_ROOT"
 printf 'status=CLAUDE_MATRIX_COMPLETE\n'
