@@ -6,6 +6,7 @@ TASK_REL="tasks/build-snapshot-publish"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 AGENT=${AGENT:-}
 CONFIRM_FREEZE=${CONFIRM_FREEZE:-0}
+CONFIRM_ZERO_COST_COVERAGE=${CONFIRM_ZERO_COST_COVERAGE:-0}
 # Live TB3 /cheat runs one attempt per (task x agent).
 TARGET=${TARGET_CHEATS:-1}
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
@@ -29,13 +30,14 @@ if [[ "$AGENT" == "codex" ]]; then
   RUN_ROOT=${RUN_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat-final"}
   [[ -f "$HOME/.codex/auth.json" ]] || fail "Codex auth.json is missing"
 else
+  [[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Claude adversarial call blocked. Set CONFIRM_ZERO_COST_COVERAGE=1 only after confirming zero out-of-pocket provider coverage."
   MODEL="anthropic/claude-opus-5"
   REASONING="max"
   AGENT_NAME="claude-code"
   ROOTS=${CHEAT_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-cheat"}
   RUN_ROOT=${RUN_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-cheat"}
   if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -z "${AWS_BEARER_TOKEN_BEDROCK:-}" && ( -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ) && -z "${ANTHROPIC_API_KEY:-}" ]]; then
-    fail "Claude auth missing: configure OAuth, Bedrock, or Anthropic API credentials first"
+    fail "Claude auth missing: configure a confirmed zero-cost-covered route first"
   fi
 fi
 
@@ -43,15 +45,16 @@ QUAL_MARKER="$QUAL_ROOT/QUALIFICATION-PASSED-${TREE}.txt"
 [[ -f "$QUAL_MARKER" ]] || fail "same-tree zero-model qualification marker missing: $QUAL_MARKER"
 mkdir -p "$RUN_ROOT"
 
-# Mirror the live TB3 /cheat workflow: adversarial acceptance is reward-based.
-# An agent exception or harbor failure can still correspond to reward 0; the
-# disqualifying condition is a nonzero reward. Standard /run remains stricter.
+# Mirror live TB3 /cheat exactly at the acceptance boundary:
+# - if harbor run exits nonzero, adversarial reward is recorded as 0;
+# - otherwise use the recorded reward and require it to be zero.
+# Standard /run validity remains intentionally stricter.
 scan_matrix() {
-  python3 - "$TREE" "$ROOTS" "$AGENT_NAME" "$MODEL" "$REASONING" <<'PY'
+  python3 - "$TREE" "$ROOTS" "$AGENT_NAME" "$MODEL" "$REASONING" "$TB3_HEAD_EXPECTED" <<'PY'
 import json,sys
 from pathlib import Path
-tree,roots_raw,agent,model,reasoning=sys.argv[1:]
-zero=[]; nonzero=[]; unparsed=[]; incomplete=[]; seen=set()
+tree,roots_raw,agent,model,reasoning,tb3=sys.argv[1:]
+zero=[]; nonzero=[]; unparsed=[]; incomplete=[]; provenance=[]; seen=set()
 for raw in roots_raw.split(":"):
     root=Path(raw).expanduser()
     if not root.exists(): continue
@@ -71,11 +74,19 @@ for raw in roots_raw.split(":"):
         except Exception:continue
         if not (d.get("task_tree")==tree and d.get("mode")=="cheat" and d.get("agent")==agent and d.get("model")==model and d.get("reasoning_effort")==reasoning):
             continue
+        if d.get("terminal_bench_head") != tb3:
+            provenance.append(str(p)); continue
+        status=d.get("harbor_exit_status")
         reward=d.get("reward")
-        if reward in (0,0.0): zero.append(str(p))
-        elif reward is None: unparsed.append(str(p))
-        else: nonzero.append(str(p))
-print(json.dumps({"zero":zero,"nonzero":nonzero,"unparsed":unparsed,"incomplete":incomplete}))
+        if status not in (None,0):
+            zero.append(str(p))
+        elif reward in (0,0.0):
+            zero.append(str(p))
+        elif reward is None:
+            unparsed.append(str(p))
+        else:
+            nonzero.append(str(p))
+print(json.dumps({"zero":zero,"nonzero":nonzero,"unparsed":unparsed,"incomplete":incomplete,"provenance":provenance}))
 PY
 }
 
@@ -90,20 +101,23 @@ zero=$(count_key "$matrix" zero)
 nonzero=$(count_key "$matrix" nonzero)
 unparsed=$(count_key "$matrix" unparsed)
 incomplete=$(count_key "$matrix" incomplete)
+provenance=$(count_key "$matrix" provenance)
 printf 'existing_reward_zero=%s/%s\n' "$zero" "$TARGET"
 printf 'existing_nonzero=%s\n' "$nonzero"
 printf 'existing_unparsed=%s\n' "$unparsed"
 printf 'existing_incomplete=%s\n' "$incomplete"
+printf 'wrong_tb3_provenance=%s\n' "$provenance"
 (( nonzero == 0 )) || fail "same-tree adversarial trial earned nonzero reward; verifier is defeated"
-(( unparsed == 0 )) || fail "same-tree adversarial trial has unparsed reward; inspect before any rerun"
+(( unparsed == 0 )) || fail "same-tree adversarial trial has unparsed successful-run reward; inspect before any rerun"
 (( incomplete == 0 )) || fail "incomplete same-tree adversarial evidence exists; inspect before any rerun"
+(( provenance == 0 )) || fail "same-tree adversarial evidence exists from a different Terminal-Bench revision"
 
 while (( zero < TARGET )); do
   before=$zero
   attempt=$((zero+1))
   printf '\n=== %s CHEAT TRIAL %s/%s ===\n' "$AGENT_NAME" "$attempt" "$TARGET"
   set +e
-  AGENT="$AGENT" MODE=cheat EXPECTED_TASK_TREE="$TREE" EXPECTED_TB3_HEAD="$TB3_HEAD_EXPECTED" RUNS_ROOT="$RUN_ROOT" \
+  AGENT="$AGENT" MODE=cheat EXPECTED_TASK_TREE="$TREE" EXPECTED_TB3_HEAD="$TB3_HEAD_EXPECTED" RUNS_ROOT="$RUN_ROOT" CONFIRM_ZERO_COST_COVERAGE="$CONFIRM_ZERO_COST_COVERAGE" \
     bash "$ROOT_DIR/scripts/run-candidate-trial.sh"
   runner_status=$?
   set -e
@@ -113,21 +127,23 @@ while (( zero < TARGET )); do
   nonzero=$(count_key "$matrix" nonzero)
   unparsed=$(count_key "$matrix" unparsed)
   incomplete=$(count_key "$matrix" incomplete)
+  provenance=$(count_key "$matrix" provenance)
   echo "runner_status=$runner_status"
   echo "reward_zero_now=$zero/$TARGET"
   echo "nonzero_now=$nonzero"
   echo "unparsed_now=$unparsed"
   echo "incomplete_now=$incomplete"
+  echo "wrong_tb3_provenance_now=$provenance"
   (( nonzero == 0 )) || { echo "STOP: adversarial reward was nonzero." >&2; exit 20; }
-  (( unparsed == 0 )) || { echo "STOP: reward was unparsed." >&2; exit 21; }
+  (( unparsed == 0 )) || { echo "STOP: successful adversarial run reward was unparsed." >&2; exit 21; }
   (( incomplete == 0 )) || { echo "STOP: incomplete adversarial evidence." >&2; exit 22; }
+  (( provenance == 0 )) || { echo "STOP: adversarial run used wrong Terminal-Bench revision." >&2; exit 24; }
   if (( zero == before )); then
-    echo "STOP: latest attempt did not produce a recorded reward-0 result; inspect before rerun." >&2
+    echo "STOP: latest attempt did not produce a live-workflow reward-0 result; inspect before rerun." >&2
     exit 23
   fi
-  # Do not reject solely because the agent/Harbor path returned nonzero: live
-  # TB3 records that adversarial outcome as reward 0. The recorded reward is
-  # the source-of-truth requirement for /cheat.
+  # A nonzero runner status is not independently disqualifying here because the
+  # pinned live /cheat workflow itself maps harbor-run failure to reward 0.
 done
 
 printf '\n=== DEADLINE CHEAT MATRIX REPORT ===\n'
