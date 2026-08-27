@@ -4,7 +4,8 @@ set -euo pipefail
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TASK_REL="tasks/build-snapshot-publish"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
-TARGET=${TARGET_TRIALS:-3}
+STANDARD_TARGET=${STANDARD_TARGET:-3}
+CHEAT_TARGET=${CHEAT_TARGET:-1}
 TB3_HEAD_EXPECTED=${TB3_HEAD_EXPECTED:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
 
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
@@ -16,7 +17,7 @@ CLAUDE_CHEAT_ROOTS=${CLAUDE_CHEAT_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transacti
 failures=0
 
 check_count() {
-  local label=$1 roots=$2 mode=$3 agent=$4 model=$5 reasoning=$6 reward=$7
+  local label=$1 roots=$2 mode=$3 agent=$4 model=$5 reasoning=$6 reward=$7 target=$8
   local count
   count=$(python3 - "$TREE" "$roots" "$mode" "$agent" "$model" "$reasoning" "$reward" <<'PY'
 import json, sys
@@ -51,15 +52,16 @@ for raw in roots_raw.split(":"):
 print(count)
 PY
 )
-  printf '%-32s %s/%s\n' "$label" "$count" "$TARGET"
-  if (( count < TARGET )); then failures=$((failures+1)); fi
+  printf '%-32s %s/%s\n' "$label" "$count" "$target"
+  if (( count < target )); then failures=$((failures+1)); fi
 }
 
 printf '=== KLAVIS FINAL SUBMISSION AUDIT ===\n'
 printf 'execution_commit=%s\n' "$(git -C "$ROOT_DIR" rev-parse HEAD)"
 printf 'task_tree=%s\n' "$TREE"
 printf 'terminal_bench_head_expected=%s\n' "$TB3_HEAD_EXPECTED"
-printf 'target_trials_per_agent=%s\n' "$TARGET"
+printf 'standard_trials_per_agent=%s\n' "$STANDARD_TARGET"
+printf 'cheat_trials_per_agent=%s\n' "$CHEAT_TARGET"
 
 if [[ -n "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]]; then
   echo "task_tree_clean=NO"
@@ -76,10 +78,10 @@ else
   failures=$((failures+1))
 fi
 
-check_count "Codex standard reward-0" "$CODEX_STANDARD_ROOTS" standard codex openai/gpt-5.6-sol xhigh 0
-check_count "Claude standard reward-0" "$CLAUDE_STANDARD_ROOTS" standard claude-code anthropic/claude-opus-5 max 0
-check_count "Codex cheat reward-0" "$CODEX_CHEAT_ROOTS" cheat codex openai/gpt-5.6-sol xhigh 0
-check_count "Claude cheat reward-0" "$CLAUDE_CHEAT_ROOTS" cheat claude-code anthropic/claude-opus-5 max 0
+check_count "Codex standard reward-0" "$CODEX_STANDARD_ROOTS" standard codex openai/gpt-5.6-sol xhigh 0 "$STANDARD_TARGET"
+check_count "Claude standard reward-0" "$CLAUDE_STANDARD_ROOTS" standard claude-code anthropic/claude-opus-5 max 0 "$STANDARD_TARGET"
+check_count "Codex cheat reward-0" "$CODEX_CHEAT_ROOTS" cheat codex openai/gpt-5.6-sol xhigh 0 "$CHEAT_TARGET"
+check_count "Claude cheat reward-0" "$CLAUDE_CHEAT_ROOTS" cheat claude-code anthropic/claude-opus-5 max 0 "$CHEAT_TARGET"
 
 for required in \
   README.md \
