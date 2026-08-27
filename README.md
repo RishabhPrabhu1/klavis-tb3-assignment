@@ -24,9 +24,11 @@ scripts/                        validation and evidence-preserving trial runners
 results/                        validation, coverage, trials, failure analysis
 ```
 
+`results/execution-plan.md` is the active execution order.
+
 ## Pre-frontier qualification
 
-The GitHub preflight validates against a fresh checkout of live Terminal-Bench and runs:
+The qualification workflow validates against a fresh checkout of live Terminal-Bench and runs:
 
 - live static checks;
 - Oracle regression plus repeated verifier-determinism runs;
@@ -46,16 +48,18 @@ TB3_REPO=/path/to/terminal-bench ./scripts/run-static-checks.sh
 
 Verifier dependencies are pinned in `tasks/build-snapshot-publish/tests/Dockerfile`; `test.sh` performs no network installs.
 
-## Standard model trials
+## Live Terminal-Bench configuration
 
-Current live TB3 defaults are three trials each for:
+The live source of truth currently specifies three standard trials each for:
 
 - `codex` + `openai/gpt-5.6-sol`, `reasoning_effort=xhigh`;
 - `claude-code` + `anthropic/claude-opus-5`, `reasoning_effort=max`.
 
-Live agent trials use Harbor 0.14.0. The local runners use Docker plus the subscription-auth mechanisms documented by the Klavis assignment and preserve raw Harbor/verifier evidence outside the repository.
+Live `/run` and `/cheat` use Harbor 0.14.0. The current local workflow is **Codex-only** because Claude Code subscription access is not available. This is sufficient to qualify and collect Codex evidence, but it does not by itself satisfy the assignment's written Claude requirement unless that requirement is later completed or waived.
 
-Before spending the full six-run matrix, validate the frozen path without a Sol call:
+## Active Codex-only execution order
+
+### 1. Verify the frozen local path without a Sol call
 
 ```bash
 uv tool install --force 'harbor==0.14.0'
@@ -64,30 +68,50 @@ PREFLIGHT_ONLY=1 \
 ./scripts/run-codex-strong-test.sh
 ```
 
-Then run exactly one Codex/Sol diagnostic:
+Required result: Oracle = 1, NOP = 0, `sol_calls=0`.
+
+### 2. Qualify `/cheat` before the standard difficulty probe
+
+```bash
+AGENTS=codex ./scripts/run-cheat-trials.sh
+```
+
+The wrapper obtains a fresh Terminal-Bench checkout, records its exact HEAD, reproduces the live adversarial prompt transform on a disposable task copy, and preserves evidence outside the repository. A valid normally completed adversarial attempt must receive reward 0.
+
+If `/cheat` succeeds against the verifier, fix the task/verifier and restart deterministic qualification before spending standard evidence.
+
+### 3. Run one genuine Sol/xhigh difficulty probe
+
+Only after the adversarial gate is clean:
 
 ```bash
 EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
 ./scripts/run-codex-strong-test.sh
 ```
 
-After a defensible genuine reward-0 diagnostic, run the final standard matrix:
+If Sol cleanly solves the task, perform a task-level redesign and restart qualification. Do not add trajectory-specific tests or continue collecting trials on a candidate already demonstrated solvable.
+
+If Sol receives a valid reward 0 for the intended systems reason, freeze the exact revision.
+
+### 4. Complete the frozen Codex evidence matrix
 
 ```bash
-./scripts/run-standard-trials.sh
+AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
 ```
 
-The wrapper refuses any task tree other than the frozen qualified tree. Claude subscription-auth runs additionally require `CLAUDE_CODE_OAUTH_TOKEN`, produced by `claude setup-token`.
+The qualifying probe may count toward the three only if it used the exact frozen task/configuration and otherwise satisfies the assignment conditions. Target: three valid genuine Sol/xhigh failures total.
 
-## Adversarial trials
+### 5. Final Codex `/cheat` evidence
 
-The live `/cheat` workflow performs one adversarial run per configured agent. The local runner obtains a fresh Terminal-Bench checkout itself, records its exact HEAD, removes the ordinary anti-cheat sentence from a disposable task copy, appends the current upstream `docs/prompts/hack-trial-prompt.md`, and leaves the real task unchanged.
+The earlier cheat qualification may serve as final evidence only if it used the exact revision that was subsequently frozen and no task/verifier semantics changed. Otherwise rerun:
 
 ```bash
-./scripts/run-cheat-trials.sh
+AGENTS=codex ./scripts/run-cheat-trials.sh
 ```
 
-The wrapper is also frozen to the qualified task tree. All required adversarial trials must reward 0.
+### 6. Documentation and final audit
+
+Record exact repository/task/upstream SHAs, commands, model/reasoning settings, Harbor version, evidence paths, trial classifications, and reproduction results. Run one final deterministic/fresh-clone audit before submission.
 
 ## Evidence
 
@@ -95,10 +119,11 @@ Trial evidence is written under `~/.cache/klavis-tb3-runs/` by default. Each can
 
 Repository records:
 
+- `results/execution-plan.md` — active Codex-only pipeline and gate state.
 - `results/contract-coverage.md` — instruction-to-verifier coverage and anti-cheat boundaries.
 - `results/validation.md` — static, local, Harbor, Oracle/NOP, determinism, and mutation status.
-- `results/standard-trials.md` — required standard model trials.
-- `results/cheat-trials.md` — required adversarial trials.
+- `results/standard-trials.md` — standard frontier evidence and outstanding Claude requirement.
+- `results/cheat-trials.md` — adversarial evidence and outstanding Claude requirement.
 - `results/failure-analysis.md` — classification of genuine model failures versus specification, verifier, or infrastructure failures.
 
 Infrastructure-invalid runs are never counted as model failures.
