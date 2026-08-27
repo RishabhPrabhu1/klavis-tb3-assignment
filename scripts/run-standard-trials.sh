@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 RUNNER="$ROOT_DIR/scripts/run-candidate-trial.sh"
-FROZEN_TASK_TREE="42cba8ad00bebf316048d1470033c1742a20ec97"
+FROZEN_TASK_TREE="2dcf531c365bdfd3eb348819df97a01f9a0ad8ea"
 N_ATTEMPTS=${N_ATTEMPTS:-3}
 # Operational default: Codex-only. Claude remains available as an explicit opt-in
 # for eventual full assignment compliance when Claude subscription auth exists.
