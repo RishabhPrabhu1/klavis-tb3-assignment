@@ -64,34 +64,52 @@ def _snapshot_metadata(project: Path, token: str) -> dict:
     return value
 
 
-def current_token(project: Path) -> str:
-    """Return the latest ordinary published generation without assuming a pointer layout.
-
-    Workspace-build transactions add committed project-history generations that are
-    deliberately private to workspace snapshots and do not become the ordinary
-    project current. The public contract marks those generations with
-    ``workspace_transaction: true``. Among all non-transaction-private committed
-    generations, strictly increasing ``commit_seq`` therefore identifies the
-    latest ordinary publication without requiring a candidate-specific CURRENT
-    selector representation.
-    """
-    tokens = generation_tokens(project)
-    assert tokens, "no committed generation exists"
-
-    sequenced: list[tuple[int, str]] = []
-    all_seqs: list[int] = []
-    for token in tokens:
-        metadata = _snapshot_metadata(project, token)
-        seq = metadata.get("commit_seq")
-        assert isinstance(seq, int) and not isinstance(seq, bool) and seq > 0
-        all_seqs.append(seq)
-        if metadata.get("workspace_transaction") is True:
+def _current_output(project: Path) -> str:
+    """Pick one currently visible output path for a public read acquisition."""
+    manifest = json.loads((project / "manifest.json").read_text())
+    targets = manifest.get("targets", {})
+    assert isinstance(targets, dict)
+    outputs: list[str] = []
+    for spec in targets.values():
+        if not isinstance(spec, dict):
             continue
-        sequenced.append((seq, token))
+        output = spec.get("output")
+        if isinstance(output, str) and (project / output).is_file():
+            outputs.append(output)
+    assert outputs, "ordinary current snapshot has no visible output to read"
+    return sorted(set(outputs))[0]
 
-    assert sequenced, "no ordinary committed generation exists"
-    assert len(all_seqs) == len(set(all_seqs)), "committed generations must have unique commit_seq values"
-    return max(sequenced)[1]
+
+def current_token(project: Path) -> str:
+    """Observe ordinary project current through the public ``read`` interface.
+
+    Workspace transactions may add committed project-history generations that are
+    visible only through workspace snapshots. Rather than identifying those
+    generations by candidate-private metadata, acquire a short-lived ordinary
+    project reader and use its documented ``acquired`` token.
+    """
+    assert generation_tokens(project), "no committed generation exists"
+    output = _current_output(project)
+    with tempfile.TemporaryDirectory(prefix="tb3-current-token-") as raw:
+        base = Path(raw)
+        base.chmod(0o711)
+        hold = base / "hold"
+        dest = base / "dest" / "value"
+        proc, baseline, log_dir = start_reader(
+            project,
+            output=output,
+            hold_dir=hold,
+            dest=dest,
+        )
+        released = False
+        try:
+            token = acquired_token(hold)
+            release_reader(proc, baseline, log_dir, hold)
+            released = True
+            return token
+        finally:
+            if not released and proc.poll() is None:
+                kill_reader(proc, baseline)
 
 
 def generation_tokens(project: Path) -> set[str]:
