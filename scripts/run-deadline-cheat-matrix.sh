@@ -8,6 +8,7 @@ AGENT=${AGENT:-}
 CONFIRM_FREEZE=${CONFIRM_FREEZE:-0}
 TARGET=${TARGET_VALID_CHEATS:-3}
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
+TB3_HEAD_EXPECTED=${TB3_HEAD_EXPECTED:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
 
 fail() { echo "ERROR: $*" >&2; exit 2; }
 
@@ -15,6 +16,9 @@ fail() { echo "ERROR: $*" >&2; exit 2; }
 [[ "$AGENT" == "codex" || "$AGENT" == "claude" ]] || fail "AGENT must be codex or claude"
 [[ "$TARGET" =~ ^[1-9][0-9]*$ ]] || fail "TARGET_VALID_CHEATS must be a positive integer"
 [[ -z "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]] || fail "task tree is dirty"
+command -v harbor >/dev/null || fail "harbor is not installed"
+[[ "$(harbor --version 2>&1)" == *"0.14.0"* ]] || fail "Harbor 0.14.0 is required"
+docker info >/dev/null 2>&1 || fail "Docker is unavailable"
 
 if [[ "$AGENT" == "codex" ]]; then
   MODEL="openai/gpt-5.6-sol"
@@ -22,12 +26,16 @@ if [[ "$AGENT" == "codex" ]]; then
   AGENT_NAME="codex"
   ROOTS=${CHEAT_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat:$HOME/.cache/klavis-tb3-runs/transaction-cheat-final"}
   RUN_ROOT=${RUN_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat-final"}
+  [[ -f "$HOME/.codex/auth.json" ]] || fail "Codex auth.json is missing"
 else
   MODEL="anthropic/claude-opus-5"
   REASONING="max"
   AGENT_NAME="claude-code"
   ROOTS=${CHEAT_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-cheat"}
   RUN_ROOT=${RUN_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-cheat"}
+  if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -z "${AWS_BEARER_TOKEN_BEDROCK:-}" && ( -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ) && -z "${ANTHROPIC_API_KEY:-}" ]]; then
+    fail "Claude auth missing: configure OAuth, Bedrock, or Anthropic API credentials first"
+  fi
 fi
 
 QUAL_MARKER="$QUAL_ROOT/QUALIFICATION-PASSED-${TREE}.txt"
@@ -39,11 +47,19 @@ scan_matrix() {
 import json, sys
 from pathlib import Path
 tree, roots_raw, agent, model, reasoning=sys.argv[1:]
-valid_zero=[]; valid_nonzero=[]; invalid=[]
+valid_zero=[]; valid_nonzero=[]; invalid=[]; incomplete=[]
 seen=set()
 for raw in roots_raw.split(":"):
     root=Path(raw).expanduser()
     if not root.exists(): continue
+    for d in root.iterdir():
+        if not d.is_dir() or (d/"summary.json").exists(): continue
+        meta=d/"metadata.json"
+        if not meta.exists(): continue
+        try: m=json.loads(meta.read_text(encoding="utf-8"))
+        except Exception: continue
+        if m.get("task_tree")==tree and m.get("mode")=="cheat" and m.get("agent")==agent:
+            incomplete.append(str(d))
     for p in root.rglob("summary.json"):
         key=str(p.resolve())
         if key in seen: continue
@@ -59,7 +75,7 @@ for raw in roots_raw.split(":"):
             valid_zero.append(str(p))
         else:
             valid_nonzero.append(str(p))
-print(json.dumps({"valid_zero":valid_zero,"valid_nonzero":valid_nonzero,"invalid":invalid}))
+print(json.dumps({"valid_zero":valid_zero,"valid_nonzero":valid_nonzero,"invalid":invalid,"incomplete":incomplete}))
 PY
 }
 
@@ -70,6 +86,7 @@ d=json.loads(sys.argv[1]); target=int(sys.argv[2])
 print(f"existing_valid_reward_zero={len(d['valid_zero'])}/{target}")
 print(f"existing_valid_nonzero={len(d['valid_nonzero'])}")
 print(f"existing_invalid={len(d['invalid'])}")
+print(f"existing_incomplete={len(d['incomplete'])}")
 PY
 
 nonzero=$(python3 - "$matrix" <<'PY'
@@ -77,6 +94,16 @@ import json,sys; print(len(json.loads(sys.argv[1])["valid_nonzero"]))
 PY
 )
 (( nonzero == 0 )) || fail "valid nonzero cheat reward already exists; verifier is defeated"
+
+incomplete=$(python3 - "$matrix" <<'PY'
+import json,sys; d=json.loads(sys.argv[1]); print("\n".join(d["incomplete"]))
+PY
+)
+if [[ -n "$incomplete" ]]; then
+  echo "ERROR: incomplete same-tree adversarial evidence exists; refusing duplicate model launch:" >&2
+  echo "$incomplete" >&2
+  exit 22
+fi
 
 count=$(python3 - "$matrix" <<'PY'
 import json,sys; print(len(json.loads(sys.argv[1])["valid_zero"]))
@@ -90,6 +117,7 @@ while (( count < TARGET )); do
   AGENT="$AGENT" \
   MODE=cheat \
   EXPECTED_TASK_TREE="$TREE" \
+  EXPECTED_TB3_HEAD="$TB3_HEAD_EXPECTED" \
   RUNS_ROOT="$RUN_ROOT" \
     bash "$ROOT_DIR/scripts/run-candidate-trial.sh"
   runner_status=$?
@@ -128,6 +156,7 @@ printf 'task_tree=%s\n' "$TREE"
 printf 'agent=%s\n' "$AGENT_NAME"
 printf 'model=%s\n' "$MODEL"
 printf 'reasoning=%s\n' "$REASONING"
+printf 'terminal_bench_head=%s\n' "$TB3_HEAD_EXPECTED"
 printf 'valid_reward_zero=%s\n' "$count"
 printf 'target=%s\n' "$TARGET"
 printf 'status=CHEAT_MATRIX_COMPLETE\n'
