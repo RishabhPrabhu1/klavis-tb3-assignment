@@ -12,6 +12,7 @@ EXPECTED_SHA=${EXPECTED_SHA:-}
 EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-}
 EXPECTED_TB3_HEAD=${EXPECTED_TB3_HEAD:-}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs"}
+CONFIRM_ZERO_COST_COVERAGE=${CONFIRM_ZERO_COST_COVERAGE:-0}
 
 fail() {
   echo "ERROR: $*" >&2
@@ -29,6 +30,7 @@ done
 REPO_SHA=$(git -C "$ROOT_DIR" rev-parse HEAD)
 TASK_TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 SHORT_SHA=${REPO_SHA:0:12}
+RUN_PID=${BASHPID:-$$}
 
 if [[ -n "$EXPECTED_SHA" && "$REPO_SHA" != "$EXPECTED_SHA" ]]; then
   fail "expected repository SHA $EXPECTED_SHA, found $REPO_SHA"
@@ -60,6 +62,7 @@ case "$AGENT" in
     EXTRA_ARGS+=(--ae CODEX_FORCE_AUTH_JSON=1 --ak reasoning_effort=xhigh)
     ;;
   claude)
+    [[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Claude call blocked. Set CONFIRM_ZERO_COST_COVERAGE=1 only after confirming this auth/provider route creates zero out-of-pocket spend."
     MODEL="anthropic/claude-opus-5"
     REASONING="max"
     AGENT_NAME="claude-code"
@@ -87,15 +90,13 @@ case "$AGENT" in
       AUTH_KIND="Anthropic Console API key"
       EXTRA_ARGS+=(--ae "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
     else
-      fail "Claude auth missing: set CLAUDE_CODE_OAUTH_TOKEN, AWS_BEARER_TOKEN_BEDROCK, AWS access credentials, or ANTHROPIC_API_KEY"
+      fail "Claude auth missing: set a confirmed zero-cost-covered Claude Code OAuth, Bedrock, or API credential"
     fi
     ;;
 esac
 
-# Include BASHPID so multiple independent trials launched in the same second
-# cannot collide in the evidence directory. This is required for deadline-mode
-# parallel matrices and does not alter trial configuration or task content.
-STAMP=$(date -u +%Y%m%dT%H%M%SZ)-${BASHPID}
+# RUN_PID is portable across macOS Bash 3.2 (no BASHPID) and modern Bash.
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)-${RUN_PID}
 RUN_DIR="$RUNS_ROOT/${STAMP}-${MODE}-${AGENT}-${SHORT_SHA}"
 TASK_COPY="$RUN_DIR/task"
 HARBOR_OUTPUT="$RUN_DIR/harbor-output"
@@ -107,6 +108,10 @@ if [[ "$MODE" == "cheat" ]]; then
   TB3_REPO="$RUN_DIR/terminal-bench"
   git clone --depth 1 --filter=blob:none --sparse \
     https://github.com/harbor-framework/terminal-bench.git "$TB3_REPO" >/dev/null 2>&1
+  if [[ -n "$EXPECTED_TB3_HEAD" ]]; then
+    git -C "$TB3_REPO" fetch --depth 1 origin "$EXPECTED_TB3_HEAD" >/dev/null 2>&1
+    git -C "$TB3_REPO" checkout --detach "$EXPECTED_TB3_HEAD" >/dev/null 2>&1
+  fi
   git -C "$TB3_REPO" sparse-checkout set docs/prompts .github
   TB3_HEAD=$(git -C "$TB3_REPO" rev-parse HEAD)
   if [[ -n "$EXPECTED_TB3_HEAD" && "$TB3_HEAD" != "$EXPECTED_TB3_HEAD" ]]; then
@@ -176,7 +181,7 @@ EOF
   exit 0
 fi
 
-JOB_NAME="${MODE}-${AGENT}-${SHORT_SHA}-${BASHPID}"
+JOB_NAME="${MODE}-${AGENT}-${SHORT_SHA}-${RUN_PID}"
 set +e
 harbor run \
   -p "$TASK_COPY" \
