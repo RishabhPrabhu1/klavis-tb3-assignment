@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-FROZEN_TASK_TREE="05e14f258a07c24a04e7c8ae1516ce36c5796f44"
+FROZEN_TASK_TREE="01087195775ecb23b702e0ff3002306e9c84cde7"
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/standard-diagnostic"}
 CHEAT_EVIDENCE_ROOT=${CHEAT_EVIDENCE_ROOT:-"$HOME/.cache/klavis-tb3-runs/cheat"}
 ALLOW_CHEAT_SAFETY_BLOCK=${ALLOW_CHEAT_SAFETY_BLOCK:-0}
