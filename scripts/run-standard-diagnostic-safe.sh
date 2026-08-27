@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-FROZEN_TASK_TREE="17291a73dc954c66db0ef5cc6cf2f70fe1c85db4"
+FROZEN_TASK_TREE="bff3b135d88174ac463d6e35a6cc30c4066dd8ea"
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/standard-diagnostic"}
 CHEAT_EVIDENCE_ROOT=${CHEAT_EVIDENCE_ROOT:-"$HOME/.cache/klavis-tb3-runs/cheat"}
 ALLOW_CHEAT_SAFETY_BLOCK=${ALLOW_CHEAT_SAFETY_BLOCK:-0}
@@ -15,9 +15,6 @@ fi
 mkdir -p "$RUNS_ROOT" "$CHEAT_EVIDENCE_ROOT"
 python3 "$ROOT_DIR/scripts/audit-trial-evidence.py" "$CHEAT_EVIDENCE_ROOT"
 
-# Require evidence that the cheat gate is outstanding because an attempted
-# Codex run ended with an agent exception. This does NOT convert that run into a
-# pass; it only permits one ordinary diagnostic while cheat remains unresolved.
 python3 - "$CHEAT_EVIDENCE_ROOT" "$FROZEN_TASK_TREE" <<'PY'
 import json
 import sys
