@@ -1,11 +1,12 @@
 {
-  "harbor_detail": "pending requalification after exactly-once request-protocol redesign",
+  "harbor_detail": "pending requalification after strengthened exactly-once request-protocol redesign",
   "harbor_docker": "pending",
-  "mutation_detail": "pending: core + lifecycle + exactly-once request mutation matrices",
+  "mutation_detail": "pending: core + lifecycle + exactly-once request mutation matrices including publication-race recovery",
   "preflight": "pending",
-  "preflight_detail": "The previously qualified tree 4eaf21ae9456395fb080be497852c0ff9623b8fa was solved cleanly by GPT-5.6 Sol/xhigh (37/37, reward 1). The task was redesigned around exactly-once request IDs, duplicate coalescing, crash takeover, post-publication response-loss recovery, and replay after generation GC. Full static/oracle/mutation/Harbor qualification must be rerun before any frontier measurement.",
+  "preflight_detail": "The previously qualified tree 4eaf21ae9456395fb080be497852c0ff9623b8fa was solved cleanly by GPT-5.6 Sol/xhigh (37/37, reward 1). The first request-protocol redesign tree 3ddb933ae848f6912210371c6afc210ceea3f373 was superseded before frontier testing after static audit found missing composition coverage. The current tree adds request-ID validation, waiting-owner takeover, and a race where an ordinary build starts before a lost-response request commits and later replaces that request generation. Full static/oracle/mutation/Harbor qualification must be rerun before any frontier measurement.",
   "qualified": false,
-  "task_tree": "3ddb933ae848f6912210371c6afc210ceea3f373",
+  "task_tree": "f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8",
+  "superseded_request_task_tree": "3ddb933ae848f6912210371c6afc210ceea3f373",
   "previous_solved_task_tree": "4eaf21ae9456395fb080be497852c0ff9623b8fa",
-  "redesign_crux": "exactly-once request protocol across concurrent duplicate invocations and crash recovery"
+  "redesign_crux": "exactly-once request protocol across duplicate concurrency, crash takeover, post-publication response loss, publication races, and replay after generation GC"
 }
