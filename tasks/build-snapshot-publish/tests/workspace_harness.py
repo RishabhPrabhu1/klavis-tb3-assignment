@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import signal
 import subprocess
 import sys
 import tempfile
@@ -127,6 +126,31 @@ def _wait_and_cleanup(proc: subprocess.Popen[bytes], timeout: float) -> tuple[in
     return returncode, _runtime_stderr(proc)
 
 
+def _start_logged_candidate(
+    command: list[str],
+    *,
+    env: dict[str, str],
+) -> subprocess.Popen[bytes]:
+    """Start one candidate process with verifier-owned logs and cleanup metadata."""
+    baseline = _pids_for_uid(_NOBODY.pw_uid)
+    log_dir = Path(tempfile.mkdtemp(prefix="tb3-workspace-candidate-"))
+    stdout = (log_dir / "stdout").open("wb")
+    stderr = (log_dir / "stderr").open("wb")
+    proc = subprocess.Popen(
+        command,
+        cwd=str(APP_ROOT),
+        env=env,
+        stdout=stdout,
+        stderr=stderr,
+        start_new_session=True,
+        preexec_fn=_drop_privileges,
+    )
+    stdout.close()
+    stderr.close()
+    _attach_runtime(proc, baseline, log_dir)
+    return proc
+
+
 def run_capture(
     workspace: Path,
     plan: Path,
@@ -137,50 +161,7 @@ def run_capture(
     require_report: bool = True,
 ) -> dict | None:
     report = _report_path(workspace, "capture")
-    command = [
-        sys.executable,
-        "-m",
-        "buildsys.cli",
-        "workspace-capture",
-        "--workspace",
-        str(workspace),
-        "--plan",
-        str(plan),
-        "--request-id",
-        request_id,
-        "--report",
-        str(report),
-    ]
-    proc = subprocess.run(
-        command,
-        cwd=str(APP_ROOT),
-        env=_base_env(failpoint=failpoint),
-        capture_output=True,
-        text=True,
-        timeout=20,
-        preexec_fn=_drop_privileges,
-    )
-    assert proc.returncode == expect_returncode, proc.stderr
-    if not require_report:
-        assert not report.exists()
-        return None
-    assert report.exists(), proc.stderr
-    return json.loads(report.read_text())
-
-
-def start_capture(
-    workspace: Path,
-    plan: Path,
-    request_id: str,
-    *,
-    pausepoint: str,
-    pause_dir: Path,
-) -> tuple[subprocess.Popen[bytes], Path, Path]:
-    report = _report_path(workspace, "capture-async")
-    log_dir = Path(tempfile.mkdtemp(prefix="tb3-workspace-capture-"))
-    stdout = (log_dir / "stdout").open("wb")
-    stderr = (log_dir / "stderr").open("wb")
-    proc = subprocess.Popen(
+    proc = _start_logged_candidate(
         [
             sys.executable,
             "-m",
@@ -195,15 +176,45 @@ def start_capture(
             "--report",
             str(report),
         ],
-        cwd=str(APP_ROOT),
-        env=_base_env(pausepoint=pausepoint, pause_dir=pause_dir),
-        stdout=stdout,
-        stderr=stderr,
-        start_new_session=True,
-        preexec_fn=_drop_privileges,
+        env=_base_env(failpoint=failpoint),
     )
-    stdout.close()
-    stderr.close()
+    returncode, stderr = _wait_and_cleanup(proc, 20)
+    assert returncode == expect_returncode, stderr
+    if not require_report:
+        assert not report.exists()
+        return None
+    assert report.exists(), stderr
+    return json.loads(report.read_text())
+
+
+def start_capture(
+    workspace: Path,
+    plan: Path,
+    request_id: str,
+    *,
+    pausepoint: str,
+    pause_dir: Path,
+) -> tuple[subprocess.Popen[bytes], Path, Path]:
+    report = _report_path(workspace, "capture-async")
+    proc = _start_logged_candidate(
+        [
+            sys.executable,
+            "-m",
+            "buildsys.cli",
+            "workspace-capture",
+            "--workspace",
+            str(workspace),
+            "--plan",
+            str(plan),
+            "--request-id",
+            request_id,
+            "--report",
+            str(report),
+        ],
+        env=_base_env(pausepoint=pausepoint, pause_dir=pause_dir),
+    )
+    log_dir = getattr(proc, "_tb3_log_dir")
+    assert isinstance(log_dir, Path)
     return proc, report, log_dir
 
 
@@ -214,8 +225,11 @@ def wait_for_pause(proc: subprocess.Popen[bytes], pause_dir: Path, timeout: floa
         if reached.exists():
             return
         if proc.poll() is not None:
-            raise AssertionError("candidate exited before workspace pausepoint")
+            stderr = _runtime_stderr(proc)
+            _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
+            raise AssertionError(f"candidate exited before workspace pausepoint: {stderr}")
         time.sleep(0.01)
+    _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
     raise AssertionError("candidate did not reach workspace pausepoint")
 
 
@@ -227,10 +241,10 @@ def finish_capture(
     pause_dir: Path | None = None,
     expected_returncode: int = 0,
 ) -> dict | None:
+    del log_dir  # stderr is tracked on the process by _start_logged_candidate.
     if pause_dir is not None:
         _write(pause_dir / "release", "release\n")
-    returncode = proc.wait(timeout=20)
-    stderr = (log_dir / "stderr").read_text(errors="replace")
+    returncode, stderr = _wait_and_cleanup(proc, 20)
     assert returncode == expected_returncode, stderr
     if expected_returncode != 0:
         return None
@@ -239,11 +253,12 @@ def finish_capture(
 
 
 def kill_process(proc: subprocess.Popen[bytes]) -> None:
+    _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
     try:
-        os.killpg(proc.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
-    proc.wait(timeout=5)
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
+        proc.wait(timeout=5)
 
 
 def workspace_tokens(workspace: Path) -> set[str]:
@@ -277,7 +292,7 @@ def current_workspace_token(workspace: Path) -> str:
 
 def run_workspace_gc(workspace: Path, keep: int) -> dict:
     report = _report_path(workspace, "workspace-gc")
-    proc = subprocess.run(
+    proc = _start_logged_candidate(
         [
             sys.executable,
             "-m",
@@ -290,14 +305,11 @@ def run_workspace_gc(workspace: Path, keep: int) -> dict:
             "--report",
             str(report),
         ],
-        cwd=str(APP_ROOT),
         env=_base_env(),
-        capture_output=True,
-        text=True,
-        timeout=20,
-        preexec_fn=_drop_privileges,
     )
-    assert proc.returncode == 0, proc.stderr
+    returncode, stderr = _wait_and_cleanup(proc, 20)
+    assert returncode == 0, stderr
+    assert report.exists(), stderr
     return json.loads(report.read_text())
 
 
@@ -312,10 +324,7 @@ def start_workspace_read(
     hold_dir.chmod(0o777)
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.parent.chmod(0o777)
-    baseline = _pids_for_uid(_NOBODY.pw_uid)
-    log_dir = Path(tempfile.mkdtemp(prefix="tb3-workspace-read-"))
-    stderr = (log_dir / "stderr").open("wb")
-    proc = subprocess.Popen(
+    proc = _start_logged_candidate(
         [
             sys.executable,
             "-m",
@@ -332,15 +341,8 @@ def start_workspace_read(
             "--dest",
             str(dest),
         ],
-        cwd=str(APP_ROOT),
         env=_base_env(),
-        stdout=subprocess.DEVNULL,
-        stderr=stderr,
-        start_new_session=True,
-        preexec_fn=_drop_privileges,
     )
-    stderr.close()
-    _attach_runtime(proc, baseline, log_dir)
     return proc
 
 
@@ -370,10 +372,7 @@ def start_plain_build(project: Path, target: str = "app") -> tuple[subprocess.Po
     reports.mkdir(exist_ok=True)
     reports.chmod(0o777)
     report = reports / f"report-{len(list(reports.iterdir()))}.json"
-    baseline = _pids_for_uid(_NOBODY.pw_uid)
-    log_dir = Path(tempfile.mkdtemp(prefix="tb3-plain-build-"))
-    stderr = (log_dir / "stderr").open("wb")
-    proc = subprocess.Popen(
+    proc = _start_logged_candidate(
         [
             sys.executable,
             "-m",
@@ -386,15 +385,8 @@ def start_plain_build(project: Path, target: str = "app") -> tuple[subprocess.Po
             "--report",
             str(report),
         ],
-        cwd=str(APP_ROOT),
         env=_base_env(),
-        stdout=subprocess.DEVNULL,
-        stderr=stderr,
-        start_new_session=True,
-        preexec_fn=_drop_privileges,
     )
-    stderr.close()
-    _attach_runtime(proc, baseline, log_dir)
     return proc, report
 
 
@@ -406,12 +398,19 @@ def finish_plain_build(proc: subprocess.Popen[bytes], report: Path) -> dict:
 
 def candidate_write(path: Path, text: str) -> None:
     baseline = _pids_for_uid(_NOBODY.pw_uid)
-    proc = subprocess.run(
+    log_dir = Path(tempfile.mkdtemp(prefix="tb3-candidate-write-"))
+    stdout = (log_dir / "stdout").open("wb")
+    stderr_file = (log_dir / "stderr").open("wb")
+    proc = subprocess.Popen(
         [sys.executable, "-c", "from pathlib import Path; import sys; Path(sys.argv[1]).write_text(sys.argv[2])", str(path), text],
+        cwd=str(APP_ROOT),
+        stdout=stdout,
+        stderr=stderr_file,
+        start_new_session=True,
         preexec_fn=_drop_privileges,
-        capture_output=True,
-        text=True,
-        timeout=5,
     )
-    assert proc.returncode == 0, proc.stderr
-    assert _pids_for_uid(_NOBODY.pw_uid) == baseline
+    stdout.close()
+    stderr_file.close()
+    _attach_runtime(proc, baseline, log_dir)
+    returncode, stderr = _wait_and_cleanup(proc, 5)
+    assert returncode == 0, stderr
