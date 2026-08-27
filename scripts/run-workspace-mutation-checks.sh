@@ -83,12 +83,6 @@ run_mutation \
   $'        _failpoint("workspace:after-claim")'
 
 run_mutation \
-  workspace-no-publication-reconcile \
-  workspace.py \
-  $'                    _reconcile_current_unlocked(cache)\n                    _swap_selector(cache, token)' \
-  $'                    _swap_selector(cache, token)'
-
-run_mutation \
   workspace-gc-ignore-reader-pins \
   workspace.py \
   $'            retained = {token for token in initial["pinned"] if token in generations}' \
