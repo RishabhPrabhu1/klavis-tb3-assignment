@@ -326,16 +326,15 @@ def test_duplicate_concurrent_requests_commit_once() -> None:
         time.sleep(0.1)
         assert follower.poll() is None, "duplicate follower should wait for the live owner"
 
-        first = finish_request(
-            leader,
-            leader_base,
-            leader_report,
-            leader_log,
-            pause_dir=pause,
-        )
-        leader = None
+        # Release the leader, but reap the follower first. The follower's process
+        # baseline already contains the leader, so its cleanup cannot kill the
+        # sibling. Reaping the leader first would make generic UID cleanup treat
+        # the still-waiting follower as an accidental descendant.
+        _write(pause / "release", "release\n")
         second = finish_request(follower, follower_base, follower_report, follower_log)
         follower = None
+        first = finish_request(leader, leader_base, leader_report, leader_log)
+        leader = None
         assert first == second
         assert len(generation_tokens(candidate)) == 1
     finally:
