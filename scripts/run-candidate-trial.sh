@@ -60,15 +60,21 @@ case "$AGENT" in
     EXTRA_ARGS+=(--ae CODEX_FORCE_AUTH_JSON=1 --ak reasoning_effort=xhigh)
     ;;
   claude)
-    [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]] || fail "CLAUDE_CODE_OAUTH_TOKEN is not set; generate one with 'claude setup-token'"
     MODEL="anthropic/claude-opus-5"
     REASONING="max"
     AGENT_NAME="claude-code"
-    AUTH_KIND="Claude Code OAuth token"
-    EXTRA_ARGS+=(--ae CLAUDE_FORCE_OAUTH=1)
-    EXTRA_ARGS+=(--ae "CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN")
     EXTRA_ARGS+=(--ae CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000)
     EXTRA_ARGS+=(--ak reasoning_effort=max)
+    if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+      AUTH_KIND="Claude Code OAuth token"
+      EXTRA_ARGS+=(--ae CLAUDE_FORCE_OAUTH=1)
+      EXTRA_ARGS+=(--ae "CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN")
+    elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+      AUTH_KIND="Anthropic Console API key"
+      EXTRA_ARGS+=(--ae "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
+    else
+      fail "Claude auth missing: set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY"
+    fi
     ;;
 esac
 
@@ -84,8 +90,6 @@ if [[ "$MODE" == "cheat" ]]; then
   TB3_REPO="$RUN_DIR/terminal-bench"
   git clone --depth 1 --filter=blob:none --sparse \
     https://github.com/harbor-framework/terminal-bench.git "$TB3_REPO" >/dev/null 2>&1
-  # Cone-mode sparse checkout accepts directories, not individual files.
-  # Include the small .github tree so harbor-run-defaults.yml is available.
   git -C "$TB3_REPO" sparse-checkout set docs/prompts .github
   TB3_HEAD=$(git -C "$TB3_REPO" rev-parse HEAD)
   if [[ -n "$EXPECTED_TB3_HEAD" && "$TB3_HEAD" != "$EXPECTED_TB3_HEAD" ]]; then
@@ -93,9 +97,6 @@ if [[ "$MODE" == "cheat" ]]; then
   fi
   PROMPT="$TB3_REPO/docs/prompts/hack-trial-prompt.md"
   [[ -f "$PROMPT" ]] || fail "live adversarial prompt was not found"
-
-  # Match the live /cheat workflow: remove the normal anti-cheat sentence and
-  # append the current adversarial prompt to a disposable task copy.
   sed -i.bak -E 's/[[:space:]]*[Dd]o not cheat[^.]*\.//g' "$TASK_COPY/instruction.md"
   rm -f "$TASK_COPY/instruction.md.bak"
   printf '\n\n' >> "$TASK_COPY/instruction.md"
