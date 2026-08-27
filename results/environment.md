@@ -22,11 +22,12 @@ The Klavis deliverable is a standalone GitHub repository; an upstream Terminal-B
 
 ## Current trial configuration
 
-Live `.github/harbor-run-defaults.yml`:
+Live `.github/harbor-run-defaults.yml` supplies the required agents and the standard-run trial count:
 
 | Setting | Live value |
 |---|---|
-| Trials per configured agent | **3** |
+| `/run` trials per configured agent | **3** |
+| `/cheat` invocations per configured agent | **1** |
 | `/run` backend default | `modal` |
 | `/cheat` backend default | `modal` |
 | `/validate` backend default | `modal` |
@@ -38,11 +39,11 @@ Live `.github/harbor-run-defaults.yml`:
 | `harbor analyze` | enabled upstream by default |
 | Analysis model | `sonnet` |
 
-The `/cheat` workflow reads the same shared trial-count configuration, so the final assignment target is three valid adversarial trials per configured agent, not one.
+The standard `/run` workflow expands the configured `trials: 3` into a `(task × agent × trial)` matrix. The live `/cheat` workflow does **not** include a trial dimension; it runs a `(task × agent)` matrix once per configured agent. Therefore the final required model evidence target is **8 runs total**: 3 Codex standard + 3 Claude standard + 1 Codex cheat + 1 Claude cheat.
 
 ## Docker vs current upstream Modal default
 
-Upstream currently chooses `env: modal` for `/run`, `/cheat`, and `/validate` because many benchmark tasks exceed GitHub-hosted runner resources. The workflow still has an explicit Docker execution path, and comments can override the backend.
+Upstream currently chooses `env: modal` for `/run`, `/cheat`, and `/validate` because many benchmark tasks exceed GitHub-hosted runner resources. Both trial workflows still have explicit Docker execution paths, and command overrides can choose the backend.
 
 Klavis's own local examples use:
 
@@ -80,7 +81,15 @@ For the final frozen tree, the minimum recorded validation evidence should inclu
 
 ## Implementation rubric
 
-Current upstream implementation review is a model-driven `harbor exec` reviewer against `rubrics/task-implementation.toml`, not part of the shell static checks. It normally requires the upstream repository's `ANTHROPIC_API_KEY` secret. Therefore this repository's `results/implementation-rubric-review.md` is presently a **self-audit**, not authoritative automated rubric evidence.
+Current upstream implementation review is a model-driven `harbor exec` reviewer against `docs/prompts/task-implementation.toml`, not part of the shell static checks. Upstream CI supplies `ANTHROPIC_API_KEY`, so this repository's `results/implementation-rubric-review.md` remains a self-audit until the reviewer is reproduced successfully.
+
+A Bedrock reproduction runner is prepared at:
+
+```text
+scripts/run-implementation-rubric-bedrock.sh
+```
+
+If zero-cost Bedrock access works, it can run the same Claude Code `sonnet` reviewer with Harbor 0.18.0 without a paid Claude subscription or Anthropic API key.
 
 Current live rubric risks identified for this candidate:
 
@@ -89,7 +98,7 @@ Current live rubric risks identified for this candidate:
 - instruction should include a brief real-world-role sentence;
 - avoid wording that unnecessarily prescribes a specific locking implementation rather than observable transactional outcomes.
 
-These should be resolved before the final task tree is frozen if doing so will not discard valuable completed same-tree frontier evidence.
+A non-applied cleanup transformation is prepared at `scripts/apply-deadline-rubric-cleanup.sh`. It must not be applied until interrupted same-tree frontier evidence is inspected.
 
 ## Current static/verifier requirements relevant to this task
 
@@ -105,7 +114,16 @@ These should be resolved before the final task tree is frozen if doing so will n
 
 Klavis's preferred no-API-price local route is Claude Code OAuth from `claude setup-token`; that requires an eligible paid Claude subscription and is unavailable here.
 
-Claude Code and Harbor 0.14.0 both support Amazon Bedrock. Harbor 0.14.0 detects `CLAUDE_CODE_USE_BEDROCK=1` / `AWS_BEARER_TOKEN_BEDROCK`, forwards AWS credentials/region, and maps Harbor-style `anthropic/claude-opus-5` to Bedrock's `anthropic.claude-opus-5` model ID. A zero-out-of-pocket AWS Free Tier/credit route will be tested only if the free account actually permits Anthropic model entitlement; no paid upgrade is allowed.
+Claude Code and Harbor 0.14.0 both support Amazon Bedrock. Harbor detects Bedrock mode from `CLAUDE_CODE_USE_BEDROCK=1` / AWS credentials and converts the Harbor model name `anthropic/claude-opus-5` to Claude Code's recognized version name `claude-opus-5`. Claude Code then resolves that version to the matching Bedrock inference profile/model (for example `us.anthropic.claude-opus-5` in a US region). AWS documents the underlying Opus 5 Bedrock model ID as `anthropic.claude-opus-5`.
+
+Prepared zero-spend runners:
+
+```text
+scripts/run-claude-bedrock-trial.sh
+scripts/run-deadline-claude-bedrock-matrix.sh
+```
+
+The AWS Free Tier/credit route will be tested only if the free account actually permits Anthropic model entitlement; no paid upgrade is allowed.
 
 ## Final freshness rule
 
@@ -116,6 +134,6 @@ Immediately before final submission, re-fetch and record:
 - `.github/workflows/run-trials.yml`;
 - `.github/workflows/run-cheat-trials.yml`;
 - `.github/workflows/validate-task.yml`;
-- `rubrics/task-implementation.toml`.
+- `docs/prompts/task-implementation.toml`.
 
 Any changed model, trial count, Harbor version, backend behavior, timeout rule, or rubric requirement supersedes this snapshot.
