@@ -4,7 +4,7 @@ This repository contains one original Terminal-Bench 3 task for the Klavis Found
 
 ## Task
 
-`tasks/build-snapshot-publish/` is an incremental build system repair task combining:
+`tasks/build-snapshot-publish/` is an incremental build-system repair task combining:
 
 - crash-safe immutable project generations and atomic publication;
 - concurrent incremental builds with stable input views and reusable-cache merging;
@@ -19,29 +19,39 @@ Deterministic failpoints and pausepoints expose crash/concurrency boundaries wit
 
 ## Current candidate
 
-Current rubric-clean task tree:
+Current qualified task tree:
 
 ```text
 fc064cac2fb1241b68a98475dbc8ea04fbe579cc
 ```
 
-Relative to the previous representation-neutral transaction tree `5620526fada6eebea16910fc62bf71746aaa40ea`, runtime tests and the reference implementation are unchanged. Before final qualification, one reviewer-facing cleanup was applied:
+The final reviewer-facing cleanup that produced this tree changed only task README/instruction/metadata presentation; runtime tests and the reference implementation remained unchanged. The exact tree has now been requalified from scratch.
 
-- the statically required task README was reduced to non-duplicative reviewer context;
-- the fully prepared expert estimate was aligned from 6.0h to 3.5h;
-- difficulty metadata now states the real-world engineering role and synthetic-fixture provenance required by the live rubric;
-- a few transaction coordination sentences were made outcome-oriented instead of prescribing a particular lock implementation.
+Deterministic qualification:
 
-The new tree must therefore be fully requalified and measured from scratch. Evidence from `5620526f...` is historical only.
+```text
+TB3 static checks: PASS
+Oracle/reference:  66/66
+mutations:         40/40 rejected
+Harbor Oracle:     1.000
+Harbor NOP:        0.000
+frontier calls:    0 during qualification
+```
 
-## Important historical evidence
+Evidence:
+
+```text
+~/.cache/klavis-tb3-runs/transaction-preflight/20260827T213154Z-d2837bf220bd
+```
+
+## Historical calibration
 
 - `4eaf21ae9456395fb080be497852c0ff9623b8fa` — generation-publication design, cleanly solved by GPT-5.6 Sol/xhigh.
 - `42cba8ad00bebf316048d1470033c1742a20ec97` — exactly-once redesign; substantive Sol run reached 48/48 but was formally invalid due provider/subscription exception.
 - `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` — workspace-snapshot redesign; deterministically qualified then cleanly solved by Sol, 58/58, reward 1.
 - `40cbd34104e1f0a549be23b46ef70655b728cece` — first optimistic transaction tree; valid Sol reward-0 was masked by an unstated `.workspace-cache/CURRENT` verifier assumption, so it did not count.
-- `5620526fada6eebea16910fc62bf71746aaa40ea` — representation-neutral transaction tree, superseded before final evidence because source review found high-confidence implementation-rubric presentation risks.
-- `fc064cac2fb1241b68a98475dbc8ea04fbe579cc` — current candidate.
+- `5620526fada6eebea16910fc62bf71746aaa40ea` — representation-neutral transaction tree, superseded before final evidence for implementation-rubric presentation cleanup.
+- `fc064cac2fb1241b68a98475dbc8ea04fbe579cc` — current qualified candidate.
 
 ## Repository structure
 
@@ -51,61 +61,62 @@ scripts/                        qualification, trial, audit, resume, and deadlin
 results/                        validation state, trial records, coverage, failure analysis
 ```
 
-## Required qualification
+## Source of truth and qualification
 
-Current live Terminal-Bench source of truth is pinned during final evidence to:
+Current Terminal-Bench source-of-truth commit used for final evidence:
 
 ```text
 79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
 ```
 
-The deterministic qualification entrypoint is:
+The deterministic qualifier runs current static checks, the full Oracle/reference verifier, 40 non-equivalent development mutations, and Harbor Oracle/NOP with zero frontier calls:
 
 ```bash
 bash scripts/run-next-qualification-step.sh
 ```
 
-It runs current TB3 static checks, the full Oracle/reference verifier, 40 non-equivalent mutations across the five coverage matrices, and Harbor Oracle/NOP with zero frontier-model calls. The current expected runtime totals remain 66 Oracle tests and 40 rejected mutants because the rubric cleanup changed no tests/reference semantics.
+The implementation autoreview is a separate required gate. `scripts/run-implementation-rubric-bedrock.sh` mirrors the live review shape for the planned zero-spend Bedrock route and records exact-tree/upstream provenance.
 
-The current implementation autoreview is a separate required gate. TB3's live review workflow uses Harbor 0.18.0 with the live `task-implementation.toml`, Claude Code, and Sonnet. `scripts/run-implementation-rubric-bedrock.sh` mirrors that review shape for the zero-spend Bedrock route and records same-tree/upstream provenance.
+## Frontier requirements
 
-## Frontier requirement
-
-Klavis requires three valid trials for each mode/configuration:
+Klavis states that the current TB3 CI/review automation is the source of truth for trial count and `/run`/`/cheat` behavior. At the pinned upstream commit, standard `/run` uses three trials per agent, while Docker `/cheat` uses one matrix entry per `(task × agent_config)` with no trial dimension.
 
 | Mode | Agent | Model | Reasoning | Required valid reward-0 trials |
 |---|---|---|---|---:|
 | standard `/run` | Codex | `openai/gpt-5.6-sol` | xhigh | 3 |
 | standard `/run` | Claude Code | `anthropic/claude-opus-5` | max | 3 |
-| adversarial `/cheat` | Codex | `openai/gpt-5.6-sol` | xhigh | 3 |
-| adversarial `/cheat` | Claude Code | `anthropic/claude-opus-5` | max | 3 |
+| adversarial `/cheat` | Codex | `openai/gpt-5.6-sol` | xhigh | 1 |
+| adversarial `/cheat` | Claude Code | `anthropic/claude-opus-5` | max | 1 |
 
-Candidate trials use Harbor 0.14.0. Auth/quota/provider-safety/timeouts/container failures do not count. `result.json` exception state and verifier reward are authoritative through `scripts/audit-trial-evidence.py`.
+Candidate trials use Harbor 0.14.0 and Docker, matching the Klavis sample commands. Auth/quota/provider-safety/timeouts/container failures do not count. `result.json` exception state and verifier reward are authoritative through `scripts/audit-trial-evidence.py`.
 
 ## Deadline workflow
 
-Resume/requalify and obtain the first Codex difficulty measurement with:
+On macOS Bash 3.2, resume the qualified candidate without re-running deterministic qualification using:
 
 ```bash
-bash scripts/resume-deadline-cycle.sh
+bash scripts/resume-macos-deadline-cycle.sh
 ```
 
-The resume runner reuses only exact-tree evidence and refuses duplicate launches when an incomplete trial exists.
-
-Once a valid same-tree reward-0 standard probe is reviewed as a real task-caused model failure, final matrices can be collected with the guarded parallel runner. The default is two simultaneous trials to reduce wall time without assuming excessive local Docker capacity:
+Once a valid same-tree reward-0 standard probe is reviewed as a real task-caused model failure, collect the remaining standard matrices with:
 
 ```bash
 CONFIRM_FREEZE=1 AGENT=codex  MODE=standard MAX_PARALLEL=2 bash scripts/run-parallel-final-matrix.sh
 CONFIRM_FREEZE=1 AGENT=claude MODE=standard MAX_PARALLEL=2 bash scripts/run-parallel-final-matrix.sh
-CONFIRM_FREEZE=1 AGENT=codex  MODE=cheat    MAX_PARALLEL=2 bash scripts/run-parallel-final-matrix.sh
-CONFIRM_FREEZE=1 AGENT=claude MODE=cheat    MAX_PARALLEL=2 bash scripts/run-parallel-final-matrix.sh
 ```
 
-Each batch stops immediately if any launched run is invalid, incomplete, or nonzero reward.
+The adversarial requirement is one valid reward-0 run per agent. If using the generic matrix runner, set the explicit target to one:
+
+```bash
+CONFIRM_FREEZE=1 TARGET_VALID_ZEROES=1 AGENT=codex  MODE=cheat MAX_PARALLEL=1 bash scripts/run-parallel-final-matrix.sh
+CONFIRM_FREEZE=1 TARGET_VALID_ZEROES=1 AGENT=claude MODE=cheat MAX_PARALLEL=1 bash scripts/run-parallel-final-matrix.sh
+```
+
+Each batch stops if a launched run is invalid, incomplete, or nonzero reward.
 
 ## Claude access
 
-Klavis's sample uses Claude Code OAuth. For a zero-out-of-pocket path, Claude Code and Harbor also support Amazon Bedrock while preserving the required Claude Code agent, Opus 5 model, max reasoning, Docker environment, and Harbor evidence. The generic trial runner accepts Bedrock API-key or explicit AWS credential environment variables. If AWS Free Tier does not permit Opus 5 without a paid upgrade, that route must stop rather than incur cost.
+Klavis's sample uses Claude Code OAuth. For a zero-out-of-pocket path, Claude Code and Harbor also support Amazon Bedrock while preserving the required Claude Code agent, Opus 5 model, max reasoning, Docker environment, and Harbor evidence. The generic trial runner accepts a Bedrock bearer credential or ordinary AWS credentials. If AWS Free Tier does not permit Opus 5 without a paid upgrade, that route must stop rather than incur cost.
 
 ## Evidence policy
 
@@ -116,7 +127,7 @@ A model result counts only if:
 - authoritative Harbor `result.json` contains no invalidating exception;
 - its authoritative verifier reward is unambiguous;
 - verifier execution completes normally;
-- a standard failure is caused by candidate behavior under a clear contract rather than specification/verifier defects.
+- a standard failure is caused by candidate behavior under a clear contract rather than a specification/verifier defect.
 
 The final audit is intentionally strict:
 
@@ -124,7 +135,7 @@ The final audit is intentionally strict:
 bash scripts/final-submission-audit.sh
 ```
 
-It refuses `READY_FOR_SUBMISSION` unless the exact tree has zero-model qualification, implementation-rubric PASS, all four 3-trial reward-0 matrices, and the required repository documentation.
+It refuses `READY_FOR_SUBMISSION` unless the exact tree has zero-model qualification, implementation-rubric PASS, three valid reward-0 standard trials per required agent, one valid reward-0 adversarial trial per required agent, and the required repository documentation.
 
 ## Evidence records
 
