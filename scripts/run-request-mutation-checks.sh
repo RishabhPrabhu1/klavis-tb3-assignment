@@ -69,3 +69,8 @@ run_mutation \
   post-publish-is-precommit \
   $'        _failpoint("request:after-publish")' \
   $'        _failpoint("request:after-claim")'
+
+run_mutation \
+  invocation-start-only-recovery \
+  $'    def merge_with_request_recovery(self: Builder) -> None:\n        # Builder invokes this while holding COMMIT.lock. Before a publication\n        # can move the old current generation into history, materialize any\n        # committed request result that was stranded by a post-publish crash.\n        _reconcile_current_unlocked(self.cache)\n        original_merge(self)' \
+  $'    def merge_with_request_recovery(self: Builder) -> None:\n        original_merge(self)'
