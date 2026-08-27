@@ -5,7 +5,7 @@ This file is a source-level audit, **not** a claim that the live automated imple
 Current rubric-corrected candidate:
 
 ```text
-4fcc1dfe09d61ef9239c2687988cbee0f4b0315b
+85eb3be3ce69a625a06eab3e37c69badbab89779
 ```
 
 Exact-tree deterministic qualification and automated rubric execution are still required before final submission.
@@ -24,12 +24,12 @@ The second, on `d7d7adf...`, confirmed that the private `request_report` depende
 4. duplicate tests required a live owner to keep ownership while the instruction did not state that observable behavior;
 5. expert-time/solvability, instruction length, deterministic sleeps, and review size remained subjective risks.
 
-## Corrections in the current candidate
+## Corrections in the frozen candidate
 
 - **All cited workspace candidate execution paths are isolated.** Synchronous capture, workspace GC, synchronous workspace-build, async capture, workspace reads, and plain builds use verifier-owned stdout/stderr files, `start_new_session=True`, a pre-launch candidate-UID PID baseline, and bounded cleanup on success/failure/timeout. Transaction helpers use the same model.
 - **Cleanup portability no longer contaminates local mutation evidence.** Host-only non-root `PermissionError` on process signalling is treated as a developer-host limitation, while the authoritative root verifier still raises any such cleanup failure.
-- **Lost-response first replay is truly deferred.** After `workspace-build:after-publish`, the verifier performs a later overlapping transaction, workspace GC, and project GC *before the first retry*. That first replay is checked against the stranded committed snapshot/report fields; a second replay must be exactly identical and still nonpublishing.
-- **Live-owner duplicate behavior is explicit.** Project requests, workspace capture, and workspace-build now state that a duplicate remains pending while a live pre-commit owner is paused; dead owners are immediately replaceable.
+- **Lost-response first replay is truly deferred.** After `workspace-build:after-publish`, the verifier performs a later overlapping transaction, workspace GC, and project GC *before the first retry*. That first replay is validated against the stranded snapshot member identity plus the original output path/hash; `attempts` is required only to satisfy the documented positive-integer schema. A second replay must be exactly identical and still nonpublishing.
+- **Live-owner duplicate behavior is explicit.** Project requests, workspace capture, and workspace-build state that a duplicate remains pending while a live pre-commit owner is paused; dead owners are immediately replaceable.
 - **Private replay state remains absent from verification.** No `request_report` field is required.
 - **Transaction marker remains representation-private.** Ordinary project current is observed through the public `read` interface; no `workspace_transaction` metadata bit is required.
 - **Record schema is explicit.** The only directly inspected generation-record field is documented: JSON with a 64-lowercase-hex `key`, with extension fields allowed.
@@ -40,7 +40,7 @@ The second, on `d7d7adf...`, confirmed that the private `request_report` depende
 
 | Criterion | Current assessment | Basis / remaining risk |
 |---|---|---|
-| `verifiable` | LIKELY PASS | Deterministic hooks, exact assertions, pinned verifier deps, no runtime verifier network installs. Mutation evidence is auxiliary rather than treated as a submission gate. |
+| `verifiable` | LIKELY PASS | Deterministic hooks, exact assertions, pinned verifier deps, no runtime verifier network installs. Final qualifier reruns all 40 development mutation controls rather than inheriting contaminated families. |
 | `solvable` | BORDERLINE | A full reference exists and the starter already contains evaluator/CLI infrastructure, but the repaired state-machine surface is still large. This is the largest remaining subjective risk. |
 | `difficult` | PASS CALIBRATION | Predecessor with the same starter/reference runtime challenge produced a clean Sol/xhigh reward-0 with 45/66 passing and 21 failing. Final-tree trial still required. |
 | `interesting` | PASS | Build/release consistency, idempotency, crash recovery, and reclamation are professional systems problems. |
@@ -50,7 +50,7 @@ The second, on `d7d7adf...`, confirmed that the private `request_report` depende
 | `functional_verification` | PASS | Candidate code is executed; tests do not grade source keywords or implementation patterns. |
 | `deterministic_reproducible` | BORDERLINE → LIKELY PASS | Fixed dependencies and deterministic pause/fail hooks dominate. A few bounded scheduling-delay assertions remain, but they are not used to infer committed state and have explicit process-liveness checks. |
 | `essential_difficulty` | PASS | Failures require concurrency/recovery/GC reasoning, not clerical formatting. |
-| `test_instruction_alignment` | LIKELY PASS | Hidden replay field, record schema, selector/transaction marker, deferred first replay, and live-owner duplicate semantics are now aligned. |
+| `test_instruction_alignment` | LIKELY PASS | Hidden replay field, record schema, selector/transaction marker, deferred first replay, positive-attempt schema, and live-owner duplicate semantics are aligned. |
 | `structured_data_schema` | LIKELY PASS | Reports/plans and directly inspected committed-generation schemas are explicitly normative; extension fields are stated where allowed. |
 | `novel` | PASS | Custom composition of build cache, exactly-once, consistent-cut, optimistic transaction, and GC protocols. |
 | `agentic` | PASS | Requires multi-file exploration, implementation, process/concurrency debugging, and repeated execution. |
@@ -80,7 +80,7 @@ The live rubric describes a task README as optional and discourages duplicate co
 
 The task is **not yet marked rubric-passed**. Before final submission:
 
-1. exact task tree must pass current static checks, full Oracle/reference tests, affected verifier regression/mutation slices, and Harbor Oracle/NOP;
+1. exact task tree `85eb3be3ce69a625a06eab3e37c69badbab89779` must pass current static checks, full Oracle/reference tests, all 40 development mutants, and Harbor Oracle/NOP;
 2. the live implementation-rubric review must return zero failed criteria on that exact tree;
 3. the exact frozen tree must complete the required Sol and Opus standard matrices and current `/cheat` runs.
 
