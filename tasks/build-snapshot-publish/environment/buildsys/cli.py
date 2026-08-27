@@ -5,8 +5,9 @@ import json
 import sys
 from pathlib import Path
 
-from .engine import BuildError, Builder
+from .engine import BuildError
 from .lifecycle import collect_garbage, read_snapshot
+from .request_protocol import build_request
 
 
 def _write_json(path: str | Path, value: dict[str, object]) -> None:
@@ -40,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "build":
-            result = Builder(args.project).build(args.target, args.request_id)
+            result = build_request(args.project, args.target, args.request_id)
             _write_json(args.report, result)
             print(json.dumps(result, sort_keys=True))
             return 0
