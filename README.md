@@ -21,7 +21,7 @@ The intended difficulty is systems composition, not hidden file-layout requireme
 Current rubric-corrected task tree:
 
 ```text
-4fcc1dfe09d61ef9239c2687988cbee0f4b0315b
+85eb3be3ce69a625a06eab3e37c69badbab89779
 ```
 
 This successor preserves the same starter and reference implementation as the difficulty-proven transaction task while removing verifier assumptions found during review:
@@ -29,8 +29,10 @@ This successor preserves the same starter and reference implementation as the di
 - ordinary project current is observed through the public `read` interface, not a private selector or transaction marker;
 - workspace current is resolved from documented workspace generation metadata, not a fixed `CURRENT` pathname;
 - the transaction response-loss test performs its **first** replay only after later overlapping publication plus workspace/project reclamation, so an early retry cannot repair missing durability;
+- the replay validator checks observable report fields and output bytes/hashes rather than assuming a private snapshot journal field or a particular internal retry count;
 - the small generation-record object-reference schema inspected by GC verification is explicitly documented;
 - candidate executions use verifier-owned log files, isolated sessions, UID baselines, and bounded process-tree cleanup on success, failure, and timeout;
+- host-only process-signaling permission limitations are separated from authoritative root-verifier cleanup failures;
 - duplicate live-owner waiting semantics tested by the verifier are explicitly stated in the contract.
 
 Final deterministic qualification and model evidence must use this exact task tree or a later explicitly documented successor. Do not count historical-tree trials toward the final matrix.
@@ -75,12 +77,10 @@ Klavis requires current TB3 static/implementation review, Docker, Oracle/NOP, th
 For the checked-out candidate tree:
 
 ```bash
-bash scripts/run-next-qualification-step.sh
+bash scripts/run-final-tree-deadline-qualification.sh
 ```
 
-This runs current TB3 static checks, the complete reference verifier, development mutation checks, then Harbor Oracle/NOP with zero frontier-model calls. The resulting same-tree qualification marker is stored under `~/.cache/klavis-tb3-runs/transaction-preflight/`.
-
-A deadline-focused qualifier may reuse unchanged mutation-family evidence only when it reruns all current TB3 static checks, the full exact-tree 66-test Oracle, every mutation slice affected by verifier changes, and exact-tree Harbor Oracle/NOP. It records that distinction rather than representing inherited mutations as newly executed.
+The final qualifier runs all current TB3 static checks, the complete 66-test reference verifier, all 40 development mutation negative controls, then exact-tree Harbor 0.14 Docker Oracle/NOP with zero frontier-model calls. The resulting same-tree qualification marker is stored under `~/.cache/klavis-tb3-runs/transaction-preflight/`.
 
 ## Required frontier matrix
 
