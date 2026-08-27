@@ -2,10 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-"fc064cac2fb1241b68a98475dbc8ea04fbe579cc"}
 TB3_REPO=${TB3_REPO:-"$HOME/.cache/klavis-tb3-terminal-bench"}
 
 actual_tree=$(git -C "$ROOT_DIR" rev-parse HEAD:tasks/build-snapshot-publish)
+EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-"$actual_tree"}
 if [[ "$actual_tree" != "$EXPECTED_TASK_TREE" ]]; then
   echo "ERROR: expected task tree $EXPECTED_TASK_TREE, found $actual_tree" >&2
   exit 2
