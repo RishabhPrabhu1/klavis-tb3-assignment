@@ -5,7 +5,8 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TASK_REL="tasks/build-snapshot-publish"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 STANDARD_TARGET=${STANDARD_TARGET:-3}
-CHEAT_TARGET=${CHEAT_TARGET:-3}
+# Live TB3 /cheat is one matrix entry per (task x agent), not trials x agent.
+CHEAT_TARGET=${CHEAT_TARGET:-1}
 TB3_HEAD_EXPECTED=${TB3_HEAD_EXPECTED:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
 
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
