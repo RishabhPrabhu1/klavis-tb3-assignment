@@ -150,6 +150,24 @@ def _pids_for_uid(uid: int) -> set[int]:
     return found
 
 
+def _signal_process(target: int, sig: signal.Signals, *, group: bool = False) -> None:
+    """Signal a candidate process; non-root host-only permission limits are diagnostic."""
+    try:
+        if group:
+            os.killpg(target, sig)
+        else:
+            os.kill(target, sig)
+    except ProcessLookupError:
+        pass
+    except PermissionError:
+        # The authoritative verifier runs as root before dropping only the child.
+        # A permission error there would mean cleanup is broken and must fail. On a
+        # developer host running pytest unprivileged, however, platform credential
+        # behavior may forbid signalling a privilege-changed child/process group.
+        if os.geteuid() == 0:
+            raise
+
+
 def _cleanup_candidate_processes(pid: int, baseline_uid_pids: set[int]) -> None:
     """Kill and reap the candidate session plus detached processes it created."""
 
@@ -158,14 +176,8 @@ def _cleanup_candidate_processes(pid: int, baseline_uid_pids: set[int]) -> None:
         targets = _proc_children(pid) | (_pids_for_uid(_NOBODY.pw_uid) - baseline_uid_pids)
         seen.update(targets)
         for child in targets:
-            try:
-                os.kill(child, sig)
-            except ProcessLookupError:
-                pass
-        try:
-            os.killpg(pid, sig)
-        except ProcessLookupError:
-            pass
+            _signal_process(child, sig)
+        _signal_process(pid, sig, group=True)
         if sig == signal.SIGTERM:
             time.sleep(0.05)
 
@@ -186,10 +198,7 @@ def _cleanup_candidate_processes(pid: int, baseline_uid_pids: set[int]) -> None:
         if time.monotonic() >= deadline:
             assert not survivors, f"candidate processes survived cleanup: {sorted(survivors)}"
         for child in survivors:
-            try:
-                os.kill(child, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            _signal_process(child, signal.SIGKILL)
         time.sleep(0.01)
 
 
