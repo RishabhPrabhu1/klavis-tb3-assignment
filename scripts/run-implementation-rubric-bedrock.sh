@@ -6,6 +6,7 @@ TASK_REL="tasks/build-snapshot-publish"
 TB3_REPO=${TB3_REPO:-"$HOME/.cache/klavis-tb3-terminal-bench"}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/implementation-rubric"}
 EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-}
+EXPECTED_TB3_HEAD=${EXPECTED_TB3_HEAD:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
 
 fail() { echo "ERROR: $*" >&2; exit 2; }
 command -v uvx >/dev/null 2>&1 || fail "uvx is required"
@@ -25,6 +26,7 @@ export AWS_REGION=${AWS_REGION:-us-east-1}
 export CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000
 
 UPSTREAM_HEAD=$(git -C "$TB3_REPO" rev-parse HEAD)
+[[ "$UPSTREAM_HEAD" == "$EXPECTED_TB3_HEAD" ]] || fail "expected Terminal-Bench HEAD $EXPECTED_TB3_HEAD, found $UPSTREAM_HEAD"
 RUBRIC="$TB3_REPO/docs/prompts/task-implementation.toml"
 REVIEW_INSTRUCTION="$TB3_REPO/scripts/rubric-regression/templates/instruction.md"
 [[ -f "$RUBRIC" ]] || fail "live rubric missing: $RUBRIC"
@@ -86,26 +88,37 @@ criteria=[c["name"] for c in rubric["criteria"]]
 missing=[name for name in criteria if name not in checks]
 if missing:
     raise SystemExit(f"verdicts missing criteria: {missing}")
-failed=[]
+failed=[]; passed=[]; not_applicable=[]
 for name in criteria:
     value=checks[name]
-    # Upstream verdict shape has evolved; treat explicit false/fail values as failures.
-    if isinstance(value,bool):
-        ok=value
-    elif isinstance(value,dict):
-        raw=value.get("passed",value.get("pass",value.get("result",value.get("status"))))
-        ok = raw is True or (isinstance(raw,str) and raw.lower() in {"pass","passed","ok","true"})
+    if isinstance(value,dict):
+        raw=value.get("outcome",value.get("passed",value.get("pass",value.get("result",value.get("status")))))
     else:
-        ok = isinstance(value,str) and value.lower() in {"pass","passed","ok","true"}
-    if not ok:
+        raw=value
+    if raw is True or (isinstance(raw,str) and raw.lower() in {"pass","passed","ok","true"}):
+        passed.append(name)
+    elif isinstance(raw,str) and raw.lower() in {"not_applicable","not applicable","n/a","na"}:
+        not_applicable.append(name)
+    else:
         failed.append(name)
-payload={"checks":checks,"criteria":criteria,"failed":failed,"passed":len(failed)==0,"source_verdicts":str(src)}
+payload={
+    "checks":checks,
+    "criteria":criteria,
+    "failed":failed,
+    "passed_criteria":passed,
+    "not_applicable":not_applicable,
+    "passed":len(failed)==0,
+    "source_verdicts":str(src),
+}
 out.write_text(json.dumps(payload,indent=2)+"\n",encoding="utf-8")
 print("\n=== IMPLEMENTATION RUBRIC REPORT ===")
 print(f"criteria={len(criteria)}")
+print(f"passed={len(passed)}")
+print(f"not_applicable={len(not_applicable)}")
 print(f"failed={len(failed)}")
 for name in failed:
-    print(f"FAIL {name}")
+    explanation=checks.get(name,{}).get("explanation","") if isinstance(checks.get(name),dict) else ""
+    print(f"FAIL {name}: {explanation}")
 print(f"overall={'PASS' if not failed else 'FAIL'}")
 print(f"result_json={out}")
 print("=== END IMPLEMENTATION RUBRIC REPORT ===")
