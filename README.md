@@ -28,7 +28,7 @@ The task uses a separate verifier image. Candidate code receives only the declar
 ## Current candidate
 
 ```text
-f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8
+05e14f258a07c24a04e7c8ae1516ce36c5796f44
 ```
 
 This tree is **pending deterministic qualification**. It must not be represented as final or frozen frontier evidence yet.
@@ -37,7 +37,8 @@ Historical task trees:
 
 - `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4` — invalidated after a valid Sol diagnostic exposed an unstated verifier representation requirement;
 - `4eaf21ae9456395fb080be497852c0ff9623b8fa` — corrected and deterministically qualified, then cleanly solved by GPT-5.6 Sol/xhigh with reward 1 and 37/37 tests;
-- `3ddb933ae848f6912210371c6afc210ceea3f373` — first exactly-once request redesign, superseded before frontier testing after a verifier coverage audit found missing composition races.
+- `3ddb933ae848f6912210371c6afc210ceea3f373` — first exactly-once request redesign, superseded before frontier testing after a verifier coverage audit found missing composition races;
+- `f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8` — strengthened request semantics/tests, superseded only because task metadata and reviewer README were updated to accurately describe that protocol. Runtime semantics were unchanged in that metadata step.
 
 ## Repository structure
 
@@ -101,7 +102,7 @@ The target final Codex evidence is three valid Sol/xhigh failures plus a valid r
 Run **zero-model deterministic qualification** on:
 
 ```text
-f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8
+05e14f258a07c24a04e7c8ae1516ce36c5796f44
 ```
 
 Do not spend another frontier-model call until static checks, the full Oracle, all mutation matrices, and Harbor Oracle/NOP are green on this exact tree.
