@@ -2,9 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-FROZEN_TASK_TREE="17291a73dc954c66db0ef5cc6cf2f70fe1c85db4"
-CHEAT_EVIDENCE_ROOT=${CHEAT_EVIDENCE_ROOT:-"$HOME/.cache/klavis-tb3-runs/workspace-cheat"}
-RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/workspace-standard-probe"}
+FROZEN_TASK_TREE="bff3b135d88174ac463d6e35a6cc30c4066dd8ea"
+CHEAT_EVIDENCE_ROOT=${CHEAT_EVIDENCE_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat"}
+RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-standard-probe"}
 SENTINEL="$RUNS_ROOT/.attempted-${FROZEN_TASK_TREE}"
 
 fail() {
@@ -71,7 +71,6 @@ if [[ -e "$SENTINEL" ]]; then
   fail "this one-off frontier probe has already been attempted; refusing a duplicate model launch. Sentinel: $SENTINEL"
 fi
 
-# Refuse if this evidence root already contains a standard run for the frozen tree.
 if python3 - "$RUNS_ROOT" "$FROZEN_TASK_TREE" <<'PY'
 import json, sys
 from pathlib import Path
@@ -102,7 +101,6 @@ RUNS_ROOT="$RUNS_ROOT" \
 runner_status=$?
 set -e
 
-# Always run the evidence auditor after the attempt, even if the runner returned nonzero.
 set +e
 python3 "$ROOT_DIR/scripts/audit-trial-evidence.py" "$RUNS_ROOT"
 audit_status=$?
@@ -168,5 +166,4 @@ for pattern, label in (
 print("=== END FRONTIER STEP REPORT ===")
 PY
 
-# Do not auto-retry. The sentinel remains even for invalid/provider-failed attempts.
 exit "$runner_status"
