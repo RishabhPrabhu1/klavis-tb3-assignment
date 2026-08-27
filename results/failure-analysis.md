@@ -3,18 +3,21 @@
 ## Current candidate
 
 ```text
-316aaf9804a82cc43e6075a657f3effda0c5717c
+85eb3be3ce69a625a06eab3e37c69badbab89779
 ```
 
-This is the rubric-corrected successor to the difficulty-proven `fc064cac...` task. It preserves the same starter and reference implementation and the same observable runtime challenge, while removing verifier/process assumptions found during review:
+This is the frozen rubric-corrected successor to the difficulty-proven `fc064cac...` task. It preserves the same starter and reference implementation and the same observable runtime challenge, while removing verifier/process assumptions found during review:
 
 - workspace current is resolved semantically rather than through a fixed selector pathname;
-- transaction post-publish replay is checked through the public replay interface rather than a private `request_report` field;
+- transaction post-publish replay is checked only after later replacement plus workspace/project GC and does not read private `request_report` state;
 - ordinary project current is observed through the required public `read` interface rather than a transaction-specific metadata marker;
-- directly inspected generation-record object references are now an explicit documented schema;
-- long-lived verifier subprocesses use verifier-owned log files and bounded process cleanup rather than unbounded inherited-pipe reads.
+- directly inspected generation-record object references are an explicit documented schema;
+- workspace candidate subprocesses use verifier-owned log files, isolated sessions, UID baselines, and bounded process-tree cleanup;
+- host-only signal permission limits no longer contaminate local mutation failures, while authoritative root-verifier cleanup errors still fail;
+- live-owner duplicate waiting behavior tested by the verifier is explicit in the contract;
+- deferred replay validates observable member/output identity and requires only the documented positive `attempts` value, not an invented exact retry count.
 
-Final deterministic qualification and frontier evidence must use this exact tree (or a later explicitly documented successor). Historical trials below are calibration evidence only.
+Final deterministic qualification and frontier evidence must use this exact tree. Historical trials below are calibration evidence only.
 
 ## Standard-trial validity
 
@@ -97,9 +100,11 @@ The failures were broad rather than a single formatting issue: project publicati
 
 Classification: **genuine model implementation failure for difficulty calibration**. No further difficulty strengthening is warranted. Because later rubric review found verifier/schema/process issues, this old-tree result is not part of the final required 3-trial matrix.
 
-### Rubric-corrected successor
+### Frozen rubric-corrected successor
 
-Review of `fc064cac...` found four concrete submission risks: a hidden `request_report` dependency, an undocumented generation-record `key` schema, inherited-pipe/process cleanup problems in workspace helpers, and a prescribed transaction metadata marker. The current `316aaf...` tree removes or documents those assumptions without changing starter/reference runtime code or weakening observable concurrency/crash/replay/GC requirements.
+Review of the calibration tree and intermediate successors identified hidden replay state, undocumented record schema, selector/metadata assumptions, incomplete workspace process isolation, an early replay that could repair durability before the intended GC test, and undocumented live-owner duplicate semantics. Tree `85eb3be3...` removes or documents those assumptions without changing starter/reference runtime code or weakening observable concurrency/crash/replay/GC requirements.
+
+The last verifier-only adjustment removed an unnecessary `attempts == 1` assumption from deferred replay. The verifier now checks that `attempts` is the documented positive integer and that the replay identifies the stranded member generation and original `out/app.txt` SHA-256 after that generation itself has been reclaimed.
 
 ## Per-trial analysis template
 
@@ -140,7 +145,7 @@ Decision:
 
 ## Freeze rule
 
-For the final exact task tree:
+For exact task tree `85eb3be3ce69a625a06eab3e37c69badbab89779`:
 
 - any valid standard reward `1` means do not treat that tree as meeting the required failure matrix;
 - valid standard reward `0` from a genuine candidate implementation error permits freezing under the deadline policy;
