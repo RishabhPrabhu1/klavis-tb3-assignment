@@ -14,10 +14,10 @@ A standard trial counts only when the exact task tree is qualified, execution co
 ## Current candidate
 
 ```text
-316aaf9804a82cc43e6075a657f3effda0c5717c
+85eb3be3ce69a625a06eab3e37c69badbab89779
 ```
 
-Final exact-tree qualification and implementation-rubric review are pending. **No trial below the final-tree table is allowed to count toward the required six-run matrix.**
+Final exact-tree qualification and implementation-rubric review are pending. **No historical-tree trial counts toward the required six-run matrix.**
 
 ## Difficulty calibration — predecessor tree
 
@@ -40,7 +40,7 @@ runtime = 29m44s
 
 The failures were distributed across project publication, exactly-once durability, readers/GC, reclamation interleavings, interrupted-work recovery, and workspace transaction replay. This establishes that the underlying runtime task is difficult enough.
 
-It is **historical calibration only** because later rubric review found verifier/schema/process issues. The current successor keeps the same starter/reference runtime implementation but changes verifier observation/documentation, so final model trials must be rerun on `316aaf...` exactly.
+It is **historical calibration only** because later rubric review found verifier/schema/process issues. The frozen successor keeps the same starter/reference runtime implementation but changes verifier observation/documentation/process hygiene, so final model trials must be rerun on `85eb3be3...` exactly.
 
 ## Earlier verifier-defect probe
 
@@ -54,12 +54,12 @@ Tree `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` was solved cleanly by Sol/xhigh 
 
 | Task tree | Agent | Model | Reasoning | Trial | Status |
 |---|---|---|---|---:|---|
-| `316aaf...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 | pending qualification/rubric |
-| `316aaf...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | pending freeze |
-| `316aaf...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | pending freeze |
-| `316aaf...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | pending provider access/freeze |
-| `316aaf...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | pending provider access/freeze |
-| `316aaf...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | pending provider access/freeze |
+| `85eb3be3...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 | pending qualification/rubric |
+| `85eb3be3...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | pending freeze |
+| `85eb3be3...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | pending freeze |
+| `85eb3be3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | pending provider access/freeze |
+| `85eb3be3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | pending provider access/freeze |
+| `85eb3be3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | pending provider access/freeze |
 
 ## Freeze policy
 
