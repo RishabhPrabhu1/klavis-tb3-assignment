@@ -51,7 +51,6 @@ if [[ ! -d "$TB3_REPO/.git" ]]; then
   git clone https://github.com/harbor-framework/terminal-bench.git "$TB3_REPO"
 fi
 git -C "$TB3_REPO" fetch origin
-# Pin to the exact source-of-truth revision used by the submission evidence.
 git -C "$TB3_REPO" checkout --detach "$TB3_HEAD"
 
 existing_rubric=$(python3 - "$RUBRIC_ROOT" "$TREE" "$TB3_HEAD" <<'PY'
@@ -70,20 +69,18 @@ PY
 if [[ -n "$existing_rubric" ]]; then
   echo "Reusing same-tree rubric PASS: $existing_rubric"
 else
-  # macOS Bash 3.2 does not define BASHPID; this runner uses it only for an
-  # evidence-directory suffix, so provide a collision-resistant value.
   BASHPID="$(unique_id)" \
   EXPECTED_TASK_TREE="$TREE" EXPECTED_TB3_HEAD="$TB3_HEAD" TB3_REPO="$TB3_REPO" RUNS_ROOT="$RUBRIC_ROOT" \
     bash "$ROOT_DIR/scripts/run-implementation-rubric-bedrock.sh"
 fi
 
-printf '\n[3/5] Claude Code / Opus 5 / max standard matrix: 3 valid reward-0 required\n'
+printf '\n[3/5] Claude Code / Opus 5 / max standard matrix: 3 valid model failures required\n'
 CONFIRM_FREEZE=1 AGENT=claude MODE=standard TARGET_VALID_ZEROES=3 MAX_PARALLEL="$CLAUDE_STANDARD_PARALLEL" \
   bash "$ROOT_DIR/scripts/run-parallel-final-matrix.sh"
 
-printf '\n[4/5] Claude Code / Opus 5 / max adversarial matrix: 1 valid reward-0 required\n'
-CONFIRM_FREEZE=1 AGENT=claude MODE=cheat TARGET_VALID_ZEROES=1 MAX_PARALLEL=1 TB3_HEAD_EXPECTED="$TB3_HEAD" \
-  bash "$ROOT_DIR/scripts/run-parallel-final-matrix.sh"
+printf '\n[4/5] Claude Code / Opus 5 / max adversarial run: reward 0 required\n'
+CONFIRM_FREEZE=1 AGENT=claude TARGET_CHEATS=1 TB3_HEAD_EXPECTED="$TB3_HEAD" \
+  bash "$ROOT_DIR/scripts/run-deadline-cheat-matrix.sh"
 
 printf '\n[5/5] Final submission audit\n'
 set +e
