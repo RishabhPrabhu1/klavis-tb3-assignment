@@ -9,6 +9,7 @@ on:
       - "scripts/run-local-reference-tests.sh"
       - "scripts/run-mutation-checks.sh"
       - "scripts/run-lifecycle-mutation-checks.sh"
+      - "scripts/run-request-mutation-checks.sh"
       - ".github/workflows/preflight.yml"
   workflow_dispatch:
 
@@ -82,6 +83,10 @@ jobs:
           sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
             bash ./scripts/run-lifecycle-mutation-checks.sh 2>&1 | tee /tmp/lifecycle-mutations.log
           lifecycle_status=${PIPESTATUS[0]}
+
+          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
+            bash ./scripts/run-request-mutation-checks.sh 2>&1 | tee /tmp/request-mutations.log
+          request_status=${PIPESTATUS[0]}
           set -e
 
           detail=$(
@@ -90,12 +95,14 @@ jobs:
               grep -E '^(PASS|FAIL):' /tmp/core-mutations.log || true
               printf 'lifecycle_status=%s\n' "$lifecycle_status"
               grep -E '^(PASS|FAIL):' /tmp/lifecycle-mutations.log || true
+              printf 'request_status=%s\n' "$request_status"
+              grep -E '^(PASS|FAIL):' /tmp/request-mutations.log || true
             } | tr '\n' ';' | sed 's/;$//'
           )
           echo "detail=$detail" >> "$GITHUB_OUTPUT"
           printf 'mutation detail: %s\n' "$detail"
 
-          if [[ $core_status -ne 0 || $lifecycle_status -ne 0 ]]; then
+          if [[ $core_status -ne 0 || $lifecycle_status -ne 0 || $request_status -ne 0 ]]; then
             exit 1
           fi
 
