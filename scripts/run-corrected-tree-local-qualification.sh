@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-"f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8"}
+EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-"05e14f258a07c24a04e7c8ae1516ce36c5796f44"}
 TB3_REPO=${TB3_REPO:-"$HOME/.cache/klavis-tb3-terminal-bench"}
 
 actual_tree=$(git -C "$ROOT_DIR" rev-parse HEAD:tasks/build-snapshot-publish)
