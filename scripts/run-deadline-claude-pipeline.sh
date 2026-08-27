@@ -15,35 +15,45 @@ CLAUDE_STANDARD_PARALLEL=${CLAUDE_STANDARD_PARALLEL:-2}
 fail() { echo "ERROR: $*" >&2; exit 2; }
 
 [[ "$CONFIRM_FREEZE" == "1" ]] || fail "Set CONFIRM_FREEZE=1 only after this exact task tree is approved as frozen."
-[[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Claude model calls blocked. Set CONFIRM_ZERO_COST_COVERAGE=1 only after confirming eligible credits/organization coverage with zero out-of-pocket spend."
+[[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Claude model calls blocked. Set CONFIRM_ZERO_COST_COVERAGE=1 only for Klavis's subscription OAuth route or separately confirmed zero-cost provider coverage."
 [[ -z "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]] || fail "task tree is dirty"
 [[ -f "$QUAL_ROOT/QUALIFICATION-PASSED-${TREE}.txt" ]] || fail "same-tree zero-model qualification marker is missing"
 
-# This deadline path is intentionally Bedrock-only. Do not silently fall back to
-# Anthropic pay-as-you-go or subscription authentication when zero out-of-pocket
-# access is the user's constraint.
-[[ "${CLAUDE_CODE_USE_BEDROCK:-1}" == "1" ]] || fail "CLAUDE_CODE_USE_BEDROCK must be 1"
-if [[ -z "${AWS_BEARER_TOKEN_BEDROCK:-}" && ( -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ) && -z "${AWS_PROFILE:-}" ]]; then
-  fail "Bedrock credentials are not configured"
+AUTH_MODE=""
+if [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
+  AUTH_MODE="oauth"
+  # This is the route explicitly documented by Klavis: claude setup-token,
+  # CLAUDE_FORCE_OAUTH=1, CLAUDE_CODE_OAUTH_TOKEN=<token>. Prevent provider/API fallback.
+  unset ANTHROPIC_API_KEY || true
+  unset AWS_BEARER_TOKEN_BEDROCK || true
+  unset AWS_ACCESS_KEY_ID || true
+  unset AWS_SECRET_ACCESS_KEY || true
+  unset AWS_SESSION_TOKEN || true
+  unset AWS_PROFILE || true
+  unset CLAUDE_CODE_USE_BEDROCK || true
+elif [[ "${CLAUDE_CODE_USE_BEDROCK:-}" == "1" ]] && { [[ -n "${AWS_BEARER_TOKEN_BEDROCK:-}" ]] || [[ -n "${AWS_ACCESS_KEY_ID:-}" && -n "${AWS_SECRET_ACCESS_KEY:-}" ]] || [[ -n "${AWS_PROFILE:-}" ]]; }; then
+  AUTH_MODE="bedrock"
+  [[ -z "${ANTHROPIC_API_KEY:-}" ]] || fail "Unset ANTHROPIC_API_KEY for the Bedrock path"
+  export AWS_REGION=${AWS_REGION:-us-east-1}
+else
+  fail "No zero-cost-covered Claude route found. Preferred: export a token from 'claude setup-token' as CLAUDE_CODE_OAUTH_TOKEN."
 fi
-if [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
-  fail "Unset ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN so this cannot fall back to a paid Anthropic route"
-fi
-export CLAUDE_CODE_USE_BEDROCK=1
-export AWS_REGION=${AWS_REGION:-us-east-1}
 export CONFIRM_ZERO_COST_COVERAGE=1
 
 printf '=== DEADLINE CLAUDE PIPELINE ===\n'
 printf 'execution_commit=%s\n' "$(git -C "$ROOT_DIR" rev-parse HEAD)"
 printf 'task_tree=%s\n' "$TREE"
 printf 'terminal_bench_head=%s\n' "$TB3_HEAD"
-printf 'provider=Amazon Bedrock\n'
-printf 'zero_cost_coverage_confirmed=YES\n'
+printf 'auth_mode=%s\n' "$AUTH_MODE"
 printf 'standard_target=3\n'
 printf 'cheat_target=1\n'
 
-printf '\n[1/5] Bounded Claude Code / Opus 5 Bedrock entitlement smoke test\n'
-bash "$ROOT_DIR/scripts/smoke-test-claude-bedrock.sh"
+if [[ "$AUTH_MODE" == "bedrock" ]]; then
+  printf '\n[1/5] Bounded Claude Code / Opus 5 Bedrock entitlement smoke test\n'
+  bash "$ROOT_DIR/scripts/smoke-test-claude-bedrock.sh"
+else
+  printf '\n[1/5] Claude subscription OAuth token present (no extra model smoke call)\n'
+fi
 
 printf '\n[2/5] Exact-tree Terminal-Bench implementation rubric\n'
 if [[ ! -d "$TB3_REPO/.git" ]]; then
@@ -67,17 +77,20 @@ PY
 )
 if [[ -n "$existing_rubric" ]]; then
   echo "Reusing same-tree rubric PASS: $existing_rubric"
+elif [[ "$AUTH_MODE" == "oauth" ]]; then
+  EXPECTED_TASK_TREE="$TREE" EXPECTED_TB3_HEAD="$TB3_HEAD" TB3_REPO="$TB3_REPO" RUNS_ROOT="$RUBRIC_ROOT" CONFIRM_ZERO_COST_COVERAGE=1 \
+    bash "$ROOT_DIR/scripts/run-implementation-rubric-oauth.sh"
 else
   EXPECTED_TASK_TREE="$TREE" EXPECTED_TB3_HEAD="$TB3_HEAD" TB3_REPO="$TB3_REPO" RUNS_ROOT="$RUBRIC_ROOT" \
     bash "$ROOT_DIR/scripts/run-implementation-rubric-bedrock.sh"
 fi
 
 printf '\n[3/5] Claude Code / Opus 5 / max standard matrix: 3 valid model failures required\n'
-CONFIRM_FREEZE=1 AGENT=claude MODE=standard TARGET_VALID_ZEROES=3 MAX_PARALLEL="$CLAUDE_STANDARD_PARALLEL" \
+CONFIRM_FREEZE=1 CONFIRM_ZERO_COST_COVERAGE=1 AGENT=claude MODE=standard TARGET_VALID_ZEROES=3 MAX_PARALLEL="$CLAUDE_STANDARD_PARALLEL" \
   bash "$ROOT_DIR/scripts/run-parallel-final-matrix.sh"
 
 printf '\n[4/5] Claude Code / Opus 5 / max adversarial run: reward 0 required\n'
-CONFIRM_FREEZE=1 AGENT=claude TARGET_CHEATS=1 TB3_HEAD_EXPECTED="$TB3_HEAD" \
+CONFIRM_FREEZE=1 CONFIRM_ZERO_COST_COVERAGE=1 AGENT=claude TARGET_CHEATS=1 TB3_HEAD_EXPECTED="$TB3_HEAD" \
   bash "$ROOT_DIR/scripts/run-deadline-cheat-matrix.sh"
 
 printf '\n[5/5] Final submission audit\n'
