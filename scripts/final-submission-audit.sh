@@ -5,10 +5,11 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TASK_REL="tasks/build-snapshot-publish"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 TARGET=${TARGET_TRIALS:-3}
+TB3_HEAD_EXPECTED=${TB3_HEAD_EXPECTED:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
 
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
 CODEX_STANDARD_ROOTS=${CODEX_STANDARD_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-standard-probe:$HOME/.cache/klavis-tb3-runs/transaction-standard-final"}
-CLAUDE_STANDARD_ROOTS=${CLAUDE_STANDARD_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-standard"}
+CLAUDE_STANDARD_ROOTS=${CLAUDE_STANDARD_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-standard:$HOME/.cache/klavis-tb3-runs/transaction-claude-standard-final"}
 CODEX_CHEAT_ROOTS=${CODEX_CHEAT_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat:$HOME/.cache/klavis-tb3-runs/transaction-cheat-final"}
 CLAUDE_CHEAT_ROOTS=${CLAUDE_CHEAT_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-cheat"}
 
@@ -33,7 +34,6 @@ for raw in roots_raw.split(":"):
         key=str(path.resolve())
         if key in seen: continue
         seen.add(key)
-        tests=data.get("tests") if isinstance(data.get("tests"),dict) else {}
         valid=(
             data.get("task_tree")==tree
             and data.get("mode")==mode
@@ -58,6 +58,7 @@ PY
 printf '=== KLAVIS FINAL SUBMISSION AUDIT ===\n'
 printf 'execution_commit=%s\n' "$(git -C "$ROOT_DIR" rev-parse HEAD)"
 printf 'task_tree=%s\n' "$TREE"
+printf 'terminal_bench_head_expected=%s\n' "$TB3_HEAD_EXPECTED"
 printf 'target_trials_per_agent=%s\n' "$TARGET"
 
 if [[ -n "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]]; then
@@ -86,7 +87,8 @@ for required in \
   results/standard-trials.md \
   results/cheat-trials.md \
   results/failure-analysis.md \
-  results/contract-coverage.md; do
+  results/contract-coverage.md \
+  results/execution-plan.md; do
   if [[ -f "$ROOT_DIR/$required" ]]; then
     printf 'document %-36s present\n' "$required"
   else
