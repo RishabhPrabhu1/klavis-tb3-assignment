@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-"4eaf21ae9456395fb080be497852c0ff9623b8fa"}
+EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-"3ddb933ae848f6912210371c6afc210ceea3f373"}
 TB3_REPO=${TB3_REPO:-"$HOME/.cache/klavis-tb3-terminal-bench"}
 
 actual_tree=$(git -C "$ROOT_DIR" rev-parse HEAD:tasks/build-snapshot-publish)
@@ -31,6 +31,9 @@ bash "$ROOT_DIR/scripts/run-mutation-checks.sh"
 
 echo "==> lifecycle/GC mutation checks"
 bash "$ROOT_DIR/scripts/run-lifecycle-mutation-checks.sh"
+
+echo "==> exactly-once request mutation checks"
+bash "$ROOT_DIR/scripts/run-request-mutation-checks.sh"
 
 echo "LOCAL DETERMINISTIC QUALIFICATION PASSED"
 echo "task_tree=$actual_tree"
