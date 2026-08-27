@@ -41,6 +41,7 @@ for raw in roots_raw.split(":"):
             and data.get("agent")==agent
             and data.get("model")==model
             and data.get("reasoning_effort")==reasoning
+            and data.get("evidence_audited") is True
             and data.get("execution_class")=="valid-completed-trial"
             and data.get("qualification_valid") is True
             and not (data.get("result_exception_types") or [])
@@ -54,19 +55,17 @@ PY
   if (( count < target )); then failures=$((failures+1)); fi
 }
 
-# TB3's live /cheat workflow is reward-based: if harbor itself exits nonzero it
-# records reward 0, and otherwise it records the parsed Mean (defaulting to 0).
-# Therefore agent exceptions/safety refusals are not disqualified the way they
-# are for /run. We mirror that source-of-truth behavior here, while still
-# rejecting any same-tree adversarial trial that actually earned nonzero reward.
+# Mirror pinned live TB3 /cheat semantics. A nonzero harbor-run exit is recorded
+# by that workflow as adversarial reward 0. Otherwise require the recorded reward
+# to be zero. Also require exact pinned TB3 provenance.
 check_cheat_reward() {
   local label=$1 roots=$2 agent=$3 model=$4 reasoning=$5 target=$6
-  local stats zero nonzero unparsed
-  stats=$(python3 - "$TREE" "$roots" "$agent" "$model" "$reasoning" <<'PY'
+  local stats zero nonzero unparsed provenance
+  stats=$(python3 - "$TREE" "$roots" "$agent" "$model" "$reasoning" "$TB3_HEAD_EXPECTED" <<'PY'
 import json,sys
 from pathlib import Path
-tree,roots_raw,agent,model,reasoning=sys.argv[1:]
-seen=set(); zero=[]; nonzero=[]; unparsed=[]
+tree,roots_raw,agent,model,reasoning,tb3=sys.argv[1:]
+seen=set(); zero=[]; nonzero=[]; unparsed=[]; provenance=[]
 for raw in roots_raw.split(":"):
     root=Path(raw).expanduser()
     if not root.exists(): continue
@@ -78,11 +77,15 @@ for raw in roots_raw.split(":"):
         except Exception:continue
         if not (d.get("task_tree")==tree and d.get("mode")=="cheat" and d.get("agent")==agent and d.get("model")==model and d.get("reasoning_effort")==reasoning):
             continue
+        if d.get("terminal_bench_head") != tb3:
+            provenance.append(str(p)); continue
+        status=d.get("harbor_exit_status")
         reward=d.get("reward")
-        if reward in (0,0.0): zero.append(str(p))
+        if status not in (None,0): zero.append(str(p))
+        elif reward in (0,0.0): zero.append(str(p))
         elif reward is None: unparsed.append(str(p))
         else: nonzero.append(str(p))
-print(json.dumps({"zero":zero,"nonzero":nonzero,"unparsed":unparsed}))
+print(json.dumps({"zero":zero,"nonzero":nonzero,"unparsed":unparsed,"provenance":provenance}))
 PY
 )
   zero=$(python3 - "$stats" <<'PY'
@@ -97,8 +100,12 @@ PY
 import json,sys; print(len(json.loads(sys.argv[1])["unparsed"]))
 PY
 )
-  printf '%-32s %s/%s (nonzero=%s unparsed=%s)\n' "$label" "$zero" "$target" "$nonzero" "$unparsed"
-  if (( zero < target || nonzero > 0 || unparsed > 0 )); then failures=$((failures+1)); fi
+  provenance=$(python3 - "$stats" <<'PY'
+import json,sys; print(len(json.loads(sys.argv[1])["provenance"]))
+PY
+)
+  printf '%-32s %s/%s (nonzero=%s unparsed=%s wrong_tb3=%s)\n' "$label" "$zero" "$target" "$nonzero" "$unparsed" "$provenance"
+  if (( zero < target || nonzero > 0 || unparsed > 0 || provenance > 0 )); then failures=$((failures+1)); fi
 }
 
 check_rubric() {
@@ -126,6 +133,44 @@ PY
   fi
 }
 
+check_qualification_marker() {
+  local marker=$1
+  if [[ ! -f "$marker" ]]; then
+    echo "same_tree_zero_model_qualification=MISSING"
+    failures=$((failures+1))
+    return
+  fi
+  if python3 - "$marker" "$TREE" "$TB3_HEAD_EXPECTED" <<'PY'
+import sys
+from pathlib import Path
+path=Path(sys.argv[1]); tree=sys.argv[2]; tb3=sys.argv[3]
+vals={}
+for line in path.read_text(encoding="utf-8").splitlines():
+    if "=" in line:
+        k,v=line.split("=",1); vals[k.strip()]=v.strip()
+expected={
+    "task_tree":tree,
+    "terminal_bench_head":tb3,
+    "static_checks":"PASS",
+    "oracle_tests":"66",
+    "mutations_total":"40",
+    "harbor_oracle":"1",
+    "harbor_nop":"0",
+    "sol_calls":"0",
+}
+wrong={k:(vals.get(k),v) for k,v in expected.items() if vals.get(k)!=v}
+if wrong:
+    print(f"qualification marker mismatch: {wrong}", file=sys.stderr)
+    raise SystemExit(1)
+PY
+  then
+    echo "same_tree_zero_model_qualification=PASS"
+  else
+    echo "same_tree_zero_model_qualification=INVALID_MARKER"
+    failures=$((failures+1))
+  fi
+}
+
 printf '=== KLAVIS FINAL SUBMISSION AUDIT ===\n'
 printf 'execution_commit=%s\n' "$(git -C "$ROOT_DIR" rev-parse HEAD)"
 printf 'task_tree=%s\n' "$TREE"
@@ -141,13 +186,7 @@ else
 fi
 
 QUAL_MARKER="$QUAL_ROOT/QUALIFICATION-PASSED-${TREE}.txt"
-if [[ -f "$QUAL_MARKER" ]]; then
-  echo "same_tree_zero_model_qualification=PASS"
-else
-  echo "same_tree_zero_model_qualification=MISSING"
-  failures=$((failures+1))
-fi
-
+check_qualification_marker "$QUAL_MARKER"
 check_rubric
 
 check_standard_count "Codex standard reward-0" "$CODEX_STANDARD_ROOTS" codex openai/gpt-5.6-sol xhigh "$STANDARD_TARGET"
