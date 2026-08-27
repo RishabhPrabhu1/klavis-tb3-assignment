@@ -1,10 +1,12 @@
 {
-  "harbor_detail": "checkout=success,setup_python=success,setup_uv=success,harbor018_install=success,docker_build=success,oracle018=success,nop018=success,harbor014_install=success,oracle014=success,nop014=success",
-  "harbor_docker": "success",
-  "mutation_detail": "core_status=0;PASS: mutation starter rejected;PASS: mutation always-rebuild rejected;PASS: mutation ignore-upstream rejected;PASS: mutation ignore-definition rejected;PASS: mutation retain-unreached-outputs rejected;PASS: mutation non-atomic-narrow-prune rejected;PASS: mutation publish-in-place rejected;PASS: mutation no-selector rejected;PASS: mutation aborted-cache-reusable rejected;PASS: mutation stale-base-commit rejected;PASS: mutation no-input-revalidation rejected;PASS: mutation ignore-manifest-revalidation rejected;PASS: mutation ignore-source-revalidation rejected;PASS: mutation failpoint-only-staging rejected;lifecycle_status=0;PASS: lifecycle mutation commit-seq-constant rejected;PASS: lifecycle mutation gc-never-delete-generations rejected;PASS: lifecycle mutation gc-ignore-reader-pins rejected;PASS: lifecycle mutation gc-trust-stale-scan rejected;PASS: lifecycle mutation gc-sweep-active-writer rejected;PASS: lifecycle mutation gc-never-sweep-objects rejected",
-  "preflight": "success",
-  "preflight_detail": "checkout=success,setup_python=success,tooling=success,tb3_checkout=success,static=success,oracle=success,determinism=success,mutations=success",
-  "qualified": true,
-  "task_tree": "d84a5bf3df6a2c3ed7a523c7fee072936f4029e4",
+  "harbor_detail": "pending requalification after representation-neutral verifier correction",
+  "harbor_docker": "pending",
+  "mutation_detail": "pending requalification after representation-neutral verifier correction",
+  "preflight": "pending",
+  "preflight_detail": "Previous qualification applied to task tree d84a5bf3df6a2c3ed7a523c7fee072936f4029e4. A valid Sol diagnostic exposed an unstated verifier requirement for .build-cache/CURRENT. lifecycle_harness.current_token was corrected to infer the current generation from the greatest committed commit_seq instead of requiring a specific pointer layout. Full static/oracle/nop/determinism/mutation qualification must be rerun for the new task tree.",
+  "qualified": false,
+  "task_tree": "4eaf21ae9456395fb080be497852c0ff9623b8fa",
+  "previous_qualified_task_tree": "d84a5bf3df6a2c3ed7a523c7fee072936f4029e4",
+  "verifier_fix_commit": "9866fb58398d7259fe23417bf25735e2ccad580b",
   "workflow_commit": "f6f1bc4989c6cdee98b618d0374b3a289006a20f"
 }
