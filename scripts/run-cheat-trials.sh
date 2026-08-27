@@ -3,9 +3,7 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 RUNNER="$ROOT_DIR/scripts/run-candidate-trial.sh"
-FROZEN_TASK_TREE="40cbd34104e1f0a549be23b46ef70655b728cece"
-# Operational default: Codex-only. Claude remains available as an explicit opt-in
-# for eventual full assignment compliance when Claude subscription auth exists.
+FROZEN_TASK_TREE="5620526fada6eebea16910fc62bf71746aaa40ea"
 AGENTS=${AGENTS:-codex}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/cheat"}
 
@@ -27,24 +25,13 @@ run_agent() {
   local agent=$1
   local label=$2
   printf '\n=== %s adversarial trial ===\n' "$label"
-  AGENT="$agent" \
-  MODE=cheat \
-  EXPECTED_TASK_TREE="$FROZEN_TASK_TREE" \
-  RUNS_ROOT="$RUNS_ROOT" \
-  "$RUNNER"
+  AGENT="$agent" MODE=cheat EXPECTED_TASK_TREE="$FROZEN_TASK_TREE" RUNS_ROOT="$RUNS_ROOT" "$RUNNER"
 }
 
 case "$AGENTS" in
-  codex)
-    run_agent codex "Codex GPT-5.6 Sol/xhigh"
-    ;;
-  claude)
-    run_agent claude "Claude Code Opus 5/max"
-    ;;
-  both)
-    run_agent codex "Codex GPT-5.6 Sol/xhigh"
-    run_agent claude "Claude Code Opus 5/max"
-    ;;
+  codex) run_agent codex "Codex GPT-5.6 Sol/xhigh" ;;
+  claude) run_agent claude "Claude Code Opus 5/max" ;;
+  both) run_agent codex "Codex GPT-5.6 Sol/xhigh"; run_agent claude "Claude Code Opus 5/max" ;;
 esac
 
 printf '\nAdversarial matrix complete. Evidence root: %s\n' "$RUNS_ROOT"
