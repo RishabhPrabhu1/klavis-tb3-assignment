@@ -7,6 +7,7 @@ TASK_DIR="$ROOT_DIR/$TASK_REL"
 EXPECTED_SHA=${EXPECTED_SHA:-}
 EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-}
 RUNS_ROOT=${RUNS_ROOT:-"${TMPDIR:-/tmp}/build-snapshot-publish-sol-runs"}
+CHEAT_EVIDENCE_ROOT=${CHEAT_EVIDENCE_ROOT:-"$HOME/.cache/klavis-tb3-runs/cheat"}
 PREFLIGHT_ONLY=${PREFLIGHT_ONLY:-0}
 
 fail() {
@@ -42,6 +43,45 @@ docker info >/dev/null 2>&1 || fail "Docker daemon is not available"
 [[ -f "$HOME/.codex/auth.json" ]] || fail "Codex subscription auth not found at ~/.codex/auth.json; run 'codex login' first"
 
 CODEX_VERSION=$(codex --version 2>&1 || true)
+CHEAT_SUMMARY=""
+
+# Enforce the active execution plan: a standard Sol probe cannot run until a
+# normally completed Codex /cheat attempt has already earned reward 0 on this
+# exact task tree. PREFLIGHT_ONLY deliberately bypasses this because it makes
+# no Sol calls and is the prerequisite path check.
+if [[ "$PREFLIGHT_ONLY" != "1" ]]; then
+  CHEAT_SUMMARY=$(python3 - "$CHEAT_EVIDENCE_ROOT" "$TASK_TREE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1]).expanduser()
+task_tree = sys.argv[2]
+valid = []
+if root.exists():
+    for path in root.rglob("summary.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if (
+            data.get("mode") == "cheat"
+            and data.get("agent") == "codex"
+            and data.get("model") == "openai/gpt-5.6-sol"
+            and data.get("reasoning_effort") == "xhigh"
+            and data.get("task_tree") == task_tree
+            and data.get("execution_class") == "valid-completed-trial"
+            and data.get("reward") == 0.0
+        ):
+            valid.append(path)
+if not valid:
+    raise SystemExit(3)
+valid.sort(key=lambda p: (p.stat().st_mtime, str(p)))
+print(valid[-1])
+PY
+  ) || fail "no valid Codex /cheat reward-0 evidence found for task tree $TASK_TREE under $CHEAT_EVIDENCE_ROOT; run 'AGENTS=codex ./scripts/run-cheat-trials.sh' first"
+fi
+
 STAMP=$(date -u +%Y%m%dT%H%M%SZ)
 RUN_DIR="$RUNS_ROOT/${STAMP}-${SHORT_SHA}"
 TASK_COPY="$RUN_DIR/task"
@@ -50,12 +90,12 @@ JOB_NAME="sol-xhigh-${SHORT_SHA}"
 mkdir -p "$RUN_DIR" "$HARBOR_OUTPUT"
 cp -R "$TASK_DIR" "$TASK_COPY"
 
-python3 - "$RUN_DIR/metadata.json" "$REPO_SHA" "$TASK_TREE" "$HARBOR_VERSION" "$CODEX_VERSION" "$PREFLIGHT_ONLY" <<'PY'
+python3 - "$RUN_DIR/metadata.json" "$REPO_SHA" "$TASK_TREE" "$HARBOR_VERSION" "$CODEX_VERSION" "$PREFLIGHT_ONLY" "$CHEAT_SUMMARY" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-path, repo_sha, task_tree, harbor_version, codex_version, preflight_only = sys.argv[1:]
+path, repo_sha, task_tree, harbor_version, codex_version, preflight_only, cheat_summary = sys.argv[1:]
 Path(path).write_text(json.dumps({
     "repository_sha": repo_sha,
     "task_tree": task_tree,
@@ -69,6 +109,7 @@ Path(path).write_text(json.dumps({
     "attempts_requested": 0 if preflight_only == "1" else 1,
     "harbor_analyze": False,
     "preflight_only": preflight_only == "1",
+    "qualifying_cheat_summary": cheat_summary or None,
 }, indent=2) + "\n", encoding="utf-8")
 PY
 
@@ -159,13 +200,12 @@ Repository SHA:  $REPO_SHA
 Task tree:       $TASK_TREE
 Harbor:          $HARBOR_VERSION
 Codex:           $CODEX_VERSION
+Qualified cheat: $CHEAT_SUMMARY
 Output:          $RUN_DIR
 
 Only the Harbor child agent below uses GPT-5.6 Sol/xhigh.
 There is no outer Codex session and this script never invokes harbor analyze.
 Exactly one Harbor task/agent trial is requested.
-
-For a no-Sol infrastructure check first, run this script with PREFLIGHT_ONLY=1.
 EOF
 
 set +e
@@ -266,6 +306,7 @@ lines = [
     "- Reasoning: `xhigh`",
     "- Environment: `docker`",
     f"- Harbor: `{metadata['harbor_version']}`",
+    f"- Qualifying cheat summary: `{metadata['qualifying_cheat_summary']}`",
     "- Attempts requested: `1`",
     "- `harbor analyze`: **not run**",
     f"- Harbor exit status: `{harbor_status}`",
