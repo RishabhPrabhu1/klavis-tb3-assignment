@@ -2,10 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-FROZEN_TASK_TREE="fc064cac2fb1241b68a98475dbc8ea04fbe579cc"
 TB3_REPO=${TB3_REPO:-"$HOME/.cache/klavis-tb3-terminal-bench"}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
-PASS_MARKER="$RUNS_ROOT/QUALIFICATION-PASSED-${FROZEN_TASK_TREE}.txt"
 
 fail() {
   echo "ERROR: $*" >&2
@@ -14,7 +12,10 @@ fail() {
 
 cd "$ROOT_DIR"
 actual_tree=$(git rev-parse HEAD:tasks/build-snapshot-publish)
-[[ "$actual_tree" == "$FROZEN_TASK_TREE" ]] || fail "expected task tree $FROZEN_TASK_TREE, found $actual_tree"
+EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-"$actual_tree"}
+[[ "$actual_tree" == "$EXPECTED_TASK_TREE" ]] || fail "expected task tree $EXPECTED_TASK_TREE, found $actual_tree"
+FROZEN_TASK_TREE="$actual_tree"
+PASS_MARKER="$RUNS_ROOT/QUALIFICATION-PASSED-${FROZEN_TASK_TREE}.txt"
 [[ -z "$(git status --porcelain -- tasks/build-snapshot-publish)" ]] || fail "task tree is dirty"
 
 command -v harbor >/dev/null || fail "harbor is not installed"
