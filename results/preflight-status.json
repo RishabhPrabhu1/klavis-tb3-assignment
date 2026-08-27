@@ -1,13 +1,10 @@
 {
-  "harbor_detail": "Harbor 0.14.0 Docker/Colima zero-Sol preflight: oracle_reward=1, nop_reward=0, sol_calls=0; evidence=/Users/rishabhprabhu/.cache/klavis-tb3-runs/preflight-v2/20260827T062719Z-f0aa5bf9c922",
-  "harbor_docker": "success",
-  "mutation_detail": "core_status=0;14/14 core mutants rejected; lifecycle_status=0;6/6 lifecycle mutants rejected; total=20/20 rejected",
-  "preflight": "success",
-  "preflight_detail": "Terminal-Bench HEAD b2d4a935cfb1a6f621f611ea69421039cfccd158; live static checks PASS; reference/oracle full verifier 37 passed, 0 failed in 21.03s using isolated Python 3.13.14 / pytest 9.1.1 / pytest-json-ctrf 0.5.2; all 20 mutations rejected; Harbor Oracle=1, NOP=0, sol_calls=0.",
-  "qualified": true,
-  "task_tree": "4eaf21ae9456395fb080be497852c0ff9623b8fa",
-  "previous_qualified_task_tree": "d84a5bf3df6a2c3ed7a523c7fee072936f4029e4",
-  "verifier_fix_commit": "9866fb58398d7259fe23417bf25735e2ccad580b",
-  "qualification_execution_commit": "f0aa5bf9c9221ef4c217408edfa805dc01e9c907",
-  "workflow_commit": "f6f1bc4989c6cdee98b618d0374b3a289006a20f"
+  "harbor_detail": "",
+  "harbor_docker": "skipped",
+  "mutation_detail": "",
+  "preflight": "failure",
+  "preflight_detail": "checkout=success,setup_python=success,tooling=success,tb3_checkout=success,static=success,oracle=failure,determinism=skipped,mutations=skipped",
+  "qualified": false,
+  "task_tree": "0036468bc0dc46f8adbd798c4b31c0ea8725d44a",
+  "workflow_commit": "c4bc88d836200a83fc3305de0a0a069ad4ad325f"
 }
