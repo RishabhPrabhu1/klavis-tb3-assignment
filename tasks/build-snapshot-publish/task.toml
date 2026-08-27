@@ -18,7 +18,7 @@ verification_explanation = "The verifier keeps the prior incremental, publicatio
 category = "Software"
 subcategory = "Systems"
 tags = ["build-systems", "caching", "concurrency", "transactions", "snapshot-isolation", "idempotency", "exactly-once", "garbage-collection", "leases", "crash-recovery", "incremental-build", "debugging"]
-expert_time_estimate_hours = 7.0
+expert_time_estimate_hours = 4.0
 relevant_experience = "Software engineering work has included Python/TypeScript services and PostgreSQL/Supabase-backed systems, with hands-on use of GCP and AWS. The snapshot-publication, idempotency, and reclamation failure modes were developed through targeted systems research rather than prior ownership of a production build system."
 
 [verifier]
