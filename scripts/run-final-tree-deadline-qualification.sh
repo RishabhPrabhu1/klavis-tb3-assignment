@@ -34,19 +34,23 @@ printf 'terminal_bench_head=%s\n' "$ACTUAL_TB3_HEAD"
 printf 'test_python=%s\n' "$TEST_PYTHON"
 printf 'unchanged_mutation_baseline_tree=%s\n' "$BASE_QUALIFIED_TREE"
 
-printf '\n[1/4] Current TB3 static checks\n'
+printf '\n[1/5] Current TB3 static checks\n'
 TB3_REPO="$TB3_REPO" bash "$ROOT_DIR/scripts/run-static-checks.sh"
 
-printf '\n[2/4] Full exact-tree Oracle/reference verifier (66 tests expected)\n'
+printf '\n[2/5] Full exact-tree Oracle/reference verifier (66 tests expected)\n'
 bash "$ROOT_DIR/scripts/run-local-reference-tests.sh"
 
-printf '\n[3/4] Changed transaction-verifier mutation slice (8 mutants)\n'
-# Core/lifecycle/request/workspace-snapshot implementation and tests are unchanged
-# from BASE_QUALIFIED_TREE. Only the transaction/current-observation verifier slice
-# changed, so deadline mode reruns that affected mutation family rather than all 40.
+printf '\n[3/5] Changed workspace-snapshot verifier mutation slice (7 mutants)\n'
+# workspace_harness.py changed for verifier isolation, so rerun the workspace
+# mutation family rather than inheriting those negative controls.
+bash "$ROOT_DIR/scripts/run-workspace-mutation-checks.sh"
+
+printf '\n[4/5] Changed workspace-transaction verifier mutation slice (8 mutants)\n'
+# transaction harness/tests changed for representation-neutral replay and
+# process isolation, so rerun all transaction mutants.
 bash "$ROOT_DIR/scripts/run-workspace-txn-mutation-checks.sh"
 
-printf '\n[4/4] Exact-tree Harbor 0.14 Docker Oracle/NOP; zero frontier calls\n'
+printf '\n[5/5] Exact-tree Harbor 0.14 Docker Oracle/NOP; zero frontier calls\n'
 mkdir -p "$RUNS_ROOT" "$QUAL_ROOT"
 EXPECTED_TASK_TREE="$TREE" \
 PREFLIGHT_ONLY=1 \
@@ -93,6 +97,7 @@ terminal_bench_head=$ACTUAL_TB3_HEAD
 qualification_mode=deadline-delta
 static_checks=PASS
 oracle_tests=66
+changed_workspace_snapshot_mutants=7
 changed_transaction_mutants=8
 unchanged_mutation_baseline_tree=$BASE_QUALIFIED_TREE
 harbor_oracle=1
@@ -106,8 +111,9 @@ printf '\n=== FINAL-TREE QUALIFICATION REPORT ===\n'
 printf 'task_tree=%s\n' "$TREE"
 printf 'static_checks=PASS\n'
 printf 'oracle_reference=66/66\n'
+printf 'changed_workspace_snapshot_mutants=7/7_rejected\n'
 printf 'changed_transaction_mutants=8/8_rejected\n'
-printf 'unchanged_mutation_families=reused_from_%s\n' "$BASE_QUALIFIED_TREE"
+printf 'unchanged_mutation_families=core,lifecycle,project-request reused_from_%s\n' "$BASE_QUALIFIED_TREE"
 printf 'harbor_oracle=1\n'
 printf 'harbor_nop=0\n'
 printf 'frontier_calls=0\n'
