@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-FROZEN_TASK_TREE="bff3b135d88174ac463d6e35a6cc30c4066dd8ea"
+FROZEN_TASK_TREE="40cbd34104e1f0a549be23b46ef70655b728cece"
 TB3_REPO=${TB3_REPO:-"$HOME/.cache/klavis-tb3-terminal-bench"}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
 PASS_MARKER="$RUNS_ROOT/QUALIFICATION-PASSED-${FROZEN_TASK_TREE}.txt"
