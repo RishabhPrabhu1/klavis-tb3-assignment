@@ -277,11 +277,19 @@ def test_postpublish_response_loss_replays_after_workspace_and_project_reclamati
         )
         stranded_ws = current_workspace_token(workspace)
         stranded_snapshot = workspace_snapshot(workspace)
-        expected_report = stranded_snapshot["request_report"]
         stranded_project_generation = stranded_snapshot["members"]["left"]["generation"]
 
-        # A later overlapping transaction both reconciles the stranded request
-        # and replaces its project generation in the current workspace view.
+        # Establish the original externally observable report without inspecting
+        # candidate-private journal or snapshot fields. This replay must not publish.
+        before_replay_tokens = workspace_tokens(workspace)
+        expected_report = run_workspace_build(workspace, plan, "txn-lost-response")
+        assert expected_report is not None
+        assert expected_report["request_id"] == "txn-lost-response"
+        assert expected_report["snapshot"] == stranded_ws
+        assert current_workspace_token(workspace) == stranded_ws
+        assert workspace_tokens(workspace) == before_replay_tokens
+
+        # A later overlapping transaction replaces the original project generation.
         _write(workspace / "left/src/main.txt", "LEFT-LOST-RESPONSE-V3\n")
         newer = run_workspace_build(workspace, plan, "txn-newer-left")
         assert newer is not None
