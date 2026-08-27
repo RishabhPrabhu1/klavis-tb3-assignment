@@ -1,75 +1,70 @@
 # Standard Trials
 
-Status: final standard evidence has not yet been collected for the redesigned task.
+Status: final standard evidence has not yet been collected for the corrected task.
 
 ## Live requirement versus current operational scope
 
-Current live Terminal-Bench defaults still specify three standard trials each for:
+Current live Terminal-Bench defaults specify three standard trials each for:
 
 | Agent | Model | Reasoning | Live required trials |
 |---|---|---|---:|
 | `claude-code` | `anthropic/claude-opus-5` | `max` | 3 |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 |
 
-The current operational workflow is **Codex-only** because Claude Code subscription access is not available. Therefore Codex qualification can be completed now, but the repository must not claim full assignment compliance with the Claude requirement unless that requirement is later satisfied or waived.
+The current operational workflow is **Codex-only** because Claude Code subscription access is not available. Therefore Codex qualification can be developed now, but the repository must not claim full assignment compliance with the Claude requirement unless that requirement is later satisfied or waived.
 
 Live `/run` uses Harbor 0.14.0. The local Codex runner uses Docker plus the subscription-auth mechanism documented by the Klavis assignment.
 
-## Frozen task
+## Current qualified task
 
 ```text
-d84a5bf3df6a2c3ed7a523c7fee072936f4029e4
+4eaf21ae9456395fb080be497852c0ff9623b8fa
 ```
 
-Do not count any trial with a different task-tree object.
+The previous tree `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4` is invalidated and excluded from final evidence because a diagnostic exposed an unstated verifier representation requirement.
 
-## Required ordering
+Do not count any standard trial with a different task-tree object.
 
-Do **not** launch the standard difficulty probe until deterministic/Harbor qualification, the Codex path check, and Codex `/cheat` qualification have succeeded. See `results/execution-plan.md`.
+## Deterministic prerequisites
 
-### Zero-Sol path check
+The current tree has passed:
 
-```bash
-uv tool install --force 'harbor==0.14.0'
-EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
-PREFLIGHT_ONLY=1 \
-./scripts/run-codex-strong-test.sh
-```
+- live TB3 static checks;
+- 37/37 full Oracle verifier tests;
+- 14/14 core mutation rejections;
+- 6/6 lifecycle/GC mutation rejections;
+- Harbor Oracle reward 1;
+- Harbor NOP reward 0;
+- zero Sol calls during deterministic qualification.
 
-Required result: Oracle reward 1, NOP reward 0, `sol_calls=0`.
+## Difficulty-probe policy
 
-### One Sol/xhigh difficulty probe
+Normally a standard difficulty probe follows a valid reward-0 `/cheat` trial. The official adversarial prompt has instead triggered the Codex provider cybersecurity classifier before substantive task work on both the old and corrected task trees. Those `/cheat` attempts are invalid and remain outstanding.
 
-Only after Codex `/cheat` qualification succeeds:
+A narrowly scoped ordinary standard diagnostic is therefore permitted while the blocked `/cheat` evidence is preserved and audited. This exception is only for measuring task difficulty and does **not** satisfy the adversarial requirement.
 
-```bash
-EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
-./scripts/run-codex-strong-test.sh
-```
+For any standard attempt:
 
-The wrapper:
+- provider/auth/runtime/agent exceptions invalidate the trial;
+- reward 0 alone does not count as task difficulty evidence;
+- a valid reward-0 must be classified from the trajectory as genuine architectural failure rather than ambiguity, verifier defect, timeout, or a narrow implementation mistake;
+- a valid reward-1 means the task was solved and requires task-level redesign before any more standard trials.
 
-- refuses a dirty or mismatched task tree;
-- requires Harbor 0.14.0 and a working Docker daemon;
-- requires Codex subscription auth at `~/.codex/auth.json`;
-- requires valid reward-0 Codex `/cheat` evidence for the same task tree before launching the standard probe;
-- runs one Harbor `codex` / `openai/gpt-5.6-sol` / `xhigh` trial;
-- does not invoke `harbor analyze`;
-- preserves raw Harbor/verifier evidence and deterministic metadata outside the repository.
+## Corrected-tree diagnostic attempts
 
-If this is a clean solve, redesign the task at the task level and restart qualification. Do not collect additional standard trials on a task already demonstrated solvable and do not add trajectory-specific gotchas.
+| Agent | Model | Reasoning | Attempt | Reward | Valid? | Evidence path | Classification |
+|---|---|---|---:|---:|---|---|---|
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | diagnostic 1 | 0.0 | **No** | `~/.cache/klavis-tb3-runs/standard-diagnostic-v2/20260827T065421Z-standard-codex-4dbbc90f4f93` | F6 provider/access failure: subscription usage limit terminated Codex before any patch was successfully applied |
 
-If it is a valid reward-0, inspect the trajectory and count it only if the failure is task-substantive and aligned with the intended systems invariant rather than ambiguity, timeout, authentication, verifier behavior, or infrastructure.
+### Diagnostic 1 details
+
+The agent authenticated and performed partial analysis for approximately nine minutes. It identified the intended immutable-generation and short-lock architecture and began preparing an implementation. A patch application failed before modifying the starter, then Codex reported that the subscription usage limit had been reached and exited with code 1. Harbor recorded `NonZeroAgentExitCodeError`; the evidence auditor therefore classifies the run as `completed-with-exceptions` with `qualification_valid=false`.
+
+The candidate `buildsys` files remained byte-for-byte equal to the starter. The verifier's 6 passed / 31 failed result is therefore a score for the unchanged starter, not for a completed Sol solution. This run must never be counted toward the required 0/3 matrix.
 
 ## Frozen Codex matrix
 
-After a defensible reward-0 probe, explicitly freeze the exact task revision. The qualifying probe may count as trial 1 only if it used that exact frozen task/configuration and otherwise satisfies the assignment conditions. Complete three valid Codex trials total.
-
-```bash
-CONFIRM_FROZEN=1 AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
-```
-
-The standard wrapper defaults to Codex-only, refuses any task tree other than the qualified tree, and refuses to launch until `CONFIRM_FROZEN=1` is supplied.
+The final matrix has **not** started. Only after a valid standard probe demonstrates a genuine intended-crux failure should the exact task revision be frozen for final evidence collection.
 
 | Agent | Model | Reasoning | Trial | Reward | Valid? | Evidence path | Failure classification |
 |---|---|---|---:|---:|---|---|---|
@@ -77,21 +72,15 @@ The standard wrapper defaults to Codex-only, refuses any task tree other than th
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | Pending | Pending | Pending | Pending |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | Pending | Pending | Pending | Pending |
 
-Target: **0/3 genuine Codex/Sol passes**.
+Target: **0/3 genuine Codex/Sol passes**, with all three trials valid and uninterrupted.
 
-## Outstanding Claude requirement
+## Next action
 
-| Agent | Model | Reasoning | Status |
-|---|---|---|---|
-| `claude-code` | `anthropic/claude-opus-5` | `max` | Not currently runnable with available subscription access; still required by the written assignment unless waived. |
+After Codex subscription capacity is available again, rerun exactly one ordinary Sol/xhigh diagnostic on task tree `4eaf21ae9456395fb080be497852c0ff9623b8fa`. Do not change the task or verifier because of the usage-limit failure. Do not start the final 3-trial matrix until that diagnostic completes normally and its failure, if any, is classified as genuine architectural difficulty.
 
-## Historical runs excluded from final evidence
+## Outstanding requirements
 
-Earlier diagnostics were useful for benchmark development but do not count toward the final matrix:
+- A valid corrected-tree Codex `/cheat` reward-0 trial is still required; safety-blocked attempts do not count.
+- Claude Code / Opus 5 max standard and adversarial evidence remains outstanding under the written assignment unless waived.
 
-- an API-key/Modal GitHub workflow stopped before any model ran because repository provider credentials were absent;
-- an early Sol run tested an obsolete task revision;
-- a later Sol/xhigh run on a pre-concurrency revision exposed verifier artifacts involving an unstated cache-object filename convention;
-- a clean Sol solution to the earlier single-generation transactional-publication design motivated the concurrency/stable-input redesign.
-
-Authentication errors, rate limits, model unavailability, Harbor/Docker failures, verifier infrastructure failures, and unrelated infrastructure timeouts are invalid trials and are never counted as model failures.
+Authentication errors, rate limits, subscription limits, model unavailability, Harbor/Docker failures, verifier infrastructure failures, and provider safety terminations are invalid trials and are never counted as model failures.
