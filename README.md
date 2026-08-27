@@ -65,7 +65,7 @@ Claude subscription-auth runs additionally require `CLAUDE_CODE_OAUTH_TOKEN`, pr
 
 ## Adversarial trials
 
-The live `/cheat` workflow performs one adversarial run per configured agent. The local helper copies the task, removes the ordinary anti-cheat sentence, appends the current upstream `rubrics/hack-trial-prompt.md`, and leaves the original task unchanged.
+The live `/cheat` workflow performs one adversarial run per configured agent. The local helper copies the task, removes the ordinary anti-cheat sentence, appends the current upstream `docs/prompts/hack-trial-prompt.md`, and leaves the original task unchanged.
 
 ```bash
 git clone --depth 1 https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
