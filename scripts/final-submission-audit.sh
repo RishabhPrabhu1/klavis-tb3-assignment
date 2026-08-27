@@ -5,10 +5,11 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TASK_REL="tasks/build-snapshot-publish"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 STANDARD_TARGET=${STANDARD_TARGET:-3}
-CHEAT_TARGET=${CHEAT_TARGET:-1}
+CHEAT_TARGET=${CHEAT_TARGET:-3}
 TB3_HEAD_EXPECTED=${TB3_HEAD_EXPECTED:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
 
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
+RUBRIC_ROOT=${RUBRIC_ROOT:-"$HOME/.cache/klavis-tb3-runs/implementation-rubric"}
 CODEX_STANDARD_ROOTS=${CODEX_STANDARD_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-standard-probe:$HOME/.cache/klavis-tb3-runs/transaction-standard-final"}
 CLAUDE_STANDARD_ROOTS=${CLAUDE_STANDARD_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-standard:$HOME/.cache/klavis-tb3-runs/transaction-claude-standard-final"}
 CODEX_CHEAT_ROOTS=${CODEX_CHEAT_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat:$HOME/.cache/klavis-tb3-runs/transaction-cheat-final"}
@@ -56,6 +57,31 @@ PY
   if (( count < target )); then failures=$((failures+1)); fi
 }
 
+check_rubric() {
+  local found
+  found=$(python3 - "$TREE" "$TB3_HEAD_EXPECTED" "$RUBRIC_ROOT" <<'PY'
+import json,sys
+from pathlib import Path
+tree, tb3, root_raw=sys.argv[1:]
+root=Path(root_raw).expanduser(); matches=[]
+if root.exists():
+    for p in root.rglob("result.json"):
+        try:d=json.loads(p.read_text(encoding="utf-8"))
+        except Exception:continue
+        if d.get("task_tree")==tree and d.get("terminal_bench_head")==tb3 and d.get("passed") is True and not (d.get("failed") or []):
+            matches.append(str(p))
+print(matches[-1] if matches else "")
+PY
+)
+  if [[ -n "$found" ]]; then
+    echo "same_tree_implementation_rubric=PASS"
+    echo "implementation_rubric_result=$found"
+  else
+    echo "same_tree_implementation_rubric=MISSING_OR_FAILED"
+    failures=$((failures+1))
+  fi
+}
+
 printf '=== KLAVIS FINAL SUBMISSION AUDIT ===\n'
 printf 'execution_commit=%s\n' "$(git -C "$ROOT_DIR" rev-parse HEAD)"
 printf 'task_tree=%s\n' "$TREE"
@@ -78,6 +104,8 @@ else
   failures=$((failures+1))
 fi
 
+check_rubric
+
 check_count "Codex standard reward-0" "$CODEX_STANDARD_ROOTS" standard codex openai/gpt-5.6-sol xhigh 0 "$STANDARD_TARGET"
 check_count "Claude standard reward-0" "$CLAUDE_STANDARD_ROOTS" standard claude-code anthropic/claude-opus-5 max 0 "$STANDARD_TARGET"
 check_count "Codex cheat reward-0" "$CODEX_CHEAT_ROOTS" cheat codex openai/gpt-5.6-sol xhigh 0 "$CHEAT_TARGET"
@@ -90,7 +118,8 @@ for required in \
   results/cheat-trials.md \
   results/failure-analysis.md \
   results/contract-coverage.md \
-  results/execution-plan.md; do
+  results/execution-plan.md \
+  results/implementation-rubric-review.md; do
   if [[ -f "$ROOT_DIR/$required" ]]; then
     printf 'document %-36s present\n' "$required"
   else
