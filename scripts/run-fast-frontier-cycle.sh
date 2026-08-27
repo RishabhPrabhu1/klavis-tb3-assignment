@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-FROZEN_TASK_TREE="5620526fada6eebea16910fc62bf71746aaa40ea"
+FROZEN_TASK_TREE="fc064cac2fb1241b68a98475dbc8ea04fbe579cc"
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
 QUAL_MARKER="$QUAL_ROOT/QUALIFICATION-PASSED-${FROZEN_TASK_TREE}.txt"
 CHEAT_ROOT=${CHEAT_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat"}
