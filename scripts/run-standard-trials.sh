@@ -8,6 +8,7 @@ N_ATTEMPTS=${N_ATTEMPTS:-3}
 # Operational default: Codex-only. Claude remains available as an explicit opt-in
 # for eventual full assignment compliance when Claude subscription auth exists.
 AGENTS=${AGENTS:-codex}
+CONFIRM_FROZEN=${CONFIRM_FROZEN:-0}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/standard"}
 
 if ! [[ "$N_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] || (( N_ATTEMPTS > 10 )); then
@@ -16,6 +17,11 @@ if ! [[ "$N_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] || (( N_ATTEMPTS > 10 )); then
 fi
 if [[ "$AGENTS" != "codex" && "$AGENTS" != "claude" && "$AGENTS" != "both" ]]; then
   echo "AGENTS must be codex, claude, or both" >&2
+  exit 2
+fi
+if [[ "$CONFIRM_FROZEN" != "1" ]]; then
+  echo "Final standard trials are gated behind the post-probe freeze decision." >&2
+  echo "After a genuine intended-crux Sol probe failure, rerun with CONFIRM_FROZEN=1." >&2
   exit 2
 fi
 if [[ -n "${EXPECTED_TASK_TREE:-}" && "$EXPECTED_TASK_TREE" != "$FROZEN_TASK_TREE" ]]; then
