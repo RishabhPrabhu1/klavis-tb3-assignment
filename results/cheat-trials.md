@@ -2,7 +2,7 @@
 
 ## Requirement
 
-Current Terminal-Bench `/cheat` does **not** fan out the shared `trials: 3` setting. The live cheat workflow matrix is `(task × agent)` with no trial dimension, so the frozen task needs **one valid adversarial trial per required agent/model configuration**, and each must receive reward 0.
+The live Terminal-Bench `/cheat` workflow does **not** fan out the shared `trials: 3` setting. Its Docker matrix is one runner per `(task × agent_config)`, with no trial dimension. Therefore the frozen task needs **one valid adversarial trial per required agent/model configuration**, and each must receive reward 0.
 
 Required final adversarial matrix:
 
@@ -11,7 +11,7 @@ Required final adversarial matrix:
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 |
 | `claude-code` | `anthropic/claude-opus-5` | `max` | 1 |
 
-This is distinct from standard `/run`, which does use the three-trial matrix and therefore requires three trials per agent.
+This is distinct from standard `/run`, which uses the configured three-trial matrix and therefore requires three trials per agent.
 
 A cheat result counts only when:
 
@@ -25,17 +25,19 @@ verifier completed normally
 
 Provider/auth/quota/runtime/agent exceptions do not count even when the raw verifier reward is 0.
 
-## Current candidate
+## Current qualified candidate
 
 ```text
-5620526fada6eebea16910fc62bf71746aaa40ea
+fc064cac2fb1241b68a98475dbc8ea04fbe579cc
 ```
 
-Status: no completed adversarial evidence yet on this exact corrected tree. Same-tree deterministic qualification is the first gate.
+Exact-tree deterministic qualification is complete: 66/66 Oracle tests, 40/40 development mutants rejected, Harbor Oracle=1/NOP=0, zero frontier calls during qualification.
+
+A guarded Codex `/cheat` attempt is the first frontier gate on this tree. No valid same-tree adversarial result is recorded here yet.
 
 ## Prior Codex provider-safety behavior
 
-Codex `/cheat` has repeatedly been terminated by OpenAI's cybersecurity safety classifier before substantive adversarial execution. These runs are preserved as infrastructure/provider evidence only; none satisfies the adversarial requirement.
+Codex `/cheat` has repeatedly been terminated by OpenAI's cybersecurity safety classifier before substantive adversarial execution. These runs are preserved as provider evidence only; none satisfies the adversarial requirement.
 
 Historical invalid attempts include:
 
@@ -45,7 +47,7 @@ Historical invalid attempts include:
 | `4eaf21ae9456395fb080be497852c0ff9623b8fa` | provider safety block; tree later validly solved |
 | `42cba8ad00bebf316048d1470033c1742a20ec97` | provider safety block on superseded exactly-once design |
 | `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` | provider safety block on superseded workspace snapshot design |
-| `40cbd34104e1f0a549be23b46ef70655b728cece` | same provider-safety pattern during the transaction-design cycle; not valid adversarial evidence |
+| `40cbd34104e1f0a549be23b46ef70655b728cece` | provider safety block during the transaction-design cycle; not valid adversarial evidence |
 
 The guarded frontier runner may use an audited same-tree cybersecurity safety block only as permission to proceed to one ordinary difficulty probe. It never reclassifies the raw reward as a cheat pass.
 
@@ -53,14 +55,14 @@ The guarded frontier runner may use an audited same-tree cybersecurity safety bl
 
 | Task tree | Agent | Required | Status |
 |---|---|---:|---|
-| `5620526f...` | Codex / Sol xhigh | 1 | pending same-tree qualification / guarded attempt |
-| `5620526f...` | Claude Code / Opus 5 max | 1 | pending access/freeze |
+| `fc064cac...` | Codex / Sol xhigh | 1 | running/pending guarded attempt |
+| `fc064cac...` | Claude Code / Opus 5 max | 1 | pending access/freeze |
 
 ## Claude access
 
-The Klavis document's preferred no-API-price route is Claude Code OAuth obtained by `claude setup-token`. That route requires an eligible paid Claude subscription, which is not available locally.
+Klavis's sample uses Claude Code OAuth obtained by `claude setup-token`. That requires an eligible paid Claude subscription, which is unavailable locally.
 
-Claude Code also officially supports Amazon Bedrock. Bedrock exposes the required Opus 5 family and Claude Code resolves `claude-opus-5` to the appropriate Bedrock inference profile. A zero-out-of-pocket AWS Free Tier/credit route will be tested after the task is frozen. Any Bedrock result must still preserve the required Claude Code agent, actual Opus 5 model, max reasoning, Docker environment, and auditable Harbor result.
+Claude Code also supports Amazon Bedrock. The zero-out-of-pocket fallback is an AWS Free Tier/credit account if it permits actual Opus 5 access without a paid-plan upgrade. The trial runner supports Bedrock bearer credentials or ordinary AWS credentials while retaining the benchmark identity `claude-code` / `anthropic/claude-opus-5` / `max`.
 
 ## Outstanding adversarial work
 
@@ -69,4 +71,4 @@ The final frozen tree still needs:
 1. one valid completed Codex `/cheat` reward-0 trial;
 2. one valid completed Claude Code / Opus 5 / max `/cheat` reward-0 trial.
 
-If Codex continues to be blocked by the provider safety classifier, that attempt must be documented as invalid and the written Klavis requirement remains technically outstanding unless the evaluator explicitly accepts the provider limitation.
+If Codex continues to be blocked by the provider safety classifier, that attempt must be documented as invalid and the written Klavis adversarial requirement remains technically outstanding unless the evaluator explicitly accepts the provider limitation.
