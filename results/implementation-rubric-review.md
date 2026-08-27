@@ -1,6 +1,6 @@
 # Current TB3 implementation-rubric review
 
-This is a reviewer-side assessment, not a claim that Terminal-Bench's automated `/review` workflow ran. It was refreshed against the live implementation rubric on upstream `452bf305c6daa62fc59061d22133a7cbc7c1572e`.
+This is a reviewer-side assessment, not a claim that Terminal-Bench's automated `/review` workflow ran. It was originally audited against the live rubric blob `5a88f5f89bdfc3b633c06e3dc06486fc9385e2b7`. At upstream `b2d4a935cfb1a6f621f611ea69421039cfccd158` on August 26, 2026, that exact unchanged blob now lives at `docs/prompts/task-implementation.toml` after the upstream documentation-layout refactor.
 
 ## Summary
 
@@ -53,4 +53,4 @@ No correctness, security, or verifier-alignment blocker is currently known. The 
 
 ## Current conclusion
 
-The task is ready for final non-frontier qualification and then difficulty measurement. Do not add more requirements in response to individual model trajectories. If the frozen redesign is solved cleanly by a frontier model, treat that as task-level difficulty evidence rather than inventing another trajectory-specific verifier trap.
+The task is ready for frontier difficulty measurement. Do not add more requirements in response to individual model trajectories. If the frozen redesign is solved cleanly by a frontier model, treat that as task-level difficulty evidence rather than inventing another trajectory-specific verifier trap.
