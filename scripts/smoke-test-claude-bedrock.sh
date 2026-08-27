@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Zero-cost/credit-only Claude Code -> Amazon Bedrock entitlement smoke test.
+# Claude Code -> Amazon Bedrock entitlement smoke test.
 # This is NOT a Terminal-Bench trial and must never be counted as evaluation evidence.
-# It makes at most one tiny Opus 5 request with a strict budget and turn cap.
+# The script cannot inspect AWS billing coverage, so an actual request is blocked
+# unless the operator explicitly confirms eligible zero-out-of-pocket coverage.
 
 REGION=${AWS_REGION:-us-east-1}
 MODEL=${CLAUDE_BEDROCK_SMOKE_MODEL:-global.anthropic.claude-opus-5}
 MAX_BUDGET_USD=${CLAUDE_BEDROCK_SMOKE_MAX_USD:-0.05}
 DRY_RUN=${DRY_RUN:-0}
+CONFIRM_ZERO_COST_COVERAGE=${CONFIRM_ZERO_COST_COVERAGE:-0}
 
 fail() { echo "ERROR: $*" >&2; exit 2; }
 
@@ -35,6 +37,8 @@ if [[ "$DRY_RUN" == "1" ]]; then
   echo "status=DRY_RUN_NO_MODEL_CALL"
   exit 0
 fi
+
+[[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Actual Bedrock call blocked. Set CONFIRM_ZERO_COST_COVERAGE=1 only after confirming eligible credits/organization coverage so this request cannot create out-of-pocket spend."
 
 TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/klavis-claude-smoke.XXXXXX")
 trap 'rm -rf "$TMP_DIR"' EXIT
