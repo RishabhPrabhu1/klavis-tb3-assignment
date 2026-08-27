@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,10 @@ from harness import (
     _set_permissions,
     _write,
 )
+
+
+_ACTIVE_WORKSPACE_ROOTS: set[int] = set()
+_WORKSPACE_EPOCH_BASELINE: set[int] | None = None
 
 
 def make_workspace() -> tuple[Path, Path]:
@@ -97,8 +102,13 @@ def _report_path(workspace: Path, label: str) -> Path:
 
 
 def _attach_runtime(proc: subprocess.Popen[bytes], baseline: set[int], log_dir: Path) -> None:
-    # These private attributes keep the public helper signatures stable while
-    # allowing every async candidate process to be cleaned up deterministically.
+    global _WORKSPACE_EPOCH_BASELINE
+    # A workspace test may intentionally keep several candidate actors alive at
+    # once. The first actor defines the UID baseline for that concurrency epoch;
+    # the last actor performs the detached-process sweep for the whole epoch.
+    if not _ACTIVE_WORKSPACE_ROOTS:
+        _WORKSPACE_EPOCH_BASELINE = set(baseline)
+    _ACTIVE_WORKSPACE_ROOTS.add(proc.pid)
     proc._tb3_baseline_uid_pids = baseline  # type: ignore[attr-defined]
     proc._tb3_log_dir = log_dir  # type: ignore[attr-defined]
 
@@ -115,14 +125,50 @@ def _runtime_stderr(proc: subprocess.Popen[bytes]) -> str:
     return path.read_text(errors="replace") if path.exists() else ""
 
 
+def _cleanup_process_group(pid: int) -> None:
+    """Clean one actor without sweeping intentional sibling processes."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(pid, sig)
+        except ProcessLookupError:
+            pass
+        except PermissionError:
+            # The authoritative verifier runs as root before dropping only the
+            # candidate child. macOS developer runs may not permit signalling a
+            # privilege-changed process group.
+            if os.geteuid() == 0:
+                raise
+        if sig == signal.SIGTERM:
+            time.sleep(0.05)
+
+
+def _cleanup_runtime(proc: subprocess.Popen[bytes]) -> None:
+    """Clean an actor; defer UID-wide sweeping until no intentional sibling lives."""
+    global _WORKSPACE_EPOCH_BASELINE
+    _ACTIVE_WORKSPACE_ROOTS.discard(proc.pid)
+    if _ACTIVE_WORKSPACE_ROOTS:
+        _cleanup_process_group(proc.pid)
+        return
+
+    baseline = _WORKSPACE_EPOCH_BASELINE
+    _WORKSPACE_EPOCH_BASELINE = None
+    _cleanup_candidate_processes(
+        proc.pid,
+        set(baseline) if baseline is not None else _runtime_baseline(proc),
+    )
+
+
 def _wait_and_cleanup(proc: subprocess.Popen[bytes], timeout: float) -> tuple[int, str]:
-    baseline = _runtime_baseline(proc)
     try:
         returncode = proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
-        _cleanup_candidate_processes(proc.pid, baseline)
+        _cleanup_runtime(proc)
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired as exc:
+            raise AssertionError(f"candidate root survived cleanup: {_runtime_stderr(proc)}") from exc
         raise AssertionError(f"candidate timed out: {_runtime_stderr(proc)}")
-    _cleanup_candidate_processes(proc.pid, baseline)
+    _cleanup_runtime(proc)
     return returncode, _runtime_stderr(proc)
 
 
@@ -226,10 +272,14 @@ def wait_for_pause(proc: subprocess.Popen[bytes], pause_dir: Path, timeout: floa
             return
         if proc.poll() is not None:
             stderr = _runtime_stderr(proc)
-            _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
+            _cleanup_runtime(proc)
             raise AssertionError(f"candidate exited before workspace pausepoint: {stderr}")
         time.sleep(0.01)
-    _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
+    _cleanup_runtime(proc)
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired as exc:
+        raise AssertionError("candidate root survived pausepoint cleanup") from exc
     raise AssertionError("candidate did not reach workspace pausepoint")
 
 
@@ -253,11 +303,11 @@ def finish_capture(
 
 
 def kill_process(proc: subprocess.Popen[bytes]) -> None:
-    _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
+    _cleanup_runtime(proc)
     try:
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
-        _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
+        _cleanup_process_group(proc.pid)
         proc.wait(timeout=5)
 
 
@@ -354,10 +404,14 @@ def wait_for_workspace_reader(proc: subprocess.Popen[bytes], hold_dir: Path) -> 
             return acquired.read_text().strip()
         if proc.poll() is not None:
             stderr = _runtime_stderr(proc)
-            _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
+            _cleanup_runtime(proc)
             raise AssertionError(f"workspace reader exited early: {stderr}")
         time.sleep(0.01)
-    _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
+    _cleanup_runtime(proc)
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired as exc:
+        raise AssertionError("workspace reader root survived cleanup") from exc
     raise AssertionError("workspace reader did not acquire its snapshot")
 
 
