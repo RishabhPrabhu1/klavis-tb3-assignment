@@ -18,14 +18,14 @@ The Sol diagnostic must not be launched from an outer Codex session. `scripts/ru
 Current frozen task-tree object:
 
 ```text
-851f444971267df16b307fb2070588577e76c302
+d84a5bf3df6a2c3ed7a523c7fee072936f4029e4
 ```
 
 First run the zero-Sol local infrastructure preflight. It uses Harbor 0.14.0 Oracle and NOP only and makes **zero** GPT-5.6 Sol calls:
 
 ```bash
 uv tool install --force 'harbor==0.14.0'
-EXPECTED_TASK_TREE=851f444971267df16b307fb2070588577e76c302 \
+EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
 PREFLIGHT_ONLY=1 \
 ./scripts/run-codex-strong-test.sh
 ```
@@ -35,7 +35,7 @@ Required result: Oracle reward 1, NOP reward 0, and `sol_calls=0` in the emitted
 Only after that passes, run exactly one Sol/xhigh diagnostic:
 
 ```bash
-EXPECTED_TASK_TREE=851f444971267df16b307fb2070588577e76c302 \
+EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
 ./scripts/run-codex-strong-test.sh
 ```
 
