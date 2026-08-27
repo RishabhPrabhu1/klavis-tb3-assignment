@@ -2,112 +2,115 @@
 
 This is the active operational pipeline for the current task revision.
 
-The Klavis assignment's full written requirement still includes Claude Opus 5/max. The current development/evidence workflow is intentionally **Codex-only** because Claude Code subscription access is not presently available. Do not represent the resulting repository as fully compliant with the Claude requirement unless that requirement is later satisfied or waived.
+The Klavis assignment's full written requirement still includes Claude Opus 5/max. The current development/evidence workflow is intentionally **Codex-only** because Claude Code subscription access is not presently available. Do not represent the repository as fully compliant with the Claude requirement unless that requirement is later satisfied or waived.
 
-## Current deterministically qualified task
+## Current redesign candidate
 
 ```text
 tasks/build-snapshot-publish
-4eaf21ae9456395fb080be497852c0ff9623b8fa
+3ddb933ae848f6912210371c6afc210ceea3f373
 ```
 
-The prior task tree `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4` was invalidated after a valid Sol diagnostic exposed an unstated verifier requirement for `.build-cache/CURRENT`. The verifier was corrected to determine the current committed generation from the greatest unique `commit_seq` instead of requiring a particular pointer layout. No frontier result from the old task tree counts toward final qualification.
+This tree is **not yet qualified**. It must restart deterministic qualification from Step 1 before any frontier-model measurement.
+
+The previous tree `4eaf21ae9456395fb080be497852c0ff9623b8fa` was deterministically qualified but then cleanly solved by Codex / `openai/gpt-5.6-sol` / `xhigh`: reward 1, 37/37 verifier tests, no infrastructure contamination. That result invalidates the previous tree as a final benchmark candidate and triggered the present redesign.
+
+## Redesign crux
+
+The prior task's single-project MVCC publication, reader pinning, writer liveness, and reclamation model was not intrinsically difficult enough. The current redesign adds a new transaction dimension: optional build request IDs with exactly-once semantics across concurrency and crashes.
+
+For request-ID builds, the task now requires:
+
+- durable binding of the first committed request ID to its target and exact report;
+- replay without a new generation, `commit_seq` advance, or current-snapshot change;
+- rejection of cross-target request-ID reuse;
+- coalescing of concurrent duplicate requests;
+- immediate takeover after a pre-commit owner dies, without wall-clock leases;
+- independent progress for disjoint request IDs;
+- recovery when a process dies after publication but before returning its report;
+- replay after later builds and after GC has reclaimed the original generation.
+
+The starter only plumbs the new interface and intentionally does not implement the protocol. The independent reference solution and verifier exercise the new state machine.
 
 ## Pipeline
 
 1. **Deterministic qualification**
-   - live static checks;
-   - full Oracle regression;
-   - core + lifecycle mutation matrices;
-   - Docker/verifier integrity.
+   - live TB3 static checks;
+   - full Oracle/reference regression;
+   - core mutation matrix;
+   - lifecycle/GC mutation matrix;
+   - exactly-once request mutation matrix;
+   - verifier determinism and Docker integrity.
 
 2. **Reconfirm live Terminal-Bench source of truth**
    - `/run` defaults;
-   - `/cheat` behavior;
+   - `/cheat` transform;
    - trial counts;
-   - model IDs and reasoning settings;
-   - Harbor versions and execution behavior.
+   - model IDs/reasoning settings;
+   - Harbor versions.
 
-3. **Harbor qualification**
+3. **Harbor zero-model qualification**
    - Oracle = 1;
    - NOP = 0;
    - zero Sol calls.
 
-4. **Verify Codex execution path**
-   - Codex subscription auth exists;
-   - Docker is available;
-   - Harbor 0.14.0 is installed;
-   - `openai/gpt-5.6-sol` / `xhigh` command path is correct;
-   - evidence directories/logging work.
+4. **Codex execution path check**
+   - subscription auth available;
+   - Docker available;
+   - Harbor 0.14.0;
+   - evidence path usable under macOS/Colima.
 
 5. **Adversarial `/cheat` qualification**
-   - run the live `/cheat` transform on the exact candidate task;
-   - use Codex GPT-5.6 Sol/xhigh;
-   - require reward 0 from a normally completed verifier run;
-   - any provider/auth/runtime/agent exception makes the attempt invalid;
-   - if an exploit succeeds, fix the verifier/task and restart at Step 1.
+   - exact redesigned tree;
+   - Codex GPT-5.6 Sol/xhigh;
+   - valid completed reward 0 required;
+   - any provider/auth/runtime exception is invalid evidence.
 
 6. **One genuine Sol difficulty probe**
-   - exactly one Codex / GPT-5.6 Sol / xhigh standard trial;
-   - classify the trajectory rather than looking only at reward;
-   - normally this follows a clean `/cheat` pass;
-   - because the official adversarial prompt has twice triggered the provider cybersecurity classifier before substantive task work, one ordinary diagnostic is permitted only when the blocked `/cheat` attempt is preserved and audited as invalid. This exception never converts `/cheat` into a pass.
+   - exactly one valid uninterrupted Sol/xhigh standard trial;
+   - classify the trajectory, not only the reward.
 
 7. **Decision gate**
-   - genuine Sol architectural failure -> freeze candidate revision for standard evidence, while `/cheat` remains separately outstanding;
-   - Sol success -> task-level redesign, then restart at Step 1;
-   - non-architectural failure -> fix/redesign before collecting more trials;
-   - invalid provider/auth/runtime attempt -> rerun only after access is restored; never count it;
-   - do not add model-specific traps.
+   - clean solve -> redesign again and restart Step 1;
+   - genuine architectural/conceptual failure -> freeze candidate;
+   - narrow bug, ambiguity, verifier defect, or infrastructure failure -> do not freeze;
+   - never add trajectory-specific/model-specific traps.
 
-8. **Frozen Codex evidence collection**
-   - only valid, uninterrupted Sol/xhigh trials count;
-   - complete three valid Sol/xhigh trials total;
-   - target: Sol 0/3 genuine failures;
-   - no task/verifier semantic changes during this phase.
+8. **Frozen Codex evidence**
+   - three valid Sol/xhigh trials total;
+   - target 0/3 passes for genuine task-substantive reasons;
+   - no semantic task/verifier changes during the matrix.
 
 9. **Final valid `/cheat` evidence**
-   - a provider-safety-blocked attempt is not evidence;
-   - obtain at least one normally completed adversarial trial on the exact frozen task/configuration with reward 0;
-   - if the verifier is defeated, repair and restart qualification.
+   - reward 0 on the exact frozen tree from a normally completed adversarial run.
 
-10. **Documentation + final audit**
-    - standard-trial table;
-    - adversarial-trial table;
-    - failure analysis;
-    - exact repository/task/upstream SHAs;
-    - exact commands/model/reasoning/Harbor config;
-    - evidence paths;
-    - repository cleanup;
-    - final deterministic validation;
-    - fresh-clone/reproduction check;
-    - verify every written claim against preserved artifacts.
+10. **Documentation and final audit**
+   - exact SHAs/configurations/results;
+   - failure analyses;
+   - evidence paths;
+   - fresh-clone reproduction;
+   - final deterministic validation.
 
 ## Current status
 
-- [x] Step 1 deterministic qualification: 37/37 Oracle tests pass; 14/14 core and 6/6 lifecycle mutants rejected.
-- [x] Step 2 live TB3 source of truth rechecked at upstream HEAD `b2d4a935cfb1a6f621f611ea69421039cfccd158`.
-- [x] Step 3 Harbor zero-Sol qualification: Oracle=1, NOP=0, `sol_calls=0`.
-- [x] Step 4 local Codex execution/auth path verified.
-- [ ] Step 5 valid Codex `/cheat` qualification. Two attempts have been invalid: both were terminated by the provider cybersecurity safety classifier before substantive task work.
-- [ ] Step 6 valid Sol/xhigh difficulty probe. The first corrected-tree attempt was invalid because the Codex subscription usage limit terminated the turn before any patch was successfully applied.
-- [ ] Step 7 decision/freeze gate.
-- [ ] Step 8 complete Sol 0/3 evidence.
-- [ ] Step 9 final valid cheat evidence.
+- [ ] Step 1 deterministic qualification of `3ddb933ae848f6912210371c6afc210ceea3f373`.
+- [x] Step 2 source-of-truth baseline previously rechecked at TB3 HEAD `b2d4a935cfb1a6f621f611ea69421039cfccd158`; recheck again if upstream advances before frontier trials.
+- [ ] Step 3 Harbor Oracle/NOP for the redesigned tree.
+- [x] Step 4 local Codex/Docker/Harbor path previously proven functional, subject to current quota availability.
+- [ ] Step 5 valid redesigned-tree `/cheat`.
+- [ ] Step 6 redesigned-tree Sol/xhigh difficulty probe.
+- [ ] Step 7 freeze/redesign decision.
+- [ ] Step 8 Sol 0/3 matrix.
+- [ ] Step 9 final valid `/cheat`.
 - [ ] Step 10 final audit.
 
-## Current execution blockers
+## Historical evidence excluded from final matrix
 
-### Codex `/cheat`
+- task tree `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4`: invalidated by an unstated verifier representation requirement;
+- task tree `4eaf21ae9456395fb080be497852c0ff9623b8fa`: cleanly solved by Sol/xhigh, reward 1, 37/37;
+- provider-safety-blocked `/cheat` attempts: invalid;
+- quota-exhausted standard attempt: invalid.
 
-The current official adversarial prompt path reproducibly triggers `NonZeroAgentExitCodeError` from the provider cybersecurity classifier before substantive task work. Reward 0 from these attempts is invalid and must not be counted.
+## Next action
 
-### Standard Sol diagnostic
-
-The first corrected-tree standard diagnostic authenticated and began analysis, but the subscription usage limit terminated the Codex turn before any implementation was applied. Harbor therefore graded the unchanged starter. This attempt is invalid and does not measure task difficulty.
-
-## Next valid action
-
-Do not modify the deterministically qualified task because of either execution failure. After Codex subscription capacity is available again, rerun exactly one ordinary Sol/xhigh diagnostic on task tree `4eaf21ae9456395fb080be497852c0ff9623b8fa`. If it completes normally, classify the result as solve, genuine architectural failure, or non-architectural failure before launching any additional standard trial.
-
-The valid `/cheat` requirement remains outstanding and must be resolved separately before final assignment compliance can be claimed.
+Run zero-model deterministic qualification on tree `3ddb933ae848f6912210371c6afc210ceea3f373`. Do not spend another frontier call until the full Oracle and all three mutation matrices are green and Harbor again returns Oracle=1/NOP=0.
