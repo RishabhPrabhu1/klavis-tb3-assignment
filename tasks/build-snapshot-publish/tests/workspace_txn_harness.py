@@ -8,15 +8,15 @@ import sys
 import tempfile
 from pathlib import Path
 
-from harness import (
-    APP_ROOT,
-    _NOBODY,
-    _cleanup_candidate_processes,
-    _drop_privileges,
-    _pids_for_uid,
-    _write,
+from harness import APP_ROOT, _NOBODY, _drop_privileges, _pids_for_uid, _write
+from workspace_harness import (
+    _attach_runtime,
+    _base_env,
+    _cleanup_process_group,
+    _cleanup_runtime,
+    _report_path,
+    current_workspace_token,
 )
-from workspace_harness import _base_env, _report_path, current_workspace_token
 
 
 def write_build_plan(
@@ -31,10 +31,6 @@ def write_build_plan(
     _write(path, json.dumps({"members": members}, sort_keys=True, indent=2) + "\n")
     path.chmod(0o644)
     return path
-
-
-def _baseline(proc: subprocess.Popen[bytes]) -> set[int]:
-    return set(getattr(proc, "_tb3_baseline_uid_pids", set()))
 
 
 def _stderr(proc: subprocess.Popen[bytes]) -> str:
@@ -84,8 +80,7 @@ def _start_workspace_build_process(
     )
     stdout.close()
     stderr.close()
-    proc._tb3_baseline_uid_pids = baseline  # type: ignore[attr-defined]
-    proc._tb3_log_dir = log_dir  # type: ignore[attr-defined]
+    _attach_runtime(proc, baseline, log_dir)
     return proc, report, log_dir
 
 
@@ -93,9 +88,13 @@ def _wait_workspace_build(proc: subprocess.Popen[bytes], timeout: float) -> tupl
     try:
         returncode = proc.wait(timeout=timeout)
     except subprocess.TimeoutExpired:
-        _cleanup_candidate_processes(proc.pid, _baseline(proc))
+        _cleanup_runtime(proc)
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired as exc:
+            raise AssertionError(f"workspace-build root survived cleanup: {_stderr(proc)}") from exc
         raise AssertionError(f"workspace-build timed out: {_stderr(proc)}")
-    _cleanup_candidate_processes(proc.pid, _baseline(proc))
+    _cleanup_runtime(proc)
     return returncode, _stderr(proc)
 
 
@@ -162,11 +161,11 @@ def finish_workspace_build(
 
 
 def kill_workspace_build(proc: subprocess.Popen[bytes]) -> None:
-    _cleanup_candidate_processes(proc.pid, _baseline(proc))
+    _cleanup_runtime(proc)
     try:
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
-        _cleanup_candidate_processes(proc.pid, _baseline(proc))
+        _cleanup_process_group(proc.pid)
         proc.wait(timeout=5)
 
 
