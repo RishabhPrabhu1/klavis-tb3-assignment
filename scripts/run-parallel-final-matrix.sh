@@ -13,6 +13,11 @@ QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
 TB3_HEAD_EXPECTED=${TB3_HEAD_EXPECTED:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
 
 fail() { echo "ERROR: $*" >&2; exit 2; }
+unique_id() { python3 - <<'PY'
+import uuid
+print(uuid.uuid4().hex[:12])
+PY
+}
 
 [[ "$CONFIRM_FREEZE" == "1" ]] || fail "set CONFIRM_FREEZE=1 only after reviewer approval that this exact task tree is frozen"
 [[ "$AGENT" == "codex" || "$AGENT" == "claude" ]] || fail "AGENT must be codex or claude"
@@ -106,9 +111,6 @@ printf 'Existing %s/%s valid reward-0: %s/%s\n' "$AGENT_NAME" "$MODE" "$zero" "$
 (( nonzero == 0 )) || fail "valid nonzero same-tree result already exists; frozen candidate is invalid"
 (( incomplete == 0 )) || fail "incomplete same-tree evidence exists; inspect/resume it before launching parallel trials"
 
-# Invalid historical attempts do not count. We may still proceed only by explicit
-# reviewer action via this final-matrix command; each new batch itself never
-# auto-retries an invalid result.
 while (( zero < TARGET )); do
   missing=$((TARGET-zero))
   batch=$missing
@@ -119,7 +121,7 @@ while (( zero < TARGET )); do
   printf '\n=== PARALLEL %s %s BATCH: %s trial(s), %s/%s already valid ===\n' \
     "$AGENT_NAME" "$MODE" "$batch" "$zero" "$TARGET"
 
-  batch_dir="$RUN_ROOT/.parallel-launch-$(date -u +%Y%m%dT%H%M%SZ)-${BASHPID}"
+  batch_dir="$RUN_ROOT/.parallel-launch-$(date -u +%Y%m%dT%H%M%SZ)-$(unique_id)"
   mkdir -p "$batch_dir"
   pids=()
   for i in $(seq 1 "$batch"); do
@@ -127,6 +129,10 @@ while (( zero < TARGET )); do
       export AGENT MODE
       export EXPECTED_TASK_TREE="$TREE"
       export RUNS_ROOT="$RUN_ROOT"
+      # macOS ships Bash 3.2, which has no BASHPID. The candidate runner only
+      # needs this value for unique evidence/job names, so provide a UUID-derived
+      # value per child process to avoid same-second collisions.
+      export BASHPID="$(unique_id)"
       if [[ "$MODE" == "cheat" ]]; then
         export EXPECTED_TB3_HEAD="$TB3_HEAD_EXPECTED"
       fi
