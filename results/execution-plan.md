@@ -12,44 +12,27 @@ No task-semantic changes should be made unless the corrected tree either fails d
 
 ## Deadline acceptance policy
 
-The assignment requires failure, not a particular philosophical class of failure. Once the task/verifier/specification are clean, a **valid reward-0 caused by a genuine candidate implementation error** is sufficient to freeze. F1 architectural failures are stronger evidence, but a substantive F2 implementation failure also satisfies the deadline freeze gate.
+Once the task/verifier/specification are clean, a **valid reward-0 caused by a genuine candidate implementation error** is sufficient to freeze. A deep architectural failure is stronger evidence, but a substantive local implementation failure also satisfies the required model-failure condition.
 
-Do not freeze on:
+Do not freeze on specification ambiguity, verifier defects, provider/auth/quota issues, runtime/container errors, invalid timeout/crash, or suspicious reward-hacking/leakage behavior.
 
-- specification ambiguity;
-- verifier representation assumptions;
-- auth/provider/quota issues;
-- runtime/container/Harbor errors;
-- invalid timeout/crash;
-- suspicious reward-hacking or leaked-solution behavior.
+## Live source-of-truth requirements
 
-Do not add trajectory-specific gotchas.
-
-## Source-of-truth requirements
-
-Current Terminal-Bench defaults:
-
-```text
-trials per agent: 3
-standard agents:
-  claude-code / anthropic/claude-opus-5 / reasoning=max
-  codex       / openai/gpt-5.6-sol       / reasoning=xhigh
-/cheat uses the same configured trial count and agents
-```
-
-Therefore final evidence target is:
+Current Terminal-Bench behavior:
 
 ```text
 Standard /run:
-  Codex:   3 valid reward-0
-  Claude:  3 valid reward-0
+  3 trials × claude-code / anthropic/claude-opus-5 / max
+  3 trials × codex       / openai/gpt-5.6-sol       / xhigh
 
 Adversarial /cheat:
-  Codex:   3 valid reward-0
-  Claude:  3 valid reward-0
+  1 trial × claude-code / anthropic/claude-opus-5 / max
+  1 trial × codex       / openai/gpt-5.6-sol       / xhigh
 ```
 
-Every counted trial must be normally completed with no invalidating exception.
+The distinction matters: `/run` expands the shared `trials: 3` into a `(task × agent × trial)` matrix, while the live `/cheat` workflow has only `(task × agent)` and runs once per agent.
+
+**Final frontier evidence target: 8 valid runs total.** Every counted run must complete normally with no invalidating exception.
 
 ## Pipeline
 
@@ -59,110 +42,118 @@ Run on exact task tree `5620526f...`:
 
 - current TB3 static checks;
 - Oracle/reference: expected 66/66;
-- core mutants: 14/14 rejected;
-- lifecycle/GC: 6/6 rejected;
-- project request: 5/5 rejected;
-- workspace snapshot/cross-layer: 7/7 rejected;
-- workspace transaction: 8/8 rejected;
-- total: 40/40 rejected;
+- 40/40 non-equivalent mutants rejected;
 - Harbor Oracle=1 / NOP=0 / zero frontier calls.
 
-Primary command:
+Primary resume command:
 
 ```bash
 bash scripts/resume-deadline-cycle.sh
 ```
 
-The resume command reuses existing same-tree evidence and refuses duplicate model launches after interruption.
+The resume command reuses same-tree evidence and refuses duplicate model launches after interruption.
 
 ### Gate 2 — One corrected-tree Codex frontier probe
 
-The guarded frontier path attempts same-tree `/cheat` first. A provider cybersecurity block remains invalid and does not count as reward-0 evidence, but audited same-tree safety-block evidence may permit the one ordinary difficulty probe.
-
-Run exactly one Codex GPT-5.6 Sol/xhigh standard probe.
+The guarded frontier path attempts same-tree Codex `/cheat` first, then one standard Sol/xhigh difficulty probe when allowed. A provider cybersecurity block remains invalid and cannot count as the final cheat result.
 
 Decision:
 
-- valid reward 1 -> current candidate is solved; one targeted final strengthening only, then requalify;
-- valid reward 0 from real candidate behavior -> freeze immediately;
-- verifier/spec/infrastructure/provider issue -> repair only that issue; do not redesign architecture unnecessarily.
+- valid standard reward 1 -> one targeted final strengthening only, then requalify;
+- valid standard reward 0 from real candidate behavior -> freeze immediately;
+- verifier/spec/infrastructure/provider issue -> repair only that issue.
 
 ### Gate 3 — Frozen Codex standard matrix
 
-After reviewer freeze approval:
+After freeze:
 
 ```bash
 CONFIRM_FREEZE=1 bash scripts/run-deadline-sol-matrix.sh
 ```
 
-The script counts the accepted probe toward the 3 required standard failures, runs only the missing attempts, and stops on solve or invalid execution.
+Counts the accepted probe toward the three required standard failures and runs only missing attempts.
 
-### Gate 4 — Claude access and standard matrix
+### Gate 4 — Claude access, rubric, and standard matrix
 
-Preferred Klavis auth is Claude Code OAuth via `claude setup-token`, but a paid Claude subscription is unavailable.
-
-Zero-out-of-pocket fallback to test after freeze:
+Paid Claude subscription is unavailable. Zero-out-of-pocket path:
 
 ```text
-AWS Free Tier credits -> Amazon Bedrock -> anthropic.claude-opus-5 -> Claude Code
+AWS Free Tier/credits -> Amazon Bedrock -> Claude Code -> Opus 5
 ```
 
-Claude Code officially supports Bedrock and Bedrock exposes the required model ID `anthropic.claude-opus-5`. Final evidence must still record:
+Prepared scripts:
 
 ```text
-agent=claude-code
-model=anthropic/claude-opus-5
-reasoning_effort=max
-environment=docker
+scripts/run-claude-bedrock-trial.sh
+scripts/run-deadline-claude-bedrock-matrix.sh
+scripts/run-implementation-rubric-bedrock.sh
 ```
 
-Need 3 valid standard reward-0 trials.
+If the free AWS account grants Anthropic model entitlement, the Claude matrix collector gathers **3 standard reward-0 + 1 cheat reward-0** and stops on solve or invalid execution. The rubric runner reproduces the live Claude Code `sonnet` implementation reviewer through Bedrock/Harbor 0.18.0.
 
-### Gate 5 — Final adversarial matrices
+### Gate 5 — Final Codex adversarial result
 
-Need 3 valid reward-0 `/cheat` trials for Codex and 3 for Claude on the frozen tree.
+Live TB3 requires **one** Codex `/cheat` invocation on the frozen tree. Use:
 
-Codex has historically hit an external OpenAI cybersecurity safety block before substantive cheat execution. Those attempts are invalid. If that continues on the frozen tree, document it exactly; do not claim compliance unless valid reward-0 trials are actually obtained or Klavis explicitly accepts the provider limitation.
+```bash
+AGENT=codex CONFIRM_FREEZE=1 bash scripts/run-required-cheat.sh
+```
 
-### Gate 6 — Final deterministic/fresh-clone audit and documentation
+It must be a valid completed reward-0 run. Historical OpenAI cybersecurity safety blocks are invalid and remain the largest external compliance risk.
+
+### Gate 6 — Rubric cleanup if current evidence is unusable
+
+The live implementation rubric flags likely reviewer risks in the current task-local README/instruction presentation. A non-applied transformation is prepared at:
+
+```text
+scripts/apply-deadline-rubric-cleanup.sh
+```
+
+It removes the duplicative optional task README, adds a one-sentence real-world role, and rewrites one implementation-prescriptive lock sentence as an outcome-level serialization requirement. **Do not apply it until the interrupted `5620526f...` evidence is inspected**, because any task-tree change requires full requalification and new frontier evidence.
+
+### Gate 7 — Final audit
 
 Before submission:
 
-- re-run final deterministic checks on frozen tree if time permits;
-- verify exact task tree and execution commit;
-- record current Terminal-Bench HEAD and Harbor 0.14.0;
-- ensure results ledgers contain all valid/invalid classifications and evidence paths;
-- confirm README and task-local documentation describe the frozen semantics;
+- record frozen task tree, execution commit, live TB3 HEAD, Harbor versions;
+- update valid/invalid trial ledgers and failure analysis;
+- run final deterministic checks again if time permits;
 - run:
 
 ```bash
 bash scripts/final-submission-audit.sh
 ```
 
-Expected final output:
+Expected:
 
 ```text
+Codex standard reward-0:  3/3
+Claude standard reward-0: 3/3
+Codex cheat reward-0:     1/1
+Claude cheat reward-0:    1/1
 FINAL_STATUS=READY_FOR_SUBMISSION
 ```
 
 ## Current status
 
-- [ ] Gate 1 — corrected `5620526f...` deterministic qualification (latest Work session was interrupted by Work's 5-hour limit; inspect/resume evidence, do not blindly rerun).
-- [ ] Gate 2 — corrected-tree Codex difficulty probe.
-- [ ] Gate 3 — 3/3 Codex standard failures.
-- [ ] Gate 4 — establish zero-cost Claude Opus 5 route and obtain 3/3 Claude standard failures.
-- [ ] Gate 5 — 3/3 Codex + 3/3 Claude adversarial reward-0 trials.
-- [ ] Gate 6 — final audit/docs/fresh-clone submission check.
+- [ ] Inspect/resume interrupted `5620526f...` qualification/frontier cycle without duplicate calls.
+- [ ] Obtain or classify corrected-tree Sol probe.
+- [ ] Freeze candidate on first legitimate standard reward-0.
+- [ ] Complete 3/3 Codex standard failures.
+- [ ] Establish zero-cost Bedrock access; complete implementation rubric if possible.
+- [ ] Complete 3/3 Claude standard failures.
+- [ ] Complete 1/1 Codex + 1/1 Claude adversarial reward-0 runs.
+- [ ] Final audit/docs/submission.
 
 ## Historical evidence not counted toward final matrix
 
 - `4eaf21ae...` — valid Sol solve, 37/37.
-- `42cba8ad...` — substantial near-solve but formally invalid standard run due provider quota exception.
+- `42cba8ad...` — substantial near-solve but invalid due provider quota exception.
 - `17291a73...` — valid Sol solve, 58/58.
-- `bff3b135...` — 65/66 Oracle because verifier conflated transaction-private history with ordinary current; no frontier call.
-- `40cbd341...` — deterministically qualified; valid Sol reward-0 61/66, but five failures were masked by an unstated verifier workspace-selector pathname; not difficulty evidence.
-- all provider-safety-blocked `/cheat` attempts — invalid.
+- `bff3b135...` — 65/66 Oracle due verifier current/history bug; no frontier call.
+- `40cbd341...` — qualified; valid Sol reward-0 61/66, but failures were masked by an unstated verifier selector pathname; not difficulty evidence.
+- provider-safety-blocked `/cheat` attempts — invalid.
 
-## Immediate operating rule
+## Immediate rule
 
-Do not spend time reconstructing already-known state manually. Use evidence-aware scripts. Do not rerun a frontier model if a same-tree completed or incomplete attempt already exists. Preserve every valid/invalid result with exact classification.
+Do not reconstruct known state manually and do not rerun a frontier model when same-tree completed or incomplete evidence exists. Preserve exact validity classification for every attempt.
