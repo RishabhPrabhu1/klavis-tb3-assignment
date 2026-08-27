@@ -24,17 +24,16 @@ A successful build report has exactly `target`, `events`, and `outputs`. `events
 
 Each successful ordinary build and first successful request-ID build publishes one coherent project snapshot containing exactly the outputs reached from the requested target. Observers may see the previous complete snapshot or the new complete snapshot, never a mixture. Interrupted/stale work must not publish or erase another successful commit. Disjoint target closures must be able to make progress concurrently. If concurrent work commits first, a later commit must preserve any still-valid reusable cache state and must not publish values based on a manifest or source observation that changed before its commit.
 
-Committed project history is externally inspectable under:
+Committed project history is externally inspectable under these project-relative directories:
 
 ```text
 PROJECT/.build-cache/generations/TOKEN/
 PROJECT/.build-cache/generations/TOKEN/out/
 PROJECT/.build-cache/generations/TOKEN/records/
-PROJECT/.build-cache/generations/TOKEN/snapshot.json
-PROJECT/.build-cache/objects/64-lowercase-hex-key.bin
+PROJECT/.build-cache/objects/
 ```
 
-`TOKEN` is nonempty, filename-safe, and contains no `/`. Every committed generation `snapshot.json` is a JSON object containing a positive integer `commit_seq`; project generation commit sequences are unique and strictly increasing in commit order. Every file under a committed generation's `records/` is a JSON object containing a `key` field whose value is the referenced 64-lowercase-hex object key; additional record fields are allowed. A record makes its referenced object reachable.
+`TOKEN` is nonempty, filename-safe, and contains no `/`. Every committed generation directory contains `snapshot.json`, a JSON object with a positive integer `commit_seq`; project generation commit sequences are unique and strictly increasing in commit order. Every file under a committed generation's `records/` is a JSON object containing a `key` field whose value is the referenced 64-lowercase-hex object key; additional record fields are allowed. Objects are stored in the project object directory with the 64-lowercase-hex key followed by the `.bin` suffix. A record makes its referenced object reachable.
 
 ## Request IDs, project readers, and project GC
 
