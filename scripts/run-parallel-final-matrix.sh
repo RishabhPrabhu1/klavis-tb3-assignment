@@ -7,6 +7,7 @@ TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 AGENT=${AGENT:-}
 MODE=${MODE:-standard}
 CONFIRM_FREEZE=${CONFIRM_FREEZE:-0}
+CONFIRM_ZERO_COST_COVERAGE=${CONFIRM_ZERO_COST_COVERAGE:-0}
 TARGET=${TARGET_VALID_ZEROES:-3}
 MAX_PARALLEL=${MAX_PARALLEL:-2}
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
@@ -48,8 +49,9 @@ else
   AGENT_NAME="claude-code"
   MODEL="anthropic/claude-opus-5"
   REASONING="max"
+  [[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Claude launch blocked. Set CONFIRM_ZERO_COST_COVERAGE=1 only after confirming this auth/provider route creates zero out-of-pocket spend."
   if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -z "${AWS_BEARER_TOKEN_BEDROCK:-}" && ( -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ) && -z "${ANTHROPIC_API_KEY:-}" ]]; then
-    fail "Claude auth missing: configure OAuth, Bedrock, or Anthropic API credentials first"
+    fail "Claude auth missing: configure an explicitly zero-cost-covered OAuth/Bedrock/API route first"
   fi
   if [[ "$MODE" == "standard" ]]; then
     ROOTS=${MATRIX_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-standard:$HOME/.cache/klavis-tb3-runs/transaction-claude-standard-final"}
@@ -87,9 +89,17 @@ for raw in roots_raw.split(":"):
         except Exception: continue
         if not (d.get("task_tree")==tree and d.get("mode")==mode and d.get("agent")==agent and d.get("model")==model and d.get("reasoning_effort")==reasoning):
             continue
-        valid=(d.get("execution_class")=="valid-completed-trial" and d.get("qualification_valid") is True and not (d.get("result_exception_types") or []) and d.get("reward") is not None)
+        reward=d.get("reward")
+        if mode == "cheat":
+            # Live TB3 /cheat is reward-based. Agent/Harbor failure is recorded as
+            # reward 0 by that workflow rather than being subjected to /run validity.
+            if reward in (0,0.0): zero.append(str(p))
+            elif reward is None: invalid.append(str(p))
+            else: nonzero.append(str(p))
+            continue
+        valid=(d.get("execution_class")=="valid-completed-trial" and d.get("qualification_valid") is True and not (d.get("result_exception_types") or []) and reward is not None)
         if not valid: invalid.append(str(p))
-        elif d.get("reward") in (0,0.0): zero.append(str(p))
+        elif reward in (0,0.0): zero.append(str(p))
         else: nonzero.append(str(p))
 print(json.dumps({"zero":zero,"nonzero":nonzero,"invalid":invalid,"incomplete":incomplete}))
 PY
@@ -107,7 +117,7 @@ zero=$(count_key "$state" zero)
 nonzero=$(count_key "$state" nonzero)
 incomplete=$(count_key "$state" incomplete)
 
-printf 'Existing %s/%s valid reward-0: %s/%s\n' "$AGENT_NAME" "$MODE" "$zero" "$TARGET"
+printf 'Existing %s/%s reward-0 satisfying mode semantics: %s/%s\n' "$AGENT_NAME" "$MODE" "$zero" "$TARGET"
 (( nonzero == 0 )) || fail "valid nonzero same-tree result already exists; frozen candidate is invalid"
 (( incomplete == 0 )) || fail "incomplete same-tree evidence exists; inspect/resume it before launching parallel trials"
 
@@ -118,7 +128,7 @@ while (( zero < TARGET )); do
   before_zero=$zero
   before_invalid=$(count_key "$state" invalid)
 
-  printf '\n=== PARALLEL %s %s BATCH: %s trial(s), %s/%s already valid ===\n' \
+  printf '\n=== PARALLEL %s %s BATCH: %s trial(s), %s/%s already satisfying ===\n' \
     "$AGENT_NAME" "$MODE" "$batch" "$zero" "$TARGET"
 
   batch_dir="$RUN_ROOT/.parallel-launch-$(date -u +%Y%m%dT%H%M%SZ)-$(unique_id)"
@@ -131,7 +141,8 @@ while (( zero < TARGET )); do
       export RUNS_ROOT="$RUN_ROOT"
       # macOS ships Bash 3.2, which has no BASHPID. The candidate runner only
       # needs this value for unique evidence/job names, so provide a UUID-derived
-      # value per child process to avoid same-second collisions.
+      # value per child process. Modern Bash may ignore assignment to its special
+      # BASHPID and will provide the real child PID, which is also unique.
       export BASHPID="$(unique_id)"
       if [[ "$MODE" == "cheat" ]]; then
         export EXPECTED_TB3_HEAD="$TB3_HEAD_EXPECTED"
@@ -158,18 +169,18 @@ while (( zero < TARGET )); do
 
   echo "batch_logs=$batch_dir"
   echo "runner_statuses=${statuses[*]}"
-  echo "valid_reward_zero_now=$zero/$TARGET"
+  echo "reward_zero_satisfying_mode_now=$zero/$TARGET"
   echo "invalid_now=$invalid"
   echo "incomplete_now=$incomplete"
 
-  (( nonzero == 0 )) || { echo "STOP: a valid nonzero result was produced." >&2; exit 20; }
+  (( nonzero == 0 )) || { echo "STOP: a nonzero same-tree result was produced." >&2; exit 20; }
   (( incomplete == 0 )) || { echo "STOP: batch left incomplete evidence." >&2; exit 21; }
   if (( zero - before_zero != batch )); then
-    echo "STOP: not every launched trial added a valid reward-0 result; do not auto-retry." >&2
+    echo "STOP: not every launched trial added a reward-0 result satisfying this mode; do not auto-retry." >&2
     exit 22
   fi
   if (( invalid > before_invalid )); then
-    echo "STOP: batch added invalid execution evidence; do not auto-retry." >&2
+    echo "STOP: batch added invalid/unparsed evidence; do not auto-retry." >&2
     exit 23
   fi
 done
@@ -181,7 +192,7 @@ printf 'agent=%s\n' "$AGENT_NAME"
 printf 'model=%s\n' "$MODEL"
 printf 'reasoning=%s\n' "$REASONING"
 printf 'mode=%s\n' "$MODE"
-printf 'valid_reward_zero=%s\n' "$zero"
+printf 'reward_zero_satisfying_mode=%s\n' "$zero"
 printf 'target=%s\n' "$TARGET"
 printf 'max_parallel=%s\n' "$MAX_PARALLEL"
 if [[ "$MODE" == "cheat" ]]; then printf 'terminal_bench_head=%s\n' "$TB3_HEAD_EXPECTED"; fi
