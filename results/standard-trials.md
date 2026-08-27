@@ -1,19 +1,61 @@
 # Standard Trials
 
-Status: the previous cross-project workspace snapshot tree was **cleanly solved** by Codex / GPT-5.6 Sol / xhigh and is disqualified. A new optimistic `workspace-build` transaction tree is under deterministic qualification; no frontier trial may run against it yet.
+## Required configuration
 
-## Live requirement versus current operational scope
+Klavis requires three valid standard `/run` trials for each configuration:
 
-Current Terminal-Bench defaults require three standard trials each for:
-
-| Agent | Model | Reasoning | Required trials |
+| Agent | Model | Reasoning | Required |
 |---|---|---|---:|
-| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 |
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 |
 
-Current operational evidence collection is Codex-only because Claude Code subscription access is unavailable. Full written-assignment compliance must not be claimed unless Claude evidence is later obtained or the requirement is waived.
+All six must genuinely fail the verifier. Provider/auth/quota/container/timeout/agent exceptions do not count.
 
-## Superseded workspace snapshot tree — valid solve
+## Current candidate
+
+```text
+5620526fada6eebea16910fc62bf71746aaa40ea
+```
+
+Status: **pending same-tree deterministic qualification and frontier measurement**.
+
+This is the optimistic multi-project `workspace-build` transaction design. Expensive member evaluation is private and must not hold global publication locks; commit uses coordinated validation, imports transaction-private project generations, merges written members into the latest workspace state, and publishes one immutable workspace generation. Disjoint transactions must progress and merge while overlapping/stale transactions retry. Exactly-once request replay and bounded cross-layer reclamation compose with the existing project/workspace protocols.
+
+The task contract intentionally does not prescribe internal selector pathnames. The current verifier observes ordinary project/workspace current state semantically by generation metadata/commit sequence.
+
+## Immediately previous transaction probe — not difficulty evidence
+
+Previous tree:
+
+```text
+40cbd34104e1f0a549be23b46ef70655b728cece
+```
+
+Deterministic qualification:
+
+```text
+Oracle/reference: 66/66
+mutations:        40/40 rejected
+Harbor Oracle:    1
+Harbor NOP:       0
+Sol calls:        0
+```
+
+A standard Codex / GPT-5.6 Sol / xhigh probe then completed validly:
+
+```text
+execution_class = valid-completed-trial
+qualification_valid = true
+result_exception_types = []
+reward = 0
+verifier = 61 passed / 5 failed
+```
+
+The candidate implemented a substantial coherent project/workspace transaction architecture. All five failing tests were masked by one verifier representation assumption: `workspace_txn_harness.workspace_snapshot()` required `.workspace-cache/CURRENT`, while the contract allowed any atomic selector representation and the candidate used lowercase `.workspace-cache/current`.
+
+Classification: **F4 verifier defect (secondary F3/F2 representation mismatch), not a legitimate model failure**. The helper was changed to resolve current workspace state semantically. The resulting corrected task tree is `5620526f...`.
+
+## Prior valid solve
 
 Tree:
 
@@ -21,15 +63,7 @@ Tree:
 17291a73dc954c66db0ef5cc6cf2f70fe1c85db4
 ```
 
-That tree was deterministically qualified at 58/58 with 32/32 non-equivalent mutants rejected and Harbor Oracle/NOP = 1/0 with zero Sol calls. Its same-tree `/cheat` attempt was invalid because of the provider cybersecurity safety classifier, but its ordinary standard difficulty probe was fully valid:
-
-```text
-execution_class = valid-completed-trial
-qualification_valid = true
-result_exception_types = []
-reward = 1.0
-verifier = 58 passed / 0 failed
-```
+That cross-project workspace snapshot design was deterministically qualified at 58/58 with 32/32 non-equivalent mutants rejected and Harbor Oracle/NOP = 1/0. A valid Sol/xhigh probe then scored reward 1.0 with 58/58 tests. It is therefore disqualified and retained only as historical evidence.
 
 Evidence:
 
@@ -37,55 +71,26 @@ Evidence:
 ~/.cache/klavis-tb3-runs/workspace-standard-probe/20260827T155729Z-standard-codex-cca1a50c3204
 ```
 
-Codex implemented the intended project-generation, request, reader/writer, GC, workspace stable-cut, workspace exactly-once, and transitive-reclamation architecture without suspicious verifier shortcuts. This was a clean intended solve and therefore required another task-level redesign.
+## Deadline policy
 
-## Current optimistic transaction redesign
+For the corrected `5620526f...` tree:
 
-Current task tree:
+1. Pass same-tree static, 66/66 Oracle, 40/40 mutation, Harbor Oracle=1/NOP=0 with zero Sol calls.
+2. Run one same-tree standard Sol/xhigh difficulty probe through the guarded frontier workflow.
+3. A valid reward 1 means the candidate is still solvable and cannot be frozen.
+4. A valid reward 0 caused by a real candidate implementation error under the clear contract is sufficient for deadline freeze. It does not need to be artificially escalated into a model-specific architectural trap.
+5. Verifier/specification/infrastructure/provider failures remain invalid and must be repaired or rerun as appropriate.
+6. After reviewer freeze approval, `CONFIRM_FREEZE=1 bash scripts/run-deadline-sol-matrix.sh` collects only the additional valid Sol failures needed to reach three and stops immediately on a solve or invalid execution.
 
-```text
-bff3b135d88174ac463d6e35a6cc30c4066dd8ea
-```
+## Current standard matrix
 
-This tree adds `workspace-build`, an optimistic write transaction over a subset of workspace members. The expensive member builds run privately outside workspace/project publication locks. At commit the implementation must validate workspace write-set versions, ordinary project-current versions, and the exact manifest/source observations used by each private build. Stale attempts retry.
+| Task tree | Agent | Model | Reasoning | Trial | Status |
+|---|---|---|---|---:|---|
+| `5620526f...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | probe / potential final 1 | pending |
+| `5620526f...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | final 2 | pending freeze |
+| `5620526f...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | final 3 | pending freeze |
+| `5620526f...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | pending access/freeze |
+| `5620526f...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | pending access/freeze |
+| `5620526f...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | pending access/freeze |
 
-On success, written members become new immutable private project generations without moving ordinary project `CURRENT`. The workspace commit merges only those members into the **latest** workspace state, so disjoint transactions preserve one another while overlapping writes retry. New crash boundaries distinguish pre-commit imported-but-unreachable project history from committed post-publication response loss. Exactly-once replay must survive later overlapping transactions, workspace GC of the original workspace snapshot, and project GC of the original private generation.
-
-Required zero-model qualification for this exact tree:
-
-- live TB3 static checks;
-- full Oracle/reference verifier, expected 66 tests;
-- 14 core mutants;
-- 6 lifecycle/GC mutants;
-- 5 project request mutants;
-- 7 workspace snapshot/cross-layer mutants;
-- 8 optimistic workspace transaction mutants;
-- 40/40 total mutants rejected;
-- Harbor Oracle=1 / NOP=0 / `sol_calls=0`.
-
-Until that passes, `/cheat`, standard Sol, final matrices, and Claude trials are blocked.
-
-## Frontier policy for the transaction tree
-
-1. Qualify `bff3b135d88174ac463d6e35a6cc30c4066dd8ea` deterministically with zero model calls.
-2. Attempt same-tree Codex `/cheat` once. Provider/auth/runtime exceptions remain invalid.
-3. If `/cheat` is again provider-safety blocked, retain audited same-tree evidence and use the explicit one-off standard diagnostic exception.
-4. Run one Sol/xhigh standard difficulty probe.
-5. A valid reward-1 solve causes another redesign.
-6. Freeze only on a valid reward-0 result whose primary failure is genuinely conceptual/architectural rather than a local bug, ambiguity, verifier defect, timeout, or provider failure.
-7. Only after freeze collect the required 3/3 standard failures per required model/config and valid adversarial reward-0 evidence.
-
-## Historical evidence
-
-- `42cba8ad00bebf316048d1470033c1742a20ec97`: exactly-once tree; standard run formally invalid due quota, but preserved candidate passed 48/48 and was treated only as near-solve development evidence.
-- `4eaf21ae9456395fb080be497852c0ff9623b8fa`: valid clean Sol/xhigh solve at 37/37; superseded.
-
-## Frozen Codex matrix
-
-Not started.
-
-| Agent | Model | Reasoning | Trial | Reward | Valid? | Classification |
-|---|---|---|---:|---:|---|---|
-| `codex` | `openai/gpt-5.6-sol` | `xhigh` | final 1 | Pending | Pending | Pending |
-| `codex` | `openai/gpt-5.6-sol` | `xhigh` | final 2 | Pending | Pending | Pending |
-| `codex` | `openai/gpt-5.6-sol` | `xhigh` | final 3 | Pending | Pending | Pending |
+Claude subscription OAuth is unavailable locally. A zero-out-of-pocket Amazon Bedrock route is being retained as the alternative access path; any final run must still preserve Claude Code + actual Opus 5 + max reasoning + Docker + auditable Harbor evidence.
