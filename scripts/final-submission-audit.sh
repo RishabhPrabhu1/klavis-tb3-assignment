@@ -148,12 +148,13 @@ vals={}
 for line in path.read_text(encoding="utf-8").splitlines():
     if "=" in line:
         k,v=line.split("=",1); vals[k.strip()]=v.strip()
+# These are the exact-tree submission gates. Development mutation counts are
+# useful negative-control evidence but are not a live TB3 qualification field.
 expected={
     "task_tree":tree,
     "terminal_bench_head":tb3,
     "static_checks":"PASS",
     "oracle_tests":"66",
-    "mutations_total":"40",
     "harbor_oracle":"1",
     "harbor_nop":"0",
     "sol_calls":"0",
