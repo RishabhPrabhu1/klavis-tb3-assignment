@@ -32,7 +32,10 @@ REVIEW_INSTRUCTION="$TB3_REPO/scripts/rubric-regression/templates/instruction.md
 [[ -f "$RUBRIC" ]] || fail "live rubric missing: $RUBRIC"
 [[ -f "$REVIEW_INSTRUCTION" ]] || fail "rubric reviewer instruction missing: $REVIEW_INSTRUCTION"
 
-STAMP=$(date -u +%Y%m%dT%H%M%SZ)-${BASHPID}
+# macOS ships Bash 3.2, which has no BASHPID. The PID is used only to make the
+# local evidence directory unique, so $$ is a safe portable fallback.
+RUN_PID=${BASHPID:-$$}
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)-${RUN_PID}
 RUN_DIR="$RUNS_ROOT/${STAMP}-${TREE:0:12}"
 STAGE="$RUN_DIR/stage"
 mkdir -p "$STAGE/task-under-review" "$RUN_DIR/jobs"
