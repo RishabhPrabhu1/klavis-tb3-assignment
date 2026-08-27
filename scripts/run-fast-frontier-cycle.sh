@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-FROZEN_TASK_TREE="bff3b135d88174ac463d6e35a6cc30c4066dd8ea"
+FROZEN_TASK_TREE="40cbd34104e1f0a549be23b46ef70655b728cece"
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
 QUAL_MARKER="$QUAL_ROOT/QUALIFICATION-PASSED-${FROZEN_TASK_TREE}.txt"
 CHEAT_ROOT=${CHEAT_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat"}
@@ -56,7 +56,6 @@ if [[ -e "$CYCLE_SENTINEL" ]]; then
   fail "frontier cycle already attempted for this tree; refusing duplicate model calls: $CYCLE_SENTINEL"
 fi
 
-# Refuse a second standard call even if a prior manual execution bypassed this cycle sentinel.
 if python3 - "$STANDARD_ROOT" "$FROZEN_TASK_TREE" <<'PY'
 import json, sys
 from pathlib import Path
@@ -73,11 +72,9 @@ then
   fail "same-tree standard evidence already exists under $STANDARD_ROOT; refusing duplicate model call"
 fi
 
-# Mark the cycle before the first possible model launch. Keep this marker even if provider execution fails.
 printf 'task_tree=%s\nexecution_commit=%s\nstarted_utc=%s\n' \
   "$FROZEN_TASK_TREE" "$(git rev-parse HEAD)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$CYCLE_SENTINEL"
 
-# Reuse an existing same-tree cheat attempt if one exists. Otherwise launch exactly one.
 set +e
 python3 "$ROOT_DIR/scripts/audit-trial-evidence.py" "$CHEAT_ROOT" >/dev/null 2>&1
 set -e
@@ -115,7 +112,6 @@ python3 "$ROOT_DIR/scripts/audit-trial-evidence.py" "$CHEAT_ROOT" >/dev/null
 cheat_audit_status=$?
 set -e
 
-# Classify the latest same-tree cheat. Only the known provider cybersecurity block may bypass a valid cheat pass.
 cheat_classification=$(python3 - "$CHEAT_ROOT" "$FROZEN_TASK_TREE" <<'PY'
 import json, sys
 from pathlib import Path
@@ -253,5 +249,4 @@ emit("standard", latest(standard_root, "standard"))
 print("=== END FAST FRONTIER CYCLE REPORT ===")
 PY
 
-# Never auto-retry. A provider/quota/runtime-invalid standard attempt remains one attempted cycle.
 exit "$standard_runner_status"
