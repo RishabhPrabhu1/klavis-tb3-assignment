@@ -32,7 +32,7 @@ REVIEW_INSTRUCTION="$TB3_REPO/scripts/rubric-regression/templates/instruction.md
 [[ -f "$RUBRIC" ]] || fail "live rubric missing: $RUBRIC"
 [[ -f "$REVIEW_INSTRUCTION" ]] || fail "rubric reviewer instruction missing: $REVIEW_INSTRUCTION"
 
-STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)-${BASHPID}
 RUN_DIR="$RUNS_ROOT/${STAMP}-${TREE:0:12}"
 STAGE="$RUN_DIR/stage"
 mkdir -p "$STAGE/task-under-review" "$RUN_DIR/jobs"
@@ -75,10 +75,10 @@ if [[ -z "$VERDICTS" ]]; then
   exit 21
 fi
 
-python3 - "$VERDICTS" "$RUBRIC" "$RUN_DIR/result.json" <<'PY'
+python3 - "$VERDICTS" "$RUBRIC" "$RUN_DIR/result.json" "$RUN_DIR/metadata.json" <<'PY'
 import json,sys,tomllib
 from pathlib import Path
-src,rubric_path,out=map(Path,sys.argv[1:])
+src,rubric_path,out,metadata_path=map(Path,sys.argv[1:])
 doc=json.JSONDecoder().raw_decode(src.read_text(encoding="utf-8").lstrip())[0]
 checks=doc.get("checks")
 if not isinstance(checks,dict) or not checks:
@@ -101,7 +101,15 @@ for name in criteria:
         not_applicable.append(name)
     else:
         failed.append(name)
+meta=json.loads(metadata_path.read_text(encoding="utf-8"))
 payload={
+    "repository_sha":meta.get("repository_sha"),
+    "task_tree":meta.get("task_tree"),
+    "terminal_bench_head":meta.get("terminal_bench_head"),
+    "harbor_version":meta.get("harbor_version"),
+    "review_agent":meta.get("review_agent"),
+    "review_model":meta.get("review_model"),
+    "auth_kind":meta.get("auth_kind"),
     "checks":checks,
     "criteria":criteria,
     "failed":failed,
@@ -112,6 +120,8 @@ payload={
 }
 out.write_text(json.dumps(payload,indent=2)+"\n",encoding="utf-8")
 print("\n=== IMPLEMENTATION RUBRIC REPORT ===")
+print(f"task_tree={payload['task_tree']}")
+print(f"terminal_bench_head={payload['terminal_bench_head']}")
 print(f"criteria={len(criteria)}")
 print(f"passed={len(passed)}")
 print(f"not_applicable={len(not_applicable)}")
