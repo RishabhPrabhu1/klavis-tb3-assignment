@@ -1,64 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 RUNNER="$ROOT_DIR/scripts/run-candidate-trial.sh"
-FROZEN_TASK_TREE="40cbd34104e1f0a549be23b46ef70655b728cece"
+FROZEN_TASK_TREE="5620526fada6eebea16910fc62bf71746aaa40ea"
 N_ATTEMPTS=${N_ATTEMPTS:-3}
-# Operational default: Codex-only. Claude remains available as an explicit opt-in
-# for eventual full assignment compliance when Claude subscription auth exists.
 AGENTS=${AGENTS:-codex}
 CONFIRM_FROZEN=${CONFIRM_FROZEN:-0}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/standard"}
-
-if ! [[ "$N_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] || (( N_ATTEMPTS > 10 )); then
-  echo "N_ATTEMPTS must be an integer from 1 to 10" >&2
-  exit 2
-fi
-if [[ "$AGENTS" != "codex" && "$AGENTS" != "claude" && "$AGENTS" != "both" ]]; then
-  echo "AGENTS must be codex, claude, or both" >&2
-  exit 2
-fi
-if [[ "$CONFIRM_FROZEN" != "1" ]]; then
-  echo "Final standard trials are gated behind the post-probe freeze decision." >&2
-  echo "After a genuine intended-crux Sol probe failure, rerun with CONFIRM_FROZEN=1." >&2
-  exit 2
-fi
-if [[ -n "${EXPECTED_TASK_TREE:-}" && "$EXPECTED_TASK_TREE" != "$FROZEN_TASK_TREE" ]]; then
-  echo "This final-trial wrapper is frozen to task tree $FROZEN_TASK_TREE" >&2
-  echo "Requested EXPECTED_TASK_TREE=$EXPECTED_TASK_TREE" >&2
-  exit 2
-fi
-if [[ ! -x "$RUNNER" ]]; then
-  echo "Candidate runner is not executable: $RUNNER" >&2
-  exit 2
-fi
-
-run_agent() {
-  local agent=$1
-  local label=$2
-  local attempt
-  for attempt in $(seq 1 "$N_ATTEMPTS"); do
-    printf '\n=== %s standard trial %s/%s ===\n' "$label" "$attempt" "$N_ATTEMPTS"
-    AGENT="$agent" \
-    MODE=standard \
-    EXPECTED_TASK_TREE="$FROZEN_TASK_TREE" \
-    RUNS_ROOT="$RUNS_ROOT" \
-    "$RUNNER"
-  done
-}
-
-case "$AGENTS" in
-  codex)
-    run_agent codex "Codex GPT-5.6 Sol/xhigh"
-    ;;
-  claude)
-    run_agent claude "Claude Code Opus 5/max"
-    ;;
-  both)
-    run_agent codex "Codex GPT-5.6 Sol/xhigh"
-    run_agent claude "Claude Code Opus 5/max"
-    ;;
-esac
-
+[[ "$N_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] && (( N_ATTEMPTS <= 10 )) || { echo "N_ATTEMPTS must be 1..10" >&2; exit 2; }
+[[ "$AGENTS" == codex || "$AGENTS" == claude || "$AGENTS" == both ]] || { echo "AGENTS must be codex, claude, or both" >&2; exit 2; }
+[[ "$CONFIRM_FROZEN" == 1 ]] || { echo "Final standard trials require CONFIRM_FROZEN=1 after a genuine architectural failure." >&2; exit 2; }
+if [[ -n "${EXPECTED_TASK_TREE:-}" && "$EXPECTED_TASK_TREE" != "$FROZEN_TASK_TREE" ]]; then echo "Wrapper frozen to $FROZEN_TASK_TREE" >&2; exit 2; fi
+run_agent(){ local agent=$1 label=$2; for attempt in $(seq 1 "$N_ATTEMPTS"); do printf '\n=== %s standard trial %s/%s ===\n' "$label" "$attempt" "$N_ATTEMPTS"; AGENT="$agent" MODE=standard EXPECTED_TASK_TREE="$FROZEN_TASK_TREE" RUNS_ROOT="$RUNS_ROOT" "$RUNNER"; done; }
+case "$AGENTS" in codex) run_agent codex "Codex GPT-5.6 Sol/xhigh";; claude) run_agent claude "Claude Code Opus 5/max";; both) run_agent codex "Codex GPT-5.6 Sol/xhigh"; run_agent claude "Claude Code Opus 5/max";; esac
 printf '\nStandard matrix complete. Evidence root: %s\n' "$RUNS_ROOT"
