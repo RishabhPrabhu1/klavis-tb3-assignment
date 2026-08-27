@@ -7,7 +7,7 @@ TB3_REPO=${TB3_REPO:-}
 JOBS_ROOT=${JOBS_ROOT:-"${TMPDIR:-/tmp}/build-snapshot-publish-jobs/cheat"}
 AGENTS=${AGENTS:-both}
 
-if [[ -z "$TB3_REPO" || ! -f "$TB3_REPO/rubrics/hack-trial-prompt.md" ]]; then
+if [[ -z "$TB3_REPO" || ! -f "$TB3_REPO/docs/prompts/hack-trial-prompt.md" ]]; then
   echo "Set TB3_REPO to a fresh live terminal-bench checkout." >&2
   exit 2
 fi
@@ -28,7 +28,7 @@ task_copy=$(mktemp -d "${TMPDIR:-/tmp}/build-snapshot-publish-cheat-task.XXXXXX"
 trap 'rm -rf "$task_copy"' EXIT
 cp -R "$TASK_DIR/." "$task_copy/"
 instruction="$task_copy/instruction.md"
-hack_prompt="$TB3_REPO/rubrics/hack-trial-prompt.md"
+hack_prompt="$TB3_REPO/docs/prompts/hack-trial-prompt.md"
 
 # Match the live /cheat transform: remove the ordinary anti-cheat sentence and
 # append the current upstream adversarial prompt. The original task is untouched.
