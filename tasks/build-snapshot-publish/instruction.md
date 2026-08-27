@@ -73,7 +73,7 @@ A WORKSPACE contains participating projects as direct child directories.
 
 with at least two entries. Member names are nonempty and contain no `/`, NUL, CR, or LF. Project values are existing direct-child names without `/`.
 
-A successful capture publishes one immutable workspace generation representing one real simultaneous cross-project cut. There must be an instant during capture at which every published member equals that project's current committed generation. Sequentially reading currents while allowing listed projects to publish between reads is insufficient. Implementations may briefly coordinate listed project publication locks but must not republish project generations. Unlisted sibling projects remain independent.
+A successful capture publishes one immutable workspace generation representing one real simultaneous cross-project cut. There must be an instant during capture at which every published member equals that project's current committed generation. Sequentially reading currents while allowing listed projects to publish between reads is insufficient. Capture may briefly block publication by listed projects only as needed to establish the cut, but must not republish project generations. Unlisted sibling projects remain independent.
 
 Workspace generations live under `WORKSPACE/.workspace-cache/generations/TOKEN/` with `snapshot.json`, a positive strictly increasing workspace `commit_seq`, and a `members` object. Each member metadata object includes `project`, project `generation`, and project generation `commit_seq`.
 
@@ -100,7 +100,7 @@ A workspace-build attempt has an **optimistic private evaluation phase** and a *
 
 ### Private evaluation must not globally serialize
 
-The expensive member builds must execute without holding the workspace commit lock or the written projects' publication locks for the duration of the build. `BUILDSYS_PAUSEPOINT=workspace-build:after-stage:MEMBER` pauses after that member has been privately staged. While paused there, a disjoint workspace-build transaction touching other members/projects must be able to complete. Wrapping the whole transaction in one global workspace lock is incorrect.
+The expensive member builds must execute without coordination that blocks workspace publication or publication by the written projects for the duration of the build. `BUILDSYS_PAUSEPOINT=workspace-build:after-stage:MEMBER` pauses after that member has been privately staged. While paused there, a disjoint workspace-build transaction touching other members/projects must be able to complete. Wrapping the whole transaction in one global workspace lock is incorrect.
 
 A private build uses the same target semantics as ordinary project build and produces a complete immutable project generation for the requested target closure, but it is not yet visible through the workspace and must not advance that physical project's ordinary current generation or ordinary `out/` selector.
 
@@ -112,7 +112,7 @@ Each attempt remembers:
 
 ### Commit validation and retry
 
-At commit, acquire the workspace publication lock and all written-project publication locks in deterministic canonical order. Before publishing, validate all of the following:
+The commit step must serialize the workspace publication edge with publication state for every written project, without holding that coordination during private evaluation. Before publishing, validate all of the following:
 
 1. every written workspace member still names the same workspace member generation observed when this attempt began;
 2. every written physical project's ordinary current generation is still the version observed when this attempt began;
@@ -192,6 +192,6 @@ Supported failpoints include:
 - `workspace-build:after-publish` => committed transaction response loss;
 - `gc:after-generations` => exit 86 after obsolete generations are removed but before object reclamation/report; later GC must recover safely.
 
-Do not hard-code sample project/workspace names. Do not depend on wall-clock lease expiry. The verifier may pause or kill processes arbitrarily. Avoid lock-order cycles across workspace/project state. Required concurrency must make progress; correctness may not be obtained by retaining all history forever or globally serializing every operation.
+Do not hard-code sample project/workspace names. Do not depend on wall-clock lease expiry. The verifier may pause or kill processes arbitrarily. Required concurrency must make progress; correctness may not be obtained by retaining all history forever or globally serializing every operation.
 
 You have 14400 seconds to complete this task. Do not cheat by using online solutions or hints specific to this task.
