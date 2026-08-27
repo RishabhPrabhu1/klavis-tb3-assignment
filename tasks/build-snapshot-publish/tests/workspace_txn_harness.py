@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 
 from harness import APP_ROOT, _drop_privileges, _write
-from workspace_harness import _base_env, _report_path
+from workspace_harness import _base_env, _report_path, current_workspace_token
 
 
 def write_build_plan(
@@ -127,11 +127,9 @@ def finish_workspace_build(
 def workspace_snapshot(workspace: Path, token: str | None = None) -> dict:
     cache = workspace / ".workspace-cache"
     if token is None:
-        selector = cache / "CURRENT"
-        assert selector.is_symlink(), "workspace CURRENT is missing"
-        generation = selector.resolve(strict=True)
-    else:
-        generation = cache / "generations" / token
+        token = current_workspace_token(workspace)
+    generation = cache / "generations" / token
+    assert generation.is_dir(), f"workspace generation is missing: {token}"
     return json.loads((generation / "snapshot.json").read_text())
 
 
