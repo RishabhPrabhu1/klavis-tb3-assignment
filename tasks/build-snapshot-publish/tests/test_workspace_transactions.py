@@ -19,6 +19,7 @@ from workspace_harness import (
 )
 from workspace_txn_harness import (
     finish_workspace_build,
+    kill_workspace_build,
     member_bytes,
     member_generation,
     run_workspace_build,
@@ -128,8 +129,7 @@ def test_disjoint_workspace_builds_stage_concurrently_and_merge_latest_state() -
         assert member_generation(workspace, "right") == right_generation
     finally:
         if proc is not None:
-            proc.kill()
-            proc.wait(timeout=5)
+            kill_workspace_build(proc)
         shutil.rmtree(base, ignore_errors=True)
 
 
@@ -160,8 +160,7 @@ def test_overlapping_workspace_build_retries_after_competing_workspace_commit() 
         assert result["updated"]["left"]["generation"] != competing_generation
     finally:
         if proc is not None:
-            proc.kill()
-            proc.wait(timeout=5)
+            kill_workspace_build(proc)
         shutil.rmtree(base, ignore_errors=True)
 
 
@@ -189,8 +188,7 @@ def test_source_change_during_private_stage_forces_retry_and_fresh_output() -> N
         assert member_bytes(workspace, "left") == b"LEFT-SOURCE-CHANGED\n"
     finally:
         if proc is not None:
-            proc.kill()
-            proc.wait(timeout=5)
+            kill_workspace_build(proc)
         shutil.rmtree(base, ignore_errors=True)
 
 
@@ -221,8 +219,7 @@ def test_ordinary_project_publication_invalidates_a_staged_workspace_transaction
         assert result["attempts"] >= 2
     finally:
         if proc is not None:
-            proc.kill()
-            proc.wait(timeout=5)
+            kill_workspace_build(proc)
         shutil.rmtree(base, ignore_errors=True)
 
 
