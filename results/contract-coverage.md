@@ -43,6 +43,7 @@ The contract specifies project generations, records, `snapshot.json`, object nam
 | REQUEST_ID validation | invalid ID cases | starter fails |
 | First success binds target + exact report | exact replay test | replay-recommits |
 | Same ID/different target -> status 2/no state change | cross-target case | allow-cross-target-replay |
+| Live owner retains ownership while duplicate waits | paused owner + follower case | ownership semantics |
 | Precommit owner crash leaves ID reusable | `request:after-claim` | state-machine mutants |
 | Concurrent duplicates commit once | duplicate owner/follower | request claim mutants |
 | Waiting duplicate takes over immediately after owner death | killed-owner tests | process lifetime required |
@@ -59,6 +60,7 @@ The contract specifies immutable workspace generations with `snapshot.json`, wor
 |---|---|---|
 | `workspace-capture` exact plan/request replay | workspace capture replay | replay-recaptures |
 | Request ID bound to canonical member map | cross-plan reuse | allow-cross-plan-replay |
+| Live capture owner retains ownership while duplicate waits | paused owner + follower | ownership behavior |
 | Post-publish response loss survives later capture + workspace GC | lost-response workspace test | postpublish-is-precommit |
 | Stable simultaneous listed-project cut | deterministic `workspace:after-member:left` with both publishers blocked | no-stable-cut-locks |
 | Unlisted/disjoint work remains independent | stable-cut and disjoint-request cases | global request claim mutation |
@@ -80,11 +82,11 @@ The contract specifies immutable workspace generations with `snapshot.json`, wor
 | Ordinary project publication during stage invalidates transaction | ordinary build while transaction paused | project-version-validation mutant |
 | `workspace-build:after-import` is precommit; workspace unchanged; orphan import reclaimable; request reusable | precommit import crash test | import-boundary/request-consumption mutant |
 | `workspace-build:after-publish` is committed response loss | postpublish response-loss test | postpublish-boundary mutant |
-| Replay survives later overlapping transaction, workspace GC, and project GC of original workspace-only generation | public replay-before/after-reclamation comparison | durable replay/reclamation behavior |
+| First replay can occur only after later overlapping transaction, workspace GC, and project GC of original workspace-only generation | deferred first replay validates stranded snapshot/report fields, followed by an identical second replay with no publication | durable replay/reclamation behavior |
 | Request ID binds exact transaction plan | cross-plan transaction test | cross-plan behavior |
 | Successful report includes attempts, updated write set, complete members and generation metadata | transaction success/replay assertions | schema/behavior coverage |
 
-The transaction suite contains eight focused non-equivalent mutants. Together with 14 core, 6 lifecycle/GC, 5 project-request, and 7 workspace-snapshot mutants, deterministic qualification expects **40/40 mutants rejected**.
+The transaction suite contains eight focused non-equivalent mutants. Together with 14 core, 6 lifecycle/GC, 5 project-request, and 7 workspace-snapshot mutants, the development mutation matrix contains 40 mutants. Mutation results are supporting negative controls; the authoritative submission gates are current TB3 static checks, exact-tree Oracle/Harbor validation, implementation rubric, and required agent matrices.
 
 ## Representation-neutrality audit
 
@@ -92,7 +94,7 @@ Three verifier assumptions were found and removed during development rather than
 
 1. Ordinary current was once inferred from newest project-history `commit_seq`; workspace-only transaction history makes that invalid. The verifier now asks the required public `read` interface which generation it acquired.
 2. Workspace current was once read through `.workspace-cache/CURRENT`; current workspace state is now resolved by documented workspace `commit_seq`, so selector naming is private.
-3. Transaction post-publish recovery once read a private `request_report` snapshot field; the test now obtains the original report through public replay and later requires the same replay after workspace/project reclamation.
+3. Transaction post-publish recovery once read a private `request_report` snapshot field. The current test performs no early replay; its first retry occurs only after later overlapping publication plus workspace/project reclamation and is validated against the stranded committed snapshot through public behavior.
 
 The remaining directly inspected project/workspace generation and object fields are the small schemas explicitly documented by the instruction. Request journals, transaction markers, lock files, reader leases, selector names, and staging layouts are not required by verifier tests.
 
@@ -100,7 +102,7 @@ The remaining directly inspected project/workspace generation and object fields 
 
 - `[verifier].environment_mode = "separate"`; tests/reference/reward are verifier-image-owned.
 - Candidate implementation runs as `nobody`; source/reference fixtures remain verifier-controlled.
-- Long-lived candidate actors log to verifier-owned files rather than inherited pipes, and process groups/new candidate-UID descendants are cleaned after completion or timeout where isolation requires it.
+- Candidate process invocations use verifier-owned stdout/stderr files rather than inherited pipes, start isolated sessions, record pre-launch candidate-UID baselines, and clean the process group plus newly created candidate-UID descendants on completion or timeout.
 - Intentional concurrent sibling processes are excluded from cleanup until their tests complete.
 - Tests assert public behavior and explicitly documented durable storage, not hidden request/lock/selector representations.
 - `tests/test.sh` performs no runtime network installation; verifier dependencies are pinned in `tests/Dockerfile`.
