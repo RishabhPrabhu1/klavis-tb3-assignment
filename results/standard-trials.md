@@ -1,27 +1,33 @@
 # Standard Trials
 
-Status: final frontier matrix not yet executed for the redesigned task.
+Status: final standard evidence has not yet been collected for the redesigned task.
 
-The assignment requires three **valid** standard trials for each current default agent to receive reward 0 because the model genuinely fails the task:
+## Live requirement versus current operational scope
 
-| Agent | Model | Reasoning | Required trials |
+Current live Terminal-Bench defaults still specify three standard trials each for:
+
+| Agent | Model | Reasoning | Live required trials |
 |---|---|---|---:|
 | `claude-code` | `anthropic/claude-opus-5` | `max` | 3 |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 |
 
-Live `/run` uses Harbor 0.14.0. The local wrappers use Docker plus the subscription-auth mechanisms documented by the Klavis assignment.
+The current operational workflow is **Codex-only** because Claude Code subscription access is not available. Therefore Codex qualification can be completed now, but the repository must not claim full assignment compliance with the Claude requirement unless that requirement is later satisfied or waived.
 
-## Usage-conserving Sol diagnostic
+Live `/run` uses Harbor 0.14.0. The local Codex runner uses Docker plus the subscription-auth mechanism documented by the Klavis assignment.
 
-The Sol diagnostic must not be launched from an outer Codex session. `scripts/run-codex-strong-test.sh` invokes Harbor directly, so GPT-5.6 Sol/xhigh is used only by the actual Harbor candidate agent. The wrapper does not call `harbor analyze`; result collection and verifier parsing are deterministic shell/Python work.
-
-Current frozen task-tree object:
+## Frozen task
 
 ```text
 d84a5bf3df6a2c3ed7a523c7fee072936f4029e4
 ```
 
-First run the zero-Sol local infrastructure preflight. It uses Harbor 0.14.0 Oracle and NOP only and makes **zero** GPT-5.6 Sol calls:
+Do not count any trial with a different task-tree object.
+
+## Required ordering
+
+Do **not** launch the standard difficulty probe until deterministic/Harbor qualification, the Codex path check, and Codex `/cheat` qualification have succeeded. See `results/execution-plan.md`.
+
+### Zero-Sol path check
 
 ```bash
 uv tool install --force 'harbor==0.14.0'
@@ -30,9 +36,11 @@ PREFLIGHT_ONLY=1 \
 ./scripts/run-codex-strong-test.sh
 ```
 
-Required result: Oracle reward 1, NOP reward 0, and `sol_calls=0` in the emitted preflight evidence.
+Required result: Oracle reward 1, NOP reward 0, `sol_calls=0`.
 
-Only after that passes, run exactly one Sol/xhigh diagnostic:
+### One Sol/xhigh difficulty probe
+
+Only after Codex `/cheat` qualification succeeds:
 
 ```bash
 EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
@@ -41,40 +49,48 @@ EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
 
 The wrapper:
 
-- refuses a dirty task tree;
-- verifies Harbor is exactly 0.14.0;
-- verifies Docker and Codex subscription authentication before the model starts;
-- copies the task outside the repository before execution;
-- requests one Harbor `codex` / `openai/gpt-5.6-sol` / `xhigh` trial only;
-- never invokes `harbor analyze`;
-- preserves raw Harbor output, verifier artifacts, the exact command, repository SHA, task-tree hash, and a deterministic summary outside the repository.
+- refuses a dirty or mismatched task tree;
+- requires Harbor 0.14.0 and a working Docker daemon;
+- requires Codex subscription auth at `~/.codex/auth.json`;
+- runs one Harbor `codex` / `openai/gpt-5.6-sol` / `xhigh` trial;
+- does not invoke `harbor analyze`;
+- preserves raw Harbor/verifier evidence and deterministic metadata outside the repository.
 
-Do not change the task during that trial. If it is a valid reward-0, inspect the trajectory and confirm the failure is caused by an explicitly stated benchmark invariant. If it is a clean solve, treat that as difficulty evidence rather than adding a trajectory-specific test.
+If this is a clean solve, redesign the task at the task level and restart qualification. Do not collect additional standard trials on a task already demonstrated solvable and do not add trajectory-specific gotchas.
 
-Claude can be run separately when subscription OAuth is available using the corresponding direct Harbor path; do not wrap it in an additional frontier-model session.
+If it is a valid reward-0, inspect the trajectory and count it only if the failure is task-substantive and aligned with the intended systems invariant rather than ambiguity, timeout, authentication, verifier behavior, or infrastructure.
 
-## Historical runs excluded from final evidence
+## Frozen Codex matrix
 
-Earlier diagnostics were useful for benchmark development but **do not count** toward the final matrix:
+After a defensible reward-0 probe, freeze the exact task revision. The qualifying probe may count as trial 1 only if it used that exact frozen task/configuration and otherwise satisfies the assignment conditions. Complete three valid Codex trials total.
 
-- an API-key/Modal GitHub workflow stopped before any model ran because repository provider credentials were absent;
-- an early Sol run tested an obsolete task revision;
-- a later clean Sol/xhigh run on the pre-concurrency task officially received reward 0 but its only failures were verifier artifacts involving an unstated cache-object filename convention;
-- that clean run also established that Sol could solve the earlier single-generation transactional-publication problem, which motivated the deliberate concurrency/stable-input redesign.
+```bash
+AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
+```
 
-The obsolete API-key workflow and trigger have been removed from the repository.
-
-## Final matrix record
-
-Fill this only with valid trials on the exact final task tree:
+The standard wrapper defaults to Codex-only and refuses any task tree other than the qualified tree.
 
 | Agent | Model | Reasoning | Trial | Reward | Valid? | Evidence path | Failure classification |
 |---|---|---|---:|---:|---|---|---|
-| `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | Pending | Pending | Pending | Pending |
-| `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | Pending | Pending | Pending | Pending |
-| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | Pending | Pending | Pending | Pending |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 | Pending | Pending | Pending | Pending |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | Pending | Pending | Pending | Pending |
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | Pending | Pending | Pending | Pending |
+
+Target: **0/3 genuine Codex/Sol passes**.
+
+## Outstanding Claude requirement
+
+| Agent | Model | Reasoning | Status |
+|---|---|---|---|
+| `claude-code` | `anthropic/claude-opus-5` | `max` | Not currently runnable with available subscription access; still required by the written assignment unless waived. |
+
+## Historical runs excluded from final evidence
+
+Earlier diagnostics were useful for benchmark development but do not count toward the final matrix:
+
+- an API-key/Modal GitHub workflow stopped before any model ran because repository provider credentials were absent;
+- an early Sol run tested an obsolete task revision;
+- a later Sol/xhigh run on a pre-concurrency revision exposed verifier artifacts involving an unstated cache-object filename convention;
+- a clean Sol solution to the earlier single-generation transactional-publication design motivated the concurrency/stable-input redesign.
 
 Authentication errors, rate limits, model unavailability, Harbor/Docker failures, verifier infrastructure failures, and unrelated infrastructure timeouts are invalid trials and are never counted as model failures.
