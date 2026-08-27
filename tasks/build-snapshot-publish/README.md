@@ -2,41 +2,45 @@
 
 ## Difficulty explanation
 
-The starter already contains the ordinary incremental-build mechanics: recursive bundles, target dependencies, action keys, cache hits, selective invalidation, and deterministic output generation. The repair is a systems-state problem above that layer. Successful builds must publish coherent snapshots across crashes and concurrent writers, long-lived readers must continue to observe the generation they acquired, garbage collection must reclaim obsolete generations and cache objects safely, and request-ID builds must provide exactly-once semantics across duplicate invocations and response-loss crashes.
+The starter already contains the ordinary incremental-build mechanics: recursive bundles, target dependencies, action keys, cache hits, selective invalidation, and deterministic output generation. The repair is a systems-state problem above that layer. Successful project builds must publish coherent snapshots across crashes and concurrent writers, long-lived readers must retain the generation they acquired, garbage collection must reclaim obsolete generations and objects safely, and request-ID builds must provide exactly-once semantics across duplicate invocations and response-loss crashes.
 
-The request protocol deliberately changes the transaction model rather than adding another isolated edge case. A committed request must replay its exact original report without a new publication even after later source/manifest changes. Concurrent duplicates must converge on one commit, a dead pre-commit owner must be immediately replaceable without wall-clock leases, and disjoint request IDs must still make progress. If a request process dies after publication but before report delivery, a retry must recover that committed result; recovery must survive later publications and GC of the original generation. The verifier also composes this with a publisher that started before the lost-response request committed but publishes afterward, forcing publication-time reconciliation rather than a command-start-only journal check.
+The request protocol changes the transaction model rather than adding an isolated edge case. A committed request must replay its exact original report without another publication even after later source or manifest changes. Concurrent duplicates must converge on one commit, a dead pre-commit owner must be immediately replaceable without wall-clock leases, and disjoint request IDs must still make progress. If a request process dies after publication but before report delivery, a retry must recover that committed result; recovery must survive later publications and GC of the original generation. Publication-time reconciliation is required so an invocation that started before a lost-response request cannot later overwrite the only recoverable copy of that request result.
 
-The hard part is the combined safety/liveness tension: retaining everything violates bounded GC, aggressive reclamation can destroy reader/writer/request state, global serialization violates progress, and overly local request bookkeeping can lose a committed result during a later publication race.
+The workspace layer adds a separate cross-resource consistency problem. `workspace-capture` publishes an immutable workspace generation containing one generation from every project in its plan. Those member generations must form a real simultaneous cut: during the deterministic stable-cut pause, ordinary publications to every listed project must wait rather than allowing a sequential reader to manufacture a combination of member generations that never coexisted. Workspace capture requests themselves are exactly-once and crash recoverable. Long-lived `workspace-read` operations pin the workspace generation they acquired, and retained workspace snapshots transitively protect their referenced project generations from project GC. `workspace-gc` has its own current/pinned/KEEP retention semantics, and project GC must revalidate those cross-project references before reclaiming history.
+
+The central difficulty is therefore composition of several independent state machines: project publication, request deduplication, workspace publication, process-lifetime liveness, project readers, workspace readers, and two reclamation layers. Retaining everything violates bounded GC; global serialization violates progress; sequential workspace capture violates linearizability; and local-only project GC can destroy history that a retained workspace snapshot still names.
 
 ## Solution explanation
 
-The oracle uses immutable staged generations with short publication/reclamation locks, process-lifetime leases, and per-request kernel locks. Builds evaluate privately, validate their manifest/source read set immediately before publication, merge still-valid cache records from the newest commit, assign a monotonic commit sequence, and atomically switch the visible generation. Readers acquire one generation under the commit lock and keep an OS-backed lease live until they exit. GC scans without monopolizing the project, then revalidates current generation, live pins, writers, generation membership, and objects before deleting anything.
+The oracle uses immutable project generations with short publication locks, stable-input revalidation, stale-base cache-state merge, monotonic commit sequences, process-lifetime reader/writer leases, and content-addressed objects. Project request IDs use per-request kernel locks and durable replay records. Committed generations carry sufficient request metadata to recover the response-loss window, and later publishers reconcile outgoing request-bearing state before replacing it.
 
-For request-ID builds, a per-request lock serializes only callers sharing that ID. The first committed generation carries enough request result information to recover from a process death immediately after publication. Durable replay state is journaled independently of generation retention. Crucially, every later publisher reconciles the outgoing current generation before replacing it; this closes the race where a build that started earlier would otherwise move a lost-response request into history before its durable request record existed. Replays return the stored report without publishing or changing the current snapshot.
+The workspace layer uses a second immutable generation namespace under the workspace root. A capture obtains only its own request claim, then under the workspace publication lock acquires every listed project's publication lock in deterministic canonical-path order. While that lock set is held it records the current generation of every member, producing a linearizable cross-project cut, writes a staged workspace snapshot, assigns the next workspace commit sequence, and publishes it atomically. Unlisted projects remain independent, and disjoint request IDs do not share request claims.
 
-This is one implementation strategy. The externally visible requirements are snapshot stability, exactly-once request behavior, bounded reclamation, process-lifetime liveness, exact reports, concurrency progress, and recovery. The verifier does not require a particular request-journal directory, filename, selector, or lock layout.
+Workspace request results are durable independently of workspace-generation retention. A committed response-loss capture is recoverable even if a later workspace publication replaces it and workspace GC subsequently deletes its original generation. Workspace readers hold OS-backed leases on the captured workspace generation and read directly from its referenced project generation. Workspace GC retains current, all live-reader-pinned snapshots, and newest KEEP additional history. Project GC takes the workspace lock before its project lock and treats project generations referenced by any retained workspace generation as protected; after the referencing workspace generation is retired, the next project GC may reclaim that history.
+
+This is one implementation strategy. The contract intentionally leaves selector names, request-journal paths, lock filenames, and lease representation unspecified. The externally visible requirements are stable publication, exact reports, exactly-once replay, real cross-project cuts, liveness without wall-clock leases, snapshot pinning, and bounded safe reclamation.
 
 ## Verification explanation
 
-Verifier-owned `reference.py` independently derives clean output bytes and recursive source dependencies. Existing tests retain the incremental, selective-invalidation, exact-snapshot, crash-consistency, ordinary-publication, disjoint-progress, stale-base-cache, aborted-writer, stable-input, reader-lifecycle, and reclamation coverage.
+Verifier-owned reference logic independently derives project output bytes and source dependencies. The existing suites retain incremental correctness, selective invalidation, exact project snapshots, crash consistency, concurrent publication, stale-base reuse, stable-input validation, request replay/recovery, project reader lifecycle, and project GC/reclamation coverage.
 
-The request suite adds:
+The workspace suite adds behavioral checks for:
 
-- replay of an already committed request without recommit;
-- cross-target request-ID reuse rejection;
-- invalid request-ID rejection;
-- pre-commit claim crash followed by retry;
-- duplicate concurrent request coalescing;
+- exact workspace replay without another workspace publication;
+- request-ID binding to the exact canonical workspace plan;
+- post-publication response loss and durable replay;
+- recovery of a stranded workspace request by a later workspace publisher before the original workspace generation is reclaimed;
+- a stable cross-project cut while concurrent project publishers are forced to wait;
+- disjoint workspace request progress;
 - takeover by an already-waiting duplicate after owner death;
-- independent progress for a different request ID;
-- committed response loss at `request:after-publish`;
-- replay after later publication and GC of the original generation;
-- an already-in-flight ordinary publisher that must preserve a stranded request before replacing the current generation.
+- long-lived workspace readers pinning both a historical workspace snapshot and its referenced project generations;
+- workspace KEEP retention in addition to live reader pins;
+- project GC preserving generations referenced by retained workspace snapshots and reclaiming them after those snapshots retire.
 
-Development mutation matrices deliberately break publication, reclamation, and request invariants. The request matrix includes replay-recommit, cross-target replay, global request serialization, incorrect post-publish failpoint placement, and invocation-start-only request recovery. Every mutant must be rejected before frontier testing.
+Development mutation matrices independently break the project publication, project reclamation, project request, and workspace invariants. Workspace mutations cover replay-recapture, cross-plan replay, global request serialization, missing stable-cut project locks, incorrect post-publish failpoint placement, missing publication-time reconciliation, ignored workspace-reader pins, and project GC ignoring workspace references. Every mutant must be rejected before frontier testing.
 
-Candidate code executes unprivileged inside the separate verifier; verifier truth and reward state remain isolated. Concurrent-process cleanup is careful not to kill intentional sibling actors while still reaping leaked candidate descendants.
+Candidate code executes unprivileged inside the separate verifier image. The verifier checks public CLI behavior and documented generation metadata rather than requiring the oracle's selector, journal, lock, or lease layout.
 
 ## Relevant experience
 
-The task was developed from hands-on Python/TypeScript service and cloud-infrastructure work, supplemented by targeted research into incremental-build caching, crash consistency, idempotency, snapshot publication, concurrent state updates, process-lifetime coordination, and safe reclamation. It does not claim prior ownership of a production build system.
+The task was developed from hands-on Python/TypeScript service and cloud-infrastructure work, supplemented by targeted research into incremental-build caching, crash consistency, idempotency, snapshot publication, cross-resource consistent cuts, process-lifetime coordination, and safe reclamation. It does not claim prior ownership of a production build system.
