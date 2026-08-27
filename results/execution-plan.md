@@ -8,12 +8,12 @@ The Klavis assignment's full written requirement still includes Claude Opus 5/ma
 
 ```text
 tasks/build-snapshot-publish
-f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8
+05e14f258a07c24a04e7c8ae1516ce36c5796f44
 ```
 
 This tree is **not yet qualified**. It must pass deterministic qualification before any frontier-model measurement.
 
-The first request-protocol tree `3ddb933ae848f6912210371c6afc210ceea3f373` was superseded before frontier testing after static review found missing composition coverage. The strengthened tree adds request-ID validation, already-waiting duplicate takeover after owner death, and a publication race in which an ordinary build starts before a lost-response request commits and later replaces that request generation.
+The runtime/verifier semantics were first strengthened at `f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8`. The formal tree then changed to `05e14...` only because `task.toml` and the task-local reviewer README were updated to accurately document the request protocol; the executable starter, reference protocol, and verifier tests did not change in that metadata step.
 
 The earlier tree `4eaf21ae9456395fb080be497852c0ff9623b8fa` was deterministically qualified but then cleanly solved by Codex / `openai/gpt-5.6-sol` / `xhigh`: reward 1, 37/37 verifier tests, no infrastructure contamination. That solve triggered the request-protocol redesign.
 
@@ -40,10 +40,11 @@ The starter only plumbs the new interface and intentionally does not implement t
 1. **Deterministic qualification**
    - live TB3 static checks;
    - full Oracle/reference regression;
+   - repeated Oracle/verifier determinism;
    - core mutation matrix;
    - lifecycle/GC mutation matrix;
    - exactly-once request mutation matrix, including publication-race recovery;
-   - verifier determinism and Docker integrity.
+   - Docker integrity.
 
 2. **Reconfirm live Terminal-Bench source of truth**
    - `/run` defaults;
@@ -96,9 +97,9 @@ The starter only plumbs the new interface and intentionally does not implement t
 
 ## Current status
 
-- [ ] Step 1 deterministic qualification of `f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8`.
+- [ ] Step 1 deterministic qualification of `05e14f258a07c24a04e7c8ae1516ce36c5796f44` — CI static, Oracle, and three-run determinism are already green; mutation/Harbor phases remain to complete.
 - [x] Step 2 source-of-truth baseline previously rechecked at TB3 HEAD `b2d4a935cfb1a6f621f611ea69421039cfccd158`; recheck if upstream advances before frontier trials.
-- [ ] Step 3 Harbor Oracle/NOP for the strengthened request tree.
+- [ ] Step 3 Harbor Oracle/NOP for the current request tree.
 - [x] Step 4 local Codex/Docker/Harbor path previously proven functional, subject to current quota availability.
 - [ ] Step 5 valid current-tree `/cheat`.
 - [ ] Step 6 current-tree Sol/xhigh difficulty probe.
@@ -112,9 +113,10 @@ The starter only plumbs the new interface and intentionally does not implement t
 - `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4`: invalidated by an unstated verifier representation requirement;
 - `4eaf21ae9456395fb080be497852c0ff9623b8fa`: cleanly solved by Sol/xhigh, reward 1, 37/37;
 - `3ddb933ae848f6912210371c6afc210ceea3f373`: superseded before frontier testing after verifier coverage audit;
+- `f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8`: superseded by metadata/reviewer-documentation completion only, before qualification was finalized;
 - provider-safety-blocked `/cheat` attempts: invalid;
 - quota-exhausted standard attempt: invalid.
 
 ## Next action
 
-Run zero-model deterministic qualification on `f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8`. Do not spend another frontier call until the full Oracle, all mutation matrices, and Harbor Oracle/NOP are green.
+Complete zero-model deterministic qualification on `05e14f258a07c24a04e7c8ae1516ce36c5796f44`. Do not spend another frontier call until all 25 mutations and Harbor Oracle/NOP are green.
