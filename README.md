@@ -21,22 +21,23 @@ The intended difficulty is systems composition, not hidden file-layout requireme
 Current rubric-corrected task tree:
 
 ```text
-316aaf9804a82cc43e6075a657f3effda0c5717c
+4fcc1dfe09d61ef9239c2687988cbee0f4b0315b
 ```
 
 This successor preserves the same starter and reference implementation as the difficulty-proven transaction task while removing verifier assumptions found during review:
 
 - ordinary project current is observed through the public `read` interface, not a private selector or transaction marker;
 - workspace current is resolved from documented workspace generation metadata, not a fixed `CURRENT` pathname;
-- response-loss replay is verified through the public replay interface, not a private `request_report` field;
+- the transaction response-loss test performs its **first** replay only after later overlapping publication plus workspace/project reclamation, so an early retry cannot repair missing durability;
 - the small generation-record object-reference schema inspected by GC verification is explicitly documented;
-- long-lived verifier processes use bounded cleanup and verifier-owned log files rather than unbounded inherited-pipe reads.
+- candidate executions use verifier-owned log files, isolated sessions, UID baselines, and bounded process-tree cleanup on success, failure, and timeout;
+- duplicate live-owner waiting semantics tested by the verifier are explicitly stated in the contract.
 
 Final deterministic qualification and model evidence must use this exact task tree or a later explicitly documented successor. Do not count historical-tree trials toward the final matrix.
 
 ## Difficulty calibration
 
-The immediately preceding semantic task, `fc064cac2fb1241b68a98475dbc8ea04fbe579cc`, passed 66/66 reference tests, rejected 40/40 development mutants, and produced Harbor Oracle/NOP rewards `1/0`. A clean GPT-5.6 Sol/xhigh standard trial then returned:
+The preceding semantic task, `fc064cac2fb1241b68a98475dbc8ea04fbe579cc`, passed 66/66 reference tests, rejected 40/40 development mutants, and produced Harbor Oracle/NOP rewards `1/0`. A clean GPT-5.6 Sol/xhigh standard trial then returned:
 
 ```text
 reward = 0
@@ -47,7 +48,7 @@ result_exception_types = []
 runtime = 29m44s
 ```
 
-The failures spanned publication, exactly-once durability, readers/GC, reclamation interleavings, recovery, and transaction replay. Later rubric review found verifier/schema/process issues in that tree, so this trial is **difficulty calibration only**, not final required evidence. The current successor changes verifier observation and documentation rather than starter/reference runtime code; no further difficulty strengthening is planned.
+The failures spanned publication, exactly-once durability, readers/GC, reclamation interleavings, recovery, and transaction replay. Later rubric review found verifier/schema/process issues in that tree, so this trial is **difficulty calibration only**, not final required evidence. The current successor changes verifier observation/documentation/process hygiene rather than starter/reference runtime code; no further difficulty strengthening is planned.
 
 Earlier calibration history is documented in `results/failure-analysis.md`.
 
@@ -77,9 +78,9 @@ For the checked-out candidate tree:
 bash scripts/run-next-qualification-step.sh
 ```
 
-This runs current TB3 static checks, the complete reference verifier, 40 non-equivalent development mutations, then Harbor Oracle/NOP with zero frontier-model calls. The resulting same-tree qualification marker is stored under `~/.cache/klavis-tb3-runs/transaction-preflight/`.
+This runs current TB3 static checks, the complete reference verifier, development mutation checks, then Harbor Oracle/NOP with zero frontier-model calls. The resulting same-tree qualification marker is stored under `~/.cache/klavis-tb3-runs/transaction-preflight/`.
 
-When deterministic qualification and an exact-tree zero-model Harbor preflight were already completed before a scripts-only commit, `scripts/adopt-qualified-tree.sh` can create the canonical marker only after explicit confirmation and exact-tree evidence verification; it cannot silently manufacture qualification for a different task tree.
+A deadline-focused qualifier may reuse unchanged mutation-family evidence only when it reruns all current TB3 static checks, the full exact-tree 66-test Oracle, every mutation slice affected by verifier changes, and exact-tree Harbor Oracle/NOP. It records that distinction rather than representing inherited mutations as newly executed.
 
 ## Required frontier matrix
 
@@ -117,8 +118,6 @@ Adversarial evidence uses the live reward-based semantics:
 ```bash
 CONFIRM_FREEZE=1 AGENT=codex TARGET_CHEATS=1 bash scripts/run-deadline-cheat-matrix.sh
 ```
-
-The generic parallel matrix remains appropriate for the three standard trials.
 
 ## Claude access
 
