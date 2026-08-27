@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-FROZEN_TASK_TREE="fc064cac2fb1241b68a98475dbc8ea04fbe579cc"
+TASK_REL="tasks/build-snapshot-publish"
+FROZEN_TASK_TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
+EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-"$FROZEN_TASK_TREE"}
+[[ "$FROZEN_TASK_TREE" == "$EXPECTED_TASK_TREE" ]] || { echo "expected task tree $EXPECTED_TASK_TREE, found $FROZEN_TASK_TREE" >&2; exit 2; }
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/standard-diagnostic"}
 CHEAT_EVIDENCE_ROOT=${CHEAT_EVIDENCE_ROOT:-"$HOME/.cache/klavis-tb3-runs/cheat"}
 ALLOW_CHEAT_SAFETY_BLOCK=${ALLOW_CHEAT_SAFETY_BLOCK:-0}
