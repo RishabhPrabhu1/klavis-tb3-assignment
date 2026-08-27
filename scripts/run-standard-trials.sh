@@ -5,7 +5,9 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 RUNNER="$ROOT_DIR/scripts/run-candidate-trial.sh"
 FROZEN_TASK_TREE="d84a5bf3df6a2c3ed7a523c7fee072936f4029e4"
 N_ATTEMPTS=${N_ATTEMPTS:-3}
-AGENTS=${AGENTS:-both}
+# Operational default: Codex-only. Claude remains available as an explicit opt-in
+# for eventual full assignment compliance when Claude subscription auth exists.
+AGENTS=${AGENTS:-codex}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/standard"}
 
 if ! [[ "$N_ATTEMPTS" =~ ^[1-9][0-9]*$ ]] || (( N_ATTEMPTS > 10 )); then
