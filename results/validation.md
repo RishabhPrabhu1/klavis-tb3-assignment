@@ -1,13 +1,13 @@
 # Validation
 
-Status: the current task tree is qualified through live static checks, local Oracle regression, verifier-determinism checks, mutation testing, Docker build, and Harbor Oracle/NOP under both the validation and agent-trial Harbor versions. The remaining empirical gates are the required frontier standard trials and adversarial trials.
+Status: the current task tree is qualified through live static checks, local Oracle regression, repeated verifier-determinism checks, mutation testing, Docker build, and Harbor Oracle/NOP under both the validation and agent-trial Harbor versions. The remaining empirical work is Codex execution-path validation, Codex `/cheat` qualification, one Sol difficulty probe, the frozen Sol evidence matrix, and final audit. Claude remains an outstanding written assignment requirement unless later satisfied or waived.
 
 ## Frozen task revision
 
 - Qualified task tree: `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4`
 - Qualification workflow commit recorded by CI: `f6f1bc4989c6cdee98b618d0374b3a289006a20f`
 - Machine-readable qualification record: `results/preflight-status.json`
-- Subsequent repository commits have changed only trial runners and reviewer-facing documentation; the task tree remains exactly `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4`.
+- Subsequent repository commits have changed trial runners and documentation only; the task tree remains exactly `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4`.
 
 Do not count any frontier result unless its recorded task-tree hash matches that value.
 
@@ -21,7 +21,7 @@ harbor_docker=success
 qualified=true
 ```
 
-The preflight phase completed:
+The deterministic phase completed:
 
 - current Terminal-Bench checkout and tooling setup;
 - live static checks;
@@ -35,11 +35,11 @@ The Harbor/Docker phase completed:
 - Oracle = 1 and NOP = 0 under Harbor 0.18.0;
 - Oracle = 1 and NOP = 0 under Harbor 0.14.0.
 
-Harbor 0.18.0 covers the current validation/review tooling generation. Harbor 0.14.0 is the version used by the live `/run` and `/cheat` workflows and by the assignment's subscription-auth agent commands.
+Harbor 0.18.0 covers the current validation/review tooling generation. Harbor 0.14.0 is used by live `/run` and `/cheat` and by the assignment's subscription-auth agent commands.
 
 ## Mutation coverage
 
-The qualified verifier rejects independent defects across incremental correctness, publication, concurrency, stable-input validation, reader lifetime, and garbage collection.
+The qualified verifier rejects defects across incremental correctness, transactional publication, concurrency, stable-input validation, reader lifetime, and garbage collection.
 
 ### Core/publication mutants
 
@@ -71,29 +71,52 @@ The qualified verifier rejects independent defects across incremental correctnes
 | `gc-sweep-active-writer` | Reclaims state still needed by an active build. |
 | `gc-never-sweep-objects` | Never reclaims unreachable content-addressed objects. |
 
-All of these mutations are rejected by the qualified verifier.
+All listed mutations are rejected by the qualified verifier.
 
 ## Implementation-rubric review
 
-`results/implementation-rubric-review.md` records the repository-side criterion audit. It reports no known fail criterion; the remaining concerns are empirical frontier difficulty and the reviewer burden created by an orchestration-heavy concurrency verifier.
+`results/implementation-rubric-review.md` records the repository-side criterion audit. It reports no known fail criterion; the remaining concerns are empirical frontier difficulty and reviewer burden from an orchestration-heavy concurrency verifier.
 
-This record is not represented as an official Terminal-Bench `/review` run. The final submission should preserve that distinction.
+This record is not represented as an official Terminal-Bench `/review` run.
 
-## Current Terminal-Bench frontier configuration
+## Live Terminal-Bench source-of-truth recheck
 
-At the live upstream head checked on August 26, 2026, `.github/harbor-run-defaults.yml` specifies:
+Rechecked upstream on 2026-08-26 at:
 
-- 3 trials per agent;
-- `claude-code` / `anthropic/claude-opus-5` / `reasoning_effort=max`;
+```text
+b2d4a935cfb1a6f621f611ea69421039cfccd158
+```
+
+`.github/harbor-run-defaults.yml` specifies:
+
+- 3 standard trials per agent;
 - `codex` / `openai/gpt-5.6-sol` / `reasoning_effort=xhigh`;
-- live workflow environment default `modal`;
-- live workflow post-run analysis enabled.
+- `claude-code` / `anthropic/claude-opus-5` / `reasoning_effort=max`;
+- live `/run` and `/cheat` environment default `modal`;
+- post-run analysis enabled.
 
-The Klavis assignment separately provides subscription-auth examples using Docker. The local trial runners deliberately use Docker plus those subscription credentials so the required frontier models can be run without API-key billing. They preserve raw Harbor/verifier evidence and do not count infrastructure-invalid runs as model failures.
+The live `/run` and `/cheat` workflows install Harbor 0.14.0. The live `/cheat` transform removes the ordinary anti-cheat sentence and appends `docs/prompts/hack-trial-prompt.md` to the task instruction before the adversarial attempt.
 
-## Next gate: one Sol diagnostic
+The local subscription-auth runners intentionally use Docker while matching the required Codex model/reasoning settings. The current operational workflow is Codex-only because Claude Code subscription access is unavailable; this does not erase the assignment's outstanding Claude requirement.
 
-Before spending the full six-run standard matrix, validate the exact frozen task path without any Sol call:
+## Active gate order
+
+The authoritative operational sequence is recorded in `results/execution-plan.md`:
+
+1. deterministic qualification — complete;
+2. live TB3 source-of-truth recheck — complete;
+3. Harbor Oracle/NOP qualification — complete;
+4. local Codex execution/auth path check — pending;
+5. Codex `/cheat` qualification — pending;
+6. one genuine Sol/xhigh difficulty probe — pending;
+7. decision/freeze gate — pending;
+8. complete three valid Sol/xhigh trials total — pending;
+9. final Codex `/cheat` evidence — pending;
+10. documentation/final audit — pending.
+
+## Next local gate: zero-Sol Codex path check
+
+On the machine that holds Codex subscription credentials:
 
 ```bash
 uv tool install --force 'harbor==0.14.0'
@@ -102,45 +125,49 @@ PREFLIGHT_ONLY=1 \
 ./scripts/run-codex-strong-test.sh
 ```
 
-Required result: Oracle reward 1, NOP reward 0, and `sol_calls=0`.
+Required result:
 
-Then run exactly one GPT-5.6 Sol/xhigh diagnostic on the same task tree:
+```text
+Oracle reward = 1
+NOP reward = 0
+sol_calls = 0
+```
+
+This verifies the frozen task path, Docker/Harbor environment, and Codex-auth prerequisites without spending a Sol task trial.
+
+## Next empirical gate: Codex `/cheat`
+
+Only after the zero-Sol path check succeeds:
+
+```bash
+AGENTS=codex ./scripts/run-cheat-trials.sh
+```
+
+A valid normally completed adversarial run must receive reward 0. If it does not, fix the verifier/task and restart deterministic qualification before spending standard difficulty evidence.
+
+## One Sol difficulty probe
+
+Only after `/cheat` qualification is clean:
 
 ```bash
 EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
 ./scripts/run-codex-strong-test.sh
 ```
 
-A valid reward-0 result advances the task to trajectory review: verify that the failure is a genuine stated systems invariant rather than ambiguity, verifier behavior, timeout, authentication, or infrastructure. A clean solve is difficulty evidence and means the task does not yet satisfy the Klavis standard-trial gate.
+If Sol cleanly solves the task, redesign at the task level and return to deterministic qualification. Do not add model-specific gotchas and do not collect more standard trials on a demonstrated-solvable candidate.
 
-## Final standard matrix
+If it is a valid reward-0, inspect the trajectory and verify the failure is caused by the intended systems invariant rather than ambiguity, verifier behavior, timeout, authentication, or infrastructure.
 
-Only after the diagnostic is defensible, run the required matrix:
+## Frozen Codex evidence
 
-```bash
-./scripts/run-standard-trials.sh
-```
-
-The wrapper refuses any task tree other than the frozen qualified tree and preserves per-run evidence through `scripts/run-candidate-trial.sh`.
-
-The acceptance condition is six valid genuine failures: three Opus 5/max and three GPT-5.6 Sol/xhigh. Authentication errors, rate limits, model unavailability, Harbor/Docker failures, verifier failures, and infrastructure timeouts are invalid and must not be counted.
-
-## Adversarial matrix
-
-The current live `/cheat` transform removes the ordinary anti-cheat sentence and appends `docs/prompts/hack-trial-prompt.md`. Run:
+After a defensible genuine failure, freeze the exact revision and complete three valid Sol/xhigh trials total. The qualifying probe may count only if it used the same frozen task/configuration and is otherwise valid.
 
 ```bash
-uv tool install --force 'harbor==0.14.0'
-./scripts/run-cheat-trials.sh
+AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
 ```
 
-For each adversarial attempt, the wrapper refuses a non-frozen task tree, creates a disposable task copy, fetches a fresh Terminal-Bench checkout itself, records the exact upstream HEAD, applies the live prompt transform, and preserves raw evidence. Run one valid adversarial attempt for each required agent. Every adversarial reward must be `0`.
+Target: Sol 0/3 genuine passes.
 
-## Remaining gates
+## Final adversarial evidence and audit
 
-1. Run the zero-Sol frozen-path preflight.
-2. Run one valid Sol/xhigh diagnostic and classify the result.
-3. If the diagnostic supports the task's difficulty, run the full 3+3 standard matrix.
-4. Run the one-per-agent adversarial matrix; every reward must be 0.
-5. Record exact evidence paths and genuine failure classifications in `results/standard-trials.md`, `results/cheat-trials.md`, and `results/failure-analysis.md`.
-6. Before submission, refresh the upstream commit/config reference one final time and verify that the task tree used by every counted trial is still the frozen qualified tree.
+If the earlier Codex `/cheat` qualification used the exact revision later frozen and no task/verifier semantics changed, it may be retained as final Codex adversarial evidence; otherwise rerun it. Then record exact evidence paths and failure classifications in `results/standard-trials.md`, `results/cheat-trials.md`, and `results/failure-analysis.md`, run final deterministic/fresh-clone validation, refresh upstream provenance, and verify every documentation claim against preserved artifacts.
