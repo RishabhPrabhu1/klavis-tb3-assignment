@@ -1,6 +1,6 @@
 # Standard Trials
 
-Status: final standard evidence has **not** started for the current cross-project workspace redesign. The tree is now fully deterministically qualified and is waiting for the first same-tree adversarial attempt, followed by one ordinary Sol/xhigh difficulty probe if the adversarial path is again externally blocked.
+Status: final standard evidence has **not** started for the current cross-project workspace redesign. The tree is fully deterministically qualified. Its one same-tree Codex `/cheat` attempt was invalid because the provider cybersecurity safety classifier terminated the agent before substantive execution; `/cheat` remains outstanding. That audited same-tree exception now authorizes exactly one ordinary Sol/xhigh difficulty diagnostic.
 
 ## Live requirement versus current operational scope
 
@@ -36,6 +36,25 @@ Qualification evidence:
 ~/.cache/klavis-tb3-runs/workspace-preflight-v3/20260827T152942Z-8246be350d7d
 ```
 
+## Same-tree adversarial prerequisite
+
+The current-tree Codex adversarial attempt at:
+
+```text
+~/.cache/klavis-tb3-runs/workspace-cheat/20260827T153704Z-cheat-codex-67e026df14a0
+```
+
+is formally invalid:
+
+```text
+execution_class = completed-with-exceptions
+qualification_valid = false
+result_exception_types = [NonZeroAgentExitCodeError]
+substantive_execution = false
+```
+
+Cause: provider cybersecurity safety termination. The raw verifier reward of 0 is not countable and `/cheat` remains outstanding. This evidence is used only by `run-standard-diagnostic-safe.sh` as the explicitly audited exception permitting one ordinary difficulty probe.
+
 ## New difficulty crux
 
 The task composes project snapshot publication and exactly-once project request semantics with a second immutable workspace snapshot layer spanning multiple independently published projects.
@@ -52,25 +71,20 @@ The new requirements include:
 
 This is a cross-resource transaction/reclamation problem rather than another single-project interleaving.
 
-## Superseded exactly-once-tree development evidence
+## Superseded development evidence
 
-Tree:
-
-```text
-42cba8ad00bebf316048d1470033c1742a20ec97
-```
-
-Its standard diagnostic was formally invalid because Codex hit its subscription usage limit, but the preserved candidate passed 48/48. This remains non-qualifying near-solve development evidence only and contributed zero valid trials. The earlier tree `4eaf21ae9456395fb080be497852c0ff9623b8fa` was a valid clean Sol/xhigh solve at 37/37 and is historical evidence only.
+The exactly-once tree `42cba8ad00bebf316048d1470033c1742a20ec97` had a standard diagnostic that was formally invalid because Codex hit its subscription usage limit, but the preserved candidate passed 48/48. That remains non-qualifying near-solve development evidence only and contributed zero valid trials. The earlier tree `4eaf21ae9456395fb080be497852c0ff9623b8fa` was a valid clean Sol/xhigh solve at 37/37 and is historical evidence only.
 
 ## Workspace-tree frontier policy
 
 1. Current tree `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` is deterministically qualified.
-2. Attempt same-tree Codex `/cheat` exactly once. Provider/auth/runtime exceptions remain invalid.
-3. If `/cheat` is again externally blocked, preserve audited same-tree evidence and use the explicit one-off standard-diagnostic exception.
-4. Run exactly one Sol/xhigh standard difficulty probe.
-5. If Sol solves, redesign again and restart deterministic qualification.
-6. Freeze only after a genuine conceptual/architectural reward-0 failure.
-7. On the eventual frozen tree, collect the required 3/3 valid standard failures per required model/config.
+2. Current-tree Codex `/cheat` has been attempted exactly once and is invalid/outstanding due provider safety.
+3. Do not retry the identical `/cheat` path in this phase.
+4. Run exactly one ordinary Codex/Sol xhigh standard difficulty probe through `run-standard-diagnostic-safe.sh` using the audited current-tree adversarial exception.
+5. If that standard run is invalid because of provider/quota/runtime failure, it contributes zero trials and does not justify redesign or freeze.
+6. If it is a valid reward-1 solve, redesign again and restart deterministic qualification.
+7. If it is a valid reward-0 result, classify every failure cluster and freeze only if the primary cause is genuinely conceptual/architectural rather than a narrow bug, ambiguity, verifier defect, or infrastructure issue.
+8. On the eventual frozen tree, collect the required 3/3 valid standard failures per required model/config.
 
 ## Frozen Codex matrix
 
@@ -86,8 +100,7 @@ Target: 0/3 genuine Codex/Sol passes on the eventual frozen tree.
 
 ## Outstanding requirements
 
-- One current-tree Codex adversarial attempt.
-- Genuine intended-crux Sol/xhigh failure before freezing.
+- One valid Sol/xhigh difficulty result on the current workspace tree before any freeze decision.
 - Three valid Codex/Sol xhigh standard failures on the eventual frozen tree.
 - Valid Codex `/cheat` reward 0 on the final frozen tree.
 - Claude Code / Opus 5 max standard and adversarial evidence remains outstanding under the written assignment unless waived.
