@@ -89,17 +89,21 @@ EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
 ./scripts/run-codex-strong-test.sh
 ```
 
+The probe wrapper refuses to launch unless it can find valid reward-0 Codex `/cheat` evidence for this exact task tree.
+
 If Sol cleanly solves the task, perform a task-level redesign and restart qualification. Do not add trajectory-specific tests or continue collecting trials on a candidate already demonstrated solvable.
 
 If Sol receives a valid reward 0 for the intended systems reason, freeze the exact revision.
 
 ### 4. Complete the frozen Codex evidence matrix
 
+After explicitly making the freeze decision:
+
 ```bash
-AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
+CONFIRM_FROZEN=1 AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
 ```
 
-The qualifying probe may count toward the three only if it used the exact frozen task/configuration and otherwise satisfies the assignment conditions. Target: three valid genuine Sol/xhigh failures total.
+The final-matrix wrapper refuses to launch without `CONFIRM_FROZEN=1`. The qualifying probe may count toward the three only if it used the exact frozen task/configuration and otherwise satisfies the assignment conditions. Target: three valid genuine Sol/xhigh failures total.
 
 ### 5. Final Codex `/cheat` evidence
 
