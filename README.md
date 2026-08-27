@@ -4,116 +4,133 @@ This repository contains one original Terminal-Bench 3 task for the Klavis Found
 
 ## Task
 
-`tasks/build-snapshot-publish/` contains an incremental build tool whose ordinary caching behavior is largely present while its transactional publication, lifecycle, and request semantics require architectural repair.
+`tasks/build-snapshot-publish/` contains an incremental build system whose starter implementation has ordinary caching behavior but is missing the required transactional publication, lifecycle, recovery, and workspace semantics.
 
-The benchmark covers:
+The current task combines five layers:
 
-- crash-safe immutable snapshot publication;
-- exact requested-target output closures;
-- concurrent writers without lost reusable cache state;
-- stable manifest/source views across evaluation and publication;
-- long-lived snapshot readers and reader pinning;
-- garbage collection under concurrent readers/writers;
-- content-addressed object reclamation;
-- exactly-once build request IDs across duplicate concurrency and crashes;
-- request takeover after a pre-commit owner dies;
-- post-publication response-loss recovery;
-- replay after later publications and GC of the original generation;
-- publication races where a build that started earlier must preserve a stranded committed request before replacing its generation.
+- crash-safe immutable project generations and atomic publication;
+- concurrent incremental builds with stable manifest/source views and reusable cache merging;
+- reader/writer lifecycle plus bounded garbage collection and object reclamation;
+- exactly-once project request IDs across duplicate concurrency, owner death, response loss, later publications, and GC;
+- cross-project workspace snapshots and optimistic atomic multi-project `workspace-build` transactions.
 
-Deterministic failpoint and pausepoint hooks make crash and concurrency cases reproducible.
+The workspace transaction layer is the current difficulty crux. Expensive member evaluation must happen privately outside long-held workspace/project publication locks, followed by coordinated validation and a short atomic commit. Disjoint transactions must progress and merge; overlapping transactions must retry; transaction-private project generations must not move ordinary project current; crash/replay semantics must remain exactly-once; and retained workspace state must protect referenced project history without retaining everything forever.
 
-The task uses a separate verifier image. Candidate code receives only the declared `/app/buildsys/` artifact; verifier tests and independent reference logic remain verifier-owned.
+Deterministic failpoints and pausepoints make crash and concurrency interleavings reproducible.
 
 ## Current candidate
 
+Current corrected task tree:
+
 ```text
-05e14f258a07c24a04e7c8ae1516ce36c5796f44
+5620526fada6eebea16910fc62bf71746aaa40ea
 ```
 
-This tree is **pending deterministic qualification**. It must not be represented as final or frozen frontier evidence yet.
+This tree differs from the immediately previous transaction candidate only by a representation-neutral verifier fix: workspace transaction tests now resolve the current workspace snapshot semantically rather than requiring a `.workspace-cache/CURRENT` symlink. The task contract does not require that pathname.
 
-Historical task trees:
+The immediately previous tree, `40cbd34104e1f0a549be23b46ef70655b728cece`, deterministically passed:
 
-- `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4` — invalidated after a valid Sol diagnostic exposed an unstated verifier representation requirement;
-- `4eaf21ae9456395fb080be497852c0ff9623b8fa` — corrected and deterministically qualified, then cleanly solved by GPT-5.6 Sol/xhigh with reward 1 and 37/37 tests;
-- `3ddb933ae848f6912210371c6afc210ceea3f373` — first exactly-once request redesign, superseded before frontier testing after a verifier coverage audit found missing composition races;
-- `f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8` — strengthened request semantics/tests, superseded only because task metadata and reviewer README were updated to accurately describe that protocol. Runtime semantics were unchanged in that metadata step.
+- 66/66 Oracle/reference tests;
+- 40/40 non-equivalent mutation checks;
+- Harbor Oracle reward 1;
+- Harbor NOP reward 0;
+- zero frontier calls during qualification.
+
+A valid GPT-5.6 Sol/xhigh probe on that tree returned reward 0 with 61/66 tests, but all five failures were masked by the verifier's hard-coded workspace selector pathname. That result is therefore classified as a verifier/specification-side non-architectural failure and is not counted as model difficulty evidence.
+
+The corrected `5620526f...` tree must be requalified and remeasured before freeze.
+
+## Important historical evidence
+
+- `4eaf21ae9456395fb080be497852c0ff9623b8fa` — corrected generation-publication design; cleanly solved by GPT-5.6 Sol/xhigh.
+- `42cba8ad00bebf316048d1470033c1742a20ec97` — exactly-once request redesign; a substantial Sol run reached 48/48 verifier tests but was formally invalid because the provider ended with a subscription-limit exception.
+- `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` — cross-project workspace-snapshot redesign; deterministically qualified and then cleanly solved by GPT-5.6 Sol/xhigh with 58/58 tests and reward 1.
+- `40cbd34104e1f0a549be23b46ef70655b728cece` — optimistic workspace-transaction redesign; deterministically qualified, then produced a valid reward-0 Sol probe that was invalid as difficulty evidence because a verifier helper required an unstated `.workspace-cache/CURRENT` representation.
+- `5620526fada6eebea16910fc62bf71746aaa40ea` — current corrected transaction candidate.
 
 ## Repository structure
 
 ```text
-tasks/build-snapshot-publish/   Terminal-Bench task, starter, oracle, verifier
-scripts/                        validation and evidence-preserving trial runners
-results/                        validation, coverage, trials, failure analysis
+tasks/build-snapshot-publish/   TB3 task, starter, reference solution, verifier
+scripts/                        qualification, trial, audit, resume, and deadline runners
+results/                        validation state, trial records, coverage, failure analysis
 ```
 
-`results/execution-plan.md` is the active execution order.
+## Deterministic qualification
 
-## Pre-frontier qualification
-
-The local deterministic qualification uses a pinned Python 3.13 verifier environment and runs:
+The deadline workflow uses a pinned Python 3.13 verifier environment and runs:
 
 ```bash
-TB3_REPO="$HOME/.cache/klavis-tb3-terminal-bench" \
-  bash scripts/run-corrected-tree-local-qualification.sh
+bash scripts/run-next-qualification-step.sh
 ```
 
-That includes:
+That performs:
 
-- live TB3 static checks;
-- full Oracle/reference regression;
-- core publication/cache mutations;
-- lifecycle/GC mutations;
-- exactly-once request-protocol mutations.
+- current TB3 static checks;
+- full Oracle/reference verifier;
+- 14 core publication/cache mutants;
+- 6 lifecycle/GC mutants;
+- 5 project exactly-once request mutants;
+- 7 workspace snapshot/cross-layer mutants;
+- 8 optimistic workspace transaction mutants;
+- Harbor Oracle/NOP with zero Sol calls.
 
-The current request mutation matrix includes negative controls for replay recommit, cross-target replay, global request serialization, incorrect post-publish failpoint placement, and invocation-start-only recovery that loses a stranded request during a later publication race.
+Expected deterministic totals for the current design are 66 Oracle tests and 40 rejected non-equivalent mutants.
 
-After the local suite is green, run Harbor Oracle/NOP with zero Sol calls on the exact task tree using the home-backed evidence path required by macOS/Colima.
+## Frontier configuration
 
-Verifier dependencies are pinned in `tasks/build-snapshot-publish/tests/Dockerfile`; `test.sh` performs no runtime network installation.
-
-## Live Terminal-Bench configuration
-
-The currently verified live source of truth specifies three standard trials each for:
+The written Klavis requirement specifies three standard trials each for:
 
 - `codex` + `openai/gpt-5.6-sol`, `reasoning_effort=xhigh`;
 - `claude-code` + `anthropic/claude-opus-5`, `reasoning_effort=max`.
 
-Live `/run` and `/cheat` use Harbor 0.14.0. Recheck upstream before final evidence if Terminal-Bench advances.
+It also requires adversarial `/cheat` trials for both configurations with reward 0. Infrastructure, authentication, provider-safety, quota, timeout, or agent-crash runs do not count as model failures.
 
-The current local workflow is **Codex-only** because Claude Code subscription access is not available. This does not satisfy the written Claude requirement unless that requirement is later completed or waived.
+Harbor 0.14.0 is used for recorded candidate trials.
 
-## Frontier evidence policy
+## Deadline execution workflow
 
-No model failure counts unless the trial:
+Routine execution is intentionally one-command and evidence-preserving:
 
-- uses the exact qualified/frozen task tree;
-- completes normally without auth, quota, provider-safety, Docker, Harbor, timeout, or verifier infrastructure contamination;
-- has audited `result.json.exception_info` with no invalidating exception;
-- fails for a task-substantive reason rather than ambiguity or verifier defect.
-
-A clean Sol/xhigh solve triggers a task-level redesign and full requalification. Do not add trajectory-specific traps to manufacture failure.
-
-The target final Codex evidence is three valid Sol/xhigh failures plus a valid reward-0 `/cheat` trial on the exact frozen tree. Claude standard and adversarial evidence remains separately outstanding under the written assignment.
-
-## Current next action
-
-Run **zero-model deterministic qualification** on:
-
-```text
-05e14f258a07c24a04e7c8ae1516ce36c5796f44
+```bash
+bash scripts/resume-deadline-cycle.sh
 ```
 
-Do not spend another frontier-model call until static checks, the full Oracle, all mutation matrices, and Harbor Oracle/NOP are green on this exact tree.
+The resume runner reuses same-tree qualification and trial evidence, refuses duplicate model launches when an interrupted run is present, and continues only from the first genuinely unfinished gate.
+
+Once a valid same-tree reward-0 Sol probe is reviewed and accepted as a real task failure, the remaining Sol standard trials can be collected with:
+
+```bash
+CONFIRM_FREEZE=1 bash scripts/run-deadline-sol-matrix.sh
+```
+
+The matrix runner stops immediately on a solve or invalid execution rather than silently accumulating unusable evidence.
+
+## Claude access
+
+Klavis's sample uses Claude Code OAuth (`claude setup-token`) to avoid API billing. If subscription OAuth is unavailable, Claude Code also supports Amazon Bedrock. Bedrock exposes the required model as `anthropic.claude-opus-5`; any Bedrock route used for final evidence must still preserve the required Claude Code agent, Opus 5 model, max reasoning setting, Docker environment, and auditable Harbor result.
+
+Claude standard/adversarial evidence remains outstanding until a valid access route is established.
+
+## Evidence policy
+
+A model failure counts only when:
+
+- the exact qualified/frozen task tree is measured;
+- the trial completes normally;
+- authoritative `result.json` contains no invalidating exception;
+- the verifier itself completes normally;
+- the failure is caused by candidate behavior under a clear contract, not verifier representation assumptions or infrastructure.
+
+A clean standard solve means the current candidate is not sufficient. A valid reward-0 caused by a genuine candidate implementation error is eligible for freeze under the current deadline policy; it does not need to be an artificially manufactured model-specific trap.
 
 ## Evidence records
 
-- `results/execution-plan.md` — active pipeline and gate state.
-- `results/contract-coverage.md` — instruction-to-verifier coverage and trust boundary.
 - `results/preflight-status.json` — machine-readable qualification state.
 - `results/standard-trials.md` — standard frontier evidence and exclusions.
 - `results/cheat-trials.md` — adversarial evidence and invalid provider-blocked attempts.
-- `results/failure-analysis.md` — model-failure versus specification/verifier/infrastructure classification.
+- `results/failure-analysis.md` — failure classification.
+- `results/contract-coverage.md` — contract-to-verifier coverage and trust boundary.
+- `results/execution-plan.md` — execution order and gate state.
 
-Trial evidence is stored under `~/.cache/klavis-tb3-runs/` by default and records repository/task/upstream SHAs, model configuration, Harbor version, raw Harbor output, verifier artifacts, and audited summaries.
+Raw trial evidence is kept under `~/.cache/klavis-tb3-runs/` and records repository/task/upstream SHAs, model configuration, Harbor version, raw Harbor output, verifier artifacts, trajectories, and audited summaries.
