@@ -82,18 +82,33 @@ specification/verifier defects when found rather than counting them as model
 failures. No production build-system ownership is claimed.
 EOF
 
-# The live rubric defines this as a best-case estimate for a fully prepared
-# expert and says the solution should be implementable in a few hours at most.
+# Align metadata with the live rubric's best-case expert estimate and its
+# difficulty-explanation requirements for real-world role + fixture provenance.
 python3 - "$TASK_DIR/task.toml" <<'PY'
 from pathlib import Path
 import sys
 p=Path(sys.argv[1])
 s=p.read_text(encoding="utf-8")
-old="expert_time_estimate_hours = 6.0"
-new="expert_time_estimate_hours = 3.5"
-if s.count(old)!=1:
-    raise SystemExit(f"expert estimate anchor count={s.count(old)}, expected 1")
-p.write_text(s.replace(old,new,1),encoding="utf-8")
+old_est="expert_time_estimate_hours = 6.0"
+new_est="expert_time_estimate_hours = 3.5"
+if s.count(old_est)!=1:
+    raise SystemExit(f"expert estimate anchor count={s.count(old_est)}, expected 1")
+s=s.replace(old_est,new_est,1)
+
+prefix='difficulty_explanation = "'
+line=next((line for line in s.splitlines() if line.startswith(prefix)),None)
+if line is None:
+    raise SystemExit("difficulty_explanation line missing")
+if "build/release infrastructure engineers" not in line:
+    assert line.endswith('"')
+    expanded=line[:-1] + (
+        " This is the kind of work build/release infrastructure engineers or storage-systems engineers "
+        "perform when hardening concurrent build orchestration and publication. The accompanying project "
+        "and manifest inputs are synthetic, deliberately small fixtures that preserve realistic dependency "
+        "and source-change relationships while keeping deterministic concurrency verification fast.\""
+    )
+    s=s.replace(line,expanded,1)
+p.write_text(s,encoding="utf-8")
 PY
 
 echo "RUBRIC CLEANUP APPLIED TO WORKING TREE ONLY"
