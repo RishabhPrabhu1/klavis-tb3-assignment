@@ -5,6 +5,7 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TASK_REL="tasks/build-snapshot-publish"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 CONFIRM_FREEZE=${CONFIRM_FREEZE:-0}
+CONFIRM_ZERO_COST_COVERAGE=${CONFIRM_ZERO_COST_COVERAGE:-0}
 TB3_HEAD=${TB3_HEAD_EXPECTED:-79e71650f5b6a6ef5bb46a434c7c04d7d99a9480}
 TB3_REPO=${TB3_REPO:-"$HOME/.cache/klavis-tb3-terminal-bench"}
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
@@ -12,13 +13,9 @@ RUBRIC_ROOT=${RUBRIC_ROOT:-"$HOME/.cache/klavis-tb3-runs/implementation-rubric"}
 CLAUDE_STANDARD_PARALLEL=${CLAUDE_STANDARD_PARALLEL:-2}
 
 fail() { echo "ERROR: $*" >&2; exit 2; }
-unique_id() { python3 - <<'PY'
-import uuid
-print(uuid.uuid4().hex[:12])
-PY
-}
 
 [[ "$CONFIRM_FREEZE" == "1" ]] || fail "Set CONFIRM_FREEZE=1 only after this exact task tree is approved as frozen."
+[[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Claude model calls blocked. Set CONFIRM_ZERO_COST_COVERAGE=1 only after confirming eligible credits/organization coverage with zero out-of-pocket spend."
 [[ -z "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]] || fail "task tree is dirty"
 [[ -f "$QUAL_ROOT/QUALIFICATION-PASSED-${TREE}.txt" ]] || fail "same-tree zero-model qualification marker is missing"
 
@@ -34,12 +31,14 @@ if [[ -n "${ANTHROPIC_API_KEY:-}" || -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]]; then
 fi
 export CLAUDE_CODE_USE_BEDROCK=1
 export AWS_REGION=${AWS_REGION:-us-east-1}
+export CONFIRM_ZERO_COST_COVERAGE=1
 
 printf '=== DEADLINE CLAUDE PIPELINE ===\n'
 printf 'execution_commit=%s\n' "$(git -C "$ROOT_DIR" rev-parse HEAD)"
 printf 'task_tree=%s\n' "$TREE"
 printf 'terminal_bench_head=%s\n' "$TB3_HEAD"
 printf 'provider=Amazon Bedrock\n'
+printf 'zero_cost_coverage_confirmed=YES\n'
 printf 'standard_target=3\n'
 printf 'cheat_target=1\n'
 
@@ -69,7 +68,6 @@ PY
 if [[ -n "$existing_rubric" ]]; then
   echo "Reusing same-tree rubric PASS: $existing_rubric"
 else
-  BASHPID="$(unique_id)" \
   EXPECTED_TASK_TREE="$TREE" EXPECTED_TB3_HEAD="$TB3_HEAD" TB3_REPO="$TB3_REPO" RUNS_ROOT="$RUBRIC_ROOT" \
     bash "$ROOT_DIR/scripts/run-implementation-rubric-bedrock.sh"
 fi
