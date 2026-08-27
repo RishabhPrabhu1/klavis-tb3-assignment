@@ -29,7 +29,7 @@ Therefore a `/cheat` agent exception or provider safety refusal is **not evaluat
 ## Current candidate
 
 ```text
-316aaf9804a82cc43e6075a657f3effda0c5717c
+85eb3be3ce69a625a06eab3e37c69badbab89779
 ```
 
 Final exact-tree qualification/freeze is pending. No historical adversarial run counts toward this final tree.
@@ -52,8 +52,8 @@ That run remains historical because the task tree changed, but the outcome confi
 
 | Task tree | Agent | Required | Status |
 |---|---|---:|---|
-| `316aaf...` | Codex / Sol xhigh | 1 reward-0 | pending qualification/freeze |
-| `316aaf...` | Claude Code / Opus 5 max | 1 reward-0 | pending provider access/freeze |
+| `85eb3be3...` | Codex / Sol xhigh | 1 reward-0 | pending qualification/freeze |
+| `85eb3be3...` | Claude Code / Opus 5 max | 1 reward-0 | pending provider access/freeze |
 
 Final collection uses `scripts/run-deadline-cheat-matrix.sh`, which mirrors the live reward semantics and stops on any nonzero/unparsed/incomplete exact-tree adversarial result.
 
