@@ -65,6 +65,7 @@ case "$AGENT" in
     REASONING="max"
     AGENT_NAME="claude-code"
     AUTH_KIND="Claude Code OAuth token"
+    EXTRA_ARGS+=(--ae CLAUDE_FORCE_OAUTH=1)
     EXTRA_ARGS+=(--ae "CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN")
     EXTRA_ARGS+=(--ae CLAUDE_CODE_MAX_OUTPUT_TOKENS=128000)
     EXTRA_ARGS+=(--ak reasoning_effort=max)
