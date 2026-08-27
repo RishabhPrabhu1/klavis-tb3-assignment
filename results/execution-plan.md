@@ -49,7 +49,8 @@ No frontier result counts unless its recorded task-tree object equals that value
 
 6. **One genuine Sol difficulty probe**
    - exactly one Codex / GPT-5.6 Sol / xhigh standard trial;
-   - classify the trajectory rather than looking only at reward.
+   - classify the trajectory rather than looking only at reward;
+   - `scripts/run-codex-strong-test.sh` refuses to launch this probe until valid Codex `/cheat` reward-0 evidence exists for the exact task tree.
 
 7. **Decision gate**
    - genuine Sol failure + clean `/cheat` -> freeze the exact revision;
@@ -61,7 +62,8 @@ No frontier result counts unless its recorded task-tree object equals that value
    - count the probe if and only if it used the same frozen task/configuration and is otherwise valid;
    - complete three valid Sol/xhigh trials total;
    - target: Sol 0/3 genuine failures;
-   - no task/verifier semantic changes during this phase.
+   - no task/verifier semantic changes during this phase;
+   - `scripts/run-standard-trials.sh` requires explicit `CONFIRM_FROZEN=1` before launching the final matrix.
 
 9. **Final `/cheat` evidence**
    - earlier cheat evidence may be reused only if it used the exact frozen revision and exact required configuration;
@@ -117,8 +119,8 @@ EXPECTED_TASK_TREE=d84a5bf3df6a2c3ed7a523c7fee072936f4029e4 \
 ./scripts/run-codex-strong-test.sh
 ```
 
-If that probe is a genuine intended-crux failure, freeze the revision and later complete the Codex matrix with:
+If that probe is a genuine intended-crux failure, make the freeze decision and later complete the Codex matrix with:
 
 ```bash
-AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
+CONFIRM_FROZEN=1 AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
 ```
