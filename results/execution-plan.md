@@ -3,10 +3,10 @@
 ## Current candidate
 
 ```text
-task tree: 316aaf9804a82cc43e6075a657f3effda0c5717c
+task tree: 85eb3be3ce69a625a06eab3e37c69badbab89779
 ```
 
-This is the rubric-corrected optimistic workspace-transaction candidate. Starter and reference implementation are unchanged from the difficulty-proven `fc064cac...` predecessor. The successor removes hidden verifier representation assumptions and hardens process isolation; it does not add more runtime difficulty.
+This is the frozen rubric-corrected optimistic workspace-transaction candidate. Starter and reference implementation are unchanged from the difficulty-proven `fc064cac...` predecessor. The successor removes hidden verifier representation assumptions and hardens process isolation; it does not add more runtime difficulty.
 
 ## Deadline acceptance policy
 
@@ -53,20 +53,22 @@ frontier calls:          0
 Primary command after checking out the current branch head:
 
 ```bash
-bash scripts/run-next-qualification-step.sh
+bash scripts/run-final-tree-deadline-qualification.sh
 ```
 
-If deterministic qualification and exact-tree Harbor Oracle/NOP were completed before a scripts-only commit, use `scripts/adopt-qualified-tree.sh` only with explicit deterministic-pass confirmation and verified exact-tree preflight evidence.
+This final qualifier reruns all deterministic families on the exact tree; it does not inherit old mutation evidence.
 
 ## Gate 2 — Implementation-rubric review
 
-The predecessor Work review found real blockers; they have been corrected in the current tree. Current source-level assessment is `BORDERLINE -> LIKELY PASS`, with instruction length and best-case expert scope the principal subjective risks.
+The predecessor Work reviews found real blockers; they have been corrected in the frozen tree. Current source-level assessment is `BORDERLINE -> LIKELY PASS`, with instruction length and best-case expert scope the principal subjective risks.
 
 Do not claim the implementation rubric passed until the live review on the exact tree returns zero failed criteria.
 
+If a zero-cost live reviewer route is not immediately available, a read-only exact-tree Work review is still useful as a negative control, but it is not a substitute for the required automated rubric result.
+
 ## Gate 3 — One exact-tree Sol probe
 
-Only after Gates 1-2 are acceptable:
+After exact-tree qualification and no known concrete rubric defect remains:
 
 ```bash
 bash scripts/run-one-qualified-sol-probe.sh
@@ -151,7 +153,7 @@ Update `results/preflight-status.json`, `standard-trials.md`, `cheat-trials.md`,
 
 ## Current status
 
-- [ ] Exact-tree qualification for `316aaf...`.
+- [ ] Exact-tree qualification for `85eb3be3...`.
 - [ ] Exact-tree implementation-rubric acceptance.
 - [ ] One exact-tree Sol probe.
 - [ ] Freeze on first legitimate final-tree standard reward-0.
@@ -167,6 +169,7 @@ Update `results/preflight-status.json`, `standard-trials.md`, `cheat-trials.md`,
 - `17291a73...` — valid Sol solve, 58/58.
 - `40cbd341...` — Sol reward-0 masked by hidden workspace-selector verifier assumption; F4.
 - `fc064cac...` — deterministically qualified and valid Sol/xhigh reward-0, 45/66; genuine difficulty calibration but superseded by rubric/verifier corrections.
+- `d7d7adf...` and `316aaf...` — deterministic/rubric-hygiene predecessors; useful regression evidence only.
 
 ## Operational rule
 
