@@ -57,11 +57,24 @@ def _cleanup_process_group(pid: int) -> None:
 
 
 def current_token(project: Path) -> str:
-    current = project / ".build-cache" / "CURRENT"
-    assert current.is_symlink(), "CURRENT must identify a committed generation"
-    generation = current.resolve(strict=True)
-    assert generation.parent == (project / ".build-cache" / "generations").resolve()
-    return generation.name
+    """Return the latest committed generation without assuming a pointer layout.
+
+    The task contract defines committed generations and strictly increasing
+    ``commit_seq`` values, but it does not require candidates to expose a
+    ``.build-cache/CURRENT`` symlink.  The current generation is therefore the
+    committed generation with the greatest commit sequence.
+    """
+    tokens = generation_tokens(project)
+    assert tokens, "no committed generation exists"
+
+    sequenced: list[tuple[int, str]] = []
+    for token in tokens:
+        seq = commit_seq(project, token)
+        sequenced.append((seq, token))
+
+    seqs = [seq for seq, _token in sequenced]
+    assert len(seqs) == len(set(seqs)), "committed generations must have unique commit_seq values"
+    return max(sequenced)[1]
 
 
 def generation_tokens(project: Path) -> set[str]:
