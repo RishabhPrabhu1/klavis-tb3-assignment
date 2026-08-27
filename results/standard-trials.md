@@ -52,6 +52,7 @@ The wrapper:
 - refuses a dirty or mismatched task tree;
 - requires Harbor 0.14.0 and a working Docker daemon;
 - requires Codex subscription auth at `~/.codex/auth.json`;
+- requires valid reward-0 Codex `/cheat` evidence for the same task tree before launching the standard probe;
 - runs one Harbor `codex` / `openai/gpt-5.6-sol` / `xhigh` trial;
 - does not invoke `harbor analyze`;
 - preserves raw Harbor/verifier evidence and deterministic metadata outside the repository.
@@ -62,13 +63,13 @@ If it is a valid reward-0, inspect the trajectory and count it only if the failu
 
 ## Frozen Codex matrix
 
-After a defensible reward-0 probe, freeze the exact task revision. The qualifying probe may count as trial 1 only if it used that exact frozen task/configuration and otherwise satisfies the assignment conditions. Complete three valid Codex trials total.
+After a defensible reward-0 probe, explicitly freeze the exact task revision. The qualifying probe may count as trial 1 only if it used that exact frozen task/configuration and otherwise satisfies the assignment conditions. Complete three valid Codex trials total.
 
 ```bash
-AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
+CONFIRM_FROZEN=1 AGENTS=codex N_ATTEMPTS=3 ./scripts/run-standard-trials.sh
 ```
 
-The standard wrapper defaults to Codex-only and refuses any task tree other than the qualified tree.
+The standard wrapper defaults to Codex-only, refuses any task tree other than the qualified tree, and refuses to launch until `CONFIRM_FROZEN=1` is supplied.
 
 | Agent | Model | Reasoning | Trial | Reward | Valid? | Evidence path | Failure classification |
 |---|---|---|---:|---:|---|---|---|
