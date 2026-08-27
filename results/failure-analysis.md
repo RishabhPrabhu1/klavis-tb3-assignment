@@ -3,127 +3,103 @@
 ## Current candidate
 
 ```text
+316aaf9804a82cc43e6075a657f3effda0c5717c
+```
+
+This is the rubric-corrected successor to the difficulty-proven `fc064cac...` task. It preserves the same starter and reference implementation and the same observable runtime challenge, while removing verifier/process assumptions found during review:
+
+- workspace current is resolved semantically rather than through a fixed selector pathname;
+- transaction post-publish replay is checked through the public replay interface rather than a private `request_report` field;
+- ordinary project current is observed through the required public `read` interface rather than a transaction-specific metadata marker;
+- directly inspected generation-record object references are now an explicit documented schema;
+- long-lived verifier subprocesses use verifier-owned log files and bounded process cleanup rather than unbounded inherited-pipe reads.
+
+Final deterministic qualification and frontier evidence must use this exact tree (or a later explicitly documented successor). Historical trials below are calibration evidence only.
+
+## Standard-trial validity
+
+A `/run` trial counts as a model failure only when all of the following hold:
+
+```text
+execution_class = valid-completed-trial
+qualification_valid = true
+result_exception_types = []
+reward = 0
+verifier completed normally
+```
+
+Authentication, provider/quota, timeout, container, Harbor, or other execution failures do not count as standard model failures.
+
+For `/cheat`, the live TB3 workflow is reward-based: each task × agent adversarial run must have reward `0`; any nonzero reward fails the requirement. The live workflow records reward 0 when `harbor run` itself exits nonzero, so an adversarial safety refusal is not treated the same way as an invalid `/run` model failure.
+
+## Failure categories
+
+- `F1` — conceptual/architectural implementation failure.
+- `F2` — localized implementation/debugging failure under an otherwise viable approach.
+- `F3` — specification ambiguity or reasonable interpretation mismatch; repair the task.
+- `F4` — verifier defect or hidden representation assumption; repair the verifier.
+- `F5` — runtime/container/infrastructure failure.
+- `F6` — auth/provider/model/tooling failure.
+- `F7` — other invalid/non-difficulty evidence, including suspicious shortcut behavior.
+
+Under deadline policy, a valid reward-0 caused by a genuine candidate implementation error under a clear contract is sufficient difficulty evidence; F3-F7 are not.
+
+## Historical calibration
+
+### Workspace snapshot design — solved
+
+Task tree `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` produced a clean GPT-5.6 Sol/xhigh solve:
+
+```text
+reward = 1
+58 passed / 0 failed
+execution_class = valid-completed-trial
+```
+
+Classification: valid solve; task was strengthened.
+
+### Optimistic transaction tree — hidden workspace selector
+
+Task tree `40cbd34104e1f0a549be23b46ef70655b728cece` passed deterministic qualification, then Sol returned reward 0 with 61 passed / 5 failed. All five failures were caused by a verifier helper requiring `.workspace-cache/CURRENT`, while the contract did not prescribe that selector and the candidate used another representation.
+
+Classification: F4 verifier defect; not difficulty evidence. Workspace current was changed to semantic `commit_seq` observation.
+
+### Rubric-clean transaction tree — genuine Sol failure
+
+Task tree:
+
+```text
 fc064cac2fb1241b68a98475dbc8ea04fbe579cc
 ```
 
-This exact tree has now passed the deterministic qualification gate:
+Deterministic qualification:
 
 ```text
 static checks:        PASS
 Oracle/reference:     66/66
-non-equivalent mutants rejected: 40/40
-Harbor Oracle:        1
-Harbor NOP:           0
-frontier calls during qualification: 0
-Terminal-Bench HEAD:  79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
+mutants rejected:     40/40
+Harbor Oracle/NOP:    1 / 0
+frontier calls in qualification: 0
 ```
 
-The current benchmark's primary systems crux is composition of optimistic multi-project write transactions with the existing project publication, exactly-once request, reader/writer, workspace snapshot, and bounded-GC protocols.
-
-A correct solution must simultaneously provide:
-
-- expensive private member evaluation without holding global publication locks;
-- stable manifest/source observations and ordinary project-current version validation;
-- workspace member write-set conflict validation;
-- whole-transaction retry after stale observations;
-- disjoint transaction progress and merge into the newest workspace state;
-- atomic overlapping-member publication;
-- transaction-private project generations that do not move ordinary project current;
-- exactly-once request binding/replay across owner death and response-loss boundaries;
-- reclamation of unreachable pre-commit imports;
-- durable replay after the original workspace and private project generation have both been reclaimed;
-- transitive workspace-to-project retention without retain-everything shortcuts.
-
-## Trial validity first
-
-Before classifying model behavior, a standard trial must satisfy:
-
-```text
-execution_class = valid-completed-trial
-qualification_valid = true
-result_exception_types = []
-reward is non-null
-verifier completed normally
-```
-
-Authentication, provider safety, quota, timeout, Harbor/Docker, or other execution contamination makes the run invalid regardless of raw reward or passing tests.
-
-## Failure categories
-
-- `F1` — genuine conceptual / architectural failure: the model chooses a system boundary or protocol that cannot satisfy one or more stated invariants without broad redesign.
-- `F2` — narrow implementation / debugging bug: the broad design is appropriate but code contains a localized correctness error.
-- `F3` — specification ambiguity or reasonable interpretation mismatch. Task defect; clarify and rerun.
-- `F4` — verifier defect or representation-specific verifier assumption. Verifier defect; repair and rerun.
-- `F5` — runtime / environment / container failure.
-- `F6` — auth / provider / model / tooling failure.
-- `F7` — other invalid or non-difficulty failure, including suspicious shortcut/reward-hacking behavior that prevents clean difficulty interpretation.
-
-Under deadline policy, a valid reward-0 caused by a real candidate implementation error under a clear, correctly verified task is sufficient to freeze; it does not have to be a perfect F1. F3-F7 are not legitimate model-difficulty evidence.
-
-## Historical calibration
-
-### Workspace snapshot design — clean solve
-
-Task tree:
-
-```text
-17291a73dc954c66db0ef5cc6cf2f70fe1c85db4
-```
-
-Valid GPT-5.6 Sol/xhigh standard probe:
-
-```text
-reward = 1.0
-58 passed / 0 failed
-execution_class = valid-completed-trial
-qualification_valid = true
-```
-
-Sol implemented the intended immutable generations, request journals, stable cross-project cut, reader/GC protocol, and transitive project protection. Classification: **valid solve; redesign required**.
-
-### First optimistic transaction qualification — verifier bug
-
-Task tree:
-
-```text
-bff3b135d88174ac463d6e35a6cc30c4066dd8ea
-```
-
-Oracle stopped at 65/66 because `lifecycle_harness.current_token()` treated the newest transaction-private project-history generation as ordinary project current. The task contract explicitly requires private generations not to move ordinary current. The verifier was repaired to distinguish transaction-private generations using the public `snapshot.json` marker `workspace_transaction: true`.
-
-Classification: **F4 verifier defect; no frontier call**.
-
-### Second optimistic transaction probe — verifier bug
-
-Task tree:
-
-```text
-40cbd34104e1f0a549be23b46ef70655b728cece
-```
-
-Deterministic qualification passed 66/66 with 40/40 mutants rejected and Harbor Oracle/NOP 1/0. A valid GPT-5.6 Sol/xhigh probe returned:
+GPT-5.6 Sol/xhigh standard probe:
 
 ```text
 reward = 0
-61 passed / 5 failed
+45 passed / 21 failed
 execution_class = valid-completed-trial
 qualification_valid = true
 result_exception_types = []
+runtime = 29m44s
 ```
 
-Sol implemented a substantive coherent optimistic transaction system. All five failures were masked by `workspace_txn_harness.workspace_snapshot()` requiring `.workspace-cache/CURRENT`, although the contract never required that selector pathname and the candidate used lowercase `.workspace-cache/current`.
+The failures were broad rather than a single formatting issue: project publication, durable exactly-once recovery, reader/GC behavior, reclamation interleavings, interrupted-work recovery, and workspace transaction replay all remained incorrect. One transaction-replay assertion was later identified as depending on private verifier state, but the remaining failures independently establish that the runtime challenge is difficult enough.
 
-Classification: **primary F4 verifier defect; secondary representation mismatch. Do not count as difficulty evidence.** The verifier now resolves current workspace state semantically by workspace generation commit sequence.
+Classification: **genuine model implementation failure for difficulty calibration**. No further difficulty strengthening is warranted. Because later rubric review found verifier/schema/process issues, this old-tree result is not part of the final required 3-trial matrix.
 
-### Representation-neutral transaction tree — rubric cleanup only
+### Rubric-corrected successor
 
-Task tree:
-
-```text
-5620526fada6eebea16910fc62bf71746aaa40ea
-```
-
-Runtime tests, reference implementation, and representation-neutral verifier were retained. Before final measurement, reviewer-facing task README/instruction/metadata wording was minimally cleaned for the live implementation rubric, producing the current `fc064cac...` tree. The runtime semantics did not change, so prior frontier evidence remains historical only and final measurements must use `fc064cac...` exactly.
+Review of `fc064cac...` found four concrete submission risks: a hidden `request_report` dependency, an undocumented generation-record `key` schema, inherited-pipe/process cleanup problems in workspace helpers, and a prescribed transaction metadata marker. The current `316aaf...` tree removes or documents those assumptions without changing starter/reference runtime code or weakening observable concurrency/crash/replay/GC requirements.
 
 ## Per-trial analysis template
 
@@ -131,7 +107,6 @@ Runtime tests, reference implementation, and representation-neutral verifier wer
 Agent / model / reasoning:
 Execution commit:
 Task tree:
-Terminal-Bench HEAD:
 Evidence directory:
 
 Validity:
@@ -147,36 +122,28 @@ Result:
 
 Implementation:
 - architecture attempted:
-- files changed:
 - substantive execution:
 - suspicious shortcuts:
 
 Failure analysis:
 - primary category F1-F7:
-- exact stated invariant violated:
+- violated observable invariant:
 - first incorrect assumption/state boundary:
 - local patch vs broad redesign:
-- likely repair distance:
-- specification ambiguity:
-- verifier defect:
+- specification ambiguity/verifier defect:
 
 Decision:
 - legitimate model failure:
 - freeze candidate:
-- redesign required:
 - invalid run:
 ```
 
-## Freeze rule for current tree
+## Freeze rule
 
-For `fc064cac...`:
+For the final exact task tree:
 
-- valid reward `1` on a required standard configuration means **do not freeze**;
-- valid reward `0` from a real candidate coding/design error under the explicit contract means **freeze is allowed** under deadline policy;
-- F3/F4 means repair specification/verifier and requalify;
-- F5/F6 means preserve the evidence as invalid and rerun only after the infrastructure/provider issue is resolved;
-- any reward-hacking or suspicious shortcut must be reviewed before the result is used as difficulty evidence.
-
-## Final synthesis
-
-For the final standard matrix, report every valid trial independently. Repeated failures on the same transaction-composition issue are particularly strong evidence, but the assignment requirement is binary: all three Sol/xhigh standard trials and all three Opus 5/max standard trials must genuinely fail the verifier. Any clean reward-1 solve on the frozen tree invalidates that frozen candidate and must not be reinterpreted as a failure.
+- any valid standard reward `1` means do not treat that tree as meeting the required failure matrix;
+- valid standard reward `0` from a genuine candidate implementation error permits freezing under the deadline policy;
+- F3/F4 requires a narrow task/verifier repair and requalification;
+- F5/F6 is preserved as invalid evidence and does not count;
+- final submission requires three valid standard failures for Sol/xhigh and three for Opus 5/max, plus one zero-reward adversarial run for each agent under the live TB3 `/cheat` behavior.
