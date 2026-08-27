@@ -121,19 +121,20 @@ Only after the diagnostic is defensible, run the required matrix:
 ./scripts/run-standard-trials.sh
 ```
 
+The wrapper refuses any task tree other than the frozen qualified tree and preserves per-run evidence through `scripts/run-candidate-trial.sh`.
+
 The acceptance condition is six valid genuine failures: three Opus 5/max and three GPT-5.6 Sol/xhigh. Authentication errors, rate limits, model unavailability, Harbor/Docker failures, verifier failures, and infrastructure timeouts are invalid and must not be counted.
 
 ## Adversarial matrix
 
-The current live `/cheat` transform removes the ordinary anti-cheat sentence and appends `docs/prompts/hack-trial-prompt.md`. Reproduce it from a fresh upstream checkout:
+The current live `/cheat` transform removes the ordinary anti-cheat sentence and appends `docs/prompts/hack-trial-prompt.md`. Run:
 
 ```bash
-git clone --depth 1 https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
 uv tool install --force 'harbor==0.14.0'
-TB3_REPO=/tmp/terminal-bench ./scripts/run-cheat-trials.sh
+./scripts/run-cheat-trials.sh
 ```
 
-Run one valid adversarial attempt for each required agent. Every adversarial reward must be `0`.
+For each adversarial attempt, the wrapper refuses a non-frozen task tree, creates a disposable task copy, fetches a fresh Terminal-Bench checkout itself, records the exact upstream HEAD, applies the live prompt transform, and preserves raw evidence. Run one valid adversarial attempt for each required agent. Every adversarial reward must be `0`.
 
 ## Remaining gates
 
