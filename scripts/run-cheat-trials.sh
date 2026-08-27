@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 RUNNER="$ROOT_DIR/scripts/run-candidate-trial.sh"
-FROZEN_TASK_TREE="5620526fada6eebea16910fc62bf71746aaa40ea"
+FROZEN_TASK_TREE="fc064cac2fb1241b68a98475dbc8ea04fbe579cc"
 AGENTS=${AGENTS:-codex}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/cheat"}
 
