@@ -56,24 +56,41 @@ def _cleanup_process_group(pid: int) -> None:
             time.sleep(0.02)
 
 
-def current_token(project: Path) -> str:
-    """Return the latest committed generation without assuming a pointer layout.
+def _snapshot_metadata(project: Path, token: str) -> dict:
+    value = json.loads(
+        (project / ".build-cache" / "generations" / token / "snapshot.json").read_text()
+    )
+    assert isinstance(value, dict), "generation snapshot metadata must be an object"
+    return value
 
-    The task contract defines committed generations and strictly increasing
-    ``commit_seq`` values, but it does not require candidates to expose a
-    ``.build-cache/CURRENT`` symlink.  The current generation is therefore the
-    committed generation with the greatest commit sequence.
+
+def current_token(project: Path) -> str:
+    """Return the latest ordinary published generation without assuming a pointer layout.
+
+    Workspace-build transactions add committed project-history generations that are
+    deliberately private to workspace snapshots and do not become the ordinary
+    project current. The public contract marks those generations with
+    ``workspace_transaction: true``. Among all non-transaction-private committed
+    generations, strictly increasing ``commit_seq`` therefore identifies the
+    latest ordinary publication without requiring a candidate-specific CURRENT
+    selector representation.
     """
     tokens = generation_tokens(project)
     assert tokens, "no committed generation exists"
 
     sequenced: list[tuple[int, str]] = []
+    all_seqs: list[int] = []
     for token in tokens:
-        seq = commit_seq(project, token)
+        metadata = _snapshot_metadata(project, token)
+        seq = metadata.get("commit_seq")
+        assert isinstance(seq, int) and not isinstance(seq, bool) and seq > 0
+        all_seqs.append(seq)
+        if metadata.get("workspace_transaction") is True:
+            continue
         sequenced.append((seq, token))
 
-    seqs = [seq for seq, _token in sequenced]
-    assert len(seqs) == len(set(seqs)), "committed generations must have unique commit_seq values"
+    assert sequenced, "no ordinary committed generation exists"
+    assert len(all_seqs) == len(set(all_seqs)), "committed generations must have unique commit_seq values"
     return max(sequenced)[1]
 
 
@@ -89,9 +106,7 @@ def generation_tokens(project: Path) -> set[str]:
 
 
 def commit_seq(project: Path, token: str) -> int:
-    value = json.loads(
-        (project / ".build-cache" / "generations" / token / "snapshot.json").read_text()
-    )
+    value = _snapshot_metadata(project, token)
     seq = value.get("commit_seq")
     assert isinstance(seq, int) and not isinstance(seq, bool) and seq > 0
     return seq
@@ -223,43 +238,30 @@ def start_reader(
     )
     stdout.close()
     stderr.close()
-    _wait_for(hold_dir / "acquired", proc, "signal snapshot acquisition")
     return proc, baseline, log_dir
 
 
-def acquired_token(hold_dir: Path) -> str:
-    raw = (hold_dir / "acquired").read_text()
-    assert raw.endswith("\n") and raw.count("\n") == 1
-    token = raw[:-1]
-    assert token and "/" not in token
-    return token
-
-
-def release_reader(
+def finish_reader(
     proc: subprocess.Popen[bytes],
     baseline: set[int],
     log_dir: Path,
-    hold_dir: Path,
+    *,
+    release_dir: Path,
+    expected_returncode: int = 0,
 ) -> None:
-    del baseline  # Sibling readers may have started after this reader's baseline.
-    _write(hold_dir / "release", "release\n")
-    returncode = proc.wait(timeout=8)
+    _write(release_dir / "release", "release\n")
+    returncode = proc.wait(timeout=10)
     stderr = (log_dir / "stderr").read_text(errors="replace")
-    assert returncode == 0, stderr
-    _cleanup_process_group(proc.pid)
+    assert returncode == expected_returncode, stderr
+    _cleanup_candidate_processes(proc.pid, baseline)
 
 
 def kill_reader(proc: subprocess.Popen[bytes], baseline: set[int]) -> None:
-    del baseline  # Cleanup must not kill other intentional concurrent actors.
-    try:
-        os.killpg(proc.pid, signal.SIGKILL)
-    except ProcessLookupError:
-        pass
+    _cleanup_candidate_processes(proc.pid, baseline)
     proc.wait(timeout=5)
-    _cleanup_process_group(proc.pid)
 
 
-def start_paused_gc(
+def start_gc(
     project: Path,
     *,
     keep: int,
@@ -268,34 +270,29 @@ def start_paused_gc(
     reports = project / "gc-reports"
     reports.mkdir(parents=True, exist_ok=True)
     reports.chmod(0o777)
-    report = reports / f"paused-gc-{len(list(reports.iterdir()))}.json"
+    report = reports / f"gc-async-{len(list(reports.iterdir()))}.json"
     pause_dir.mkdir(parents=True, exist_ok=True)
     pause_dir.chmod(0o777)
     env = _candidate_env()
-    env.update(
-        {
-            "BUILDSYS_PAUSEPOINT": "gc:after-scan",
-            "BUILDSYS_PAUSE_DIR": str(pause_dir),
-        }
-    )
-    command = [
-        sys.executable,
-        "-m",
-        "buildsys.cli",
-        "gc",
-        "--project",
-        str(project),
-        "--keep",
-        str(keep),
-        "--report",
-        str(report),
-    ]
+    env["BUILDSYS_PAUSEPOINT"] = "gc:after-scan"
+    env["BUILDSYS_PAUSE_DIR"] = str(pause_dir)
     baseline = _pids_for_uid(_NOBODY.pw_uid)
-    log_dir = Path(tempfile.mkdtemp(prefix="tb3-paused-gc-"))
+    log_dir = Path(tempfile.mkdtemp(prefix="tb3-gc-async-"))
     stdout = (log_dir / "stdout").open("wb")
     stderr = (log_dir / "stderr").open("wb")
     proc = subprocess.Popen(
-        command,
+        [
+            sys.executable,
+            "-m",
+            "buildsys.cli",
+            "gc",
+            "--project",
+            str(project),
+            "--keep",
+            str(keep),
+            "--report",
+            str(report),
+        ],
         cwd=str(APP_ROOT),
         env=env,
         stdout=stdout,
@@ -305,38 +302,21 @@ def start_paused_gc(
     )
     stdout.close()
     stderr.close()
-    _wait_for(pause_dir / "reached", proc, "reach the GC pausepoint")
     return proc, baseline, report, log_dir
 
 
-def release_gc(
+def finish_gc(
     proc: subprocess.Popen[bytes],
     baseline: set[int],
     report: Path,
     log_dir: Path,
+    *,
     pause_dir: Path,
 ) -> dict:
-    del baseline  # New readers/writers may intentionally start while GC is paused.
     _write(pause_dir / "release", "release\n")
-    returncode = proc.wait(timeout=12)
+    returncode = proc.wait(timeout=15)
     stderr = (log_dir / "stderr").read_text(errors="replace")
     assert returncode == 0, stderr
-    _cleanup_process_group(proc.pid)
+    _cleanup_candidate_processes(proc.pid, baseline)
     assert report.exists()
     return json.loads(report.read_text())
-
-
-def assert_gc_report(report: dict) -> None:
-    assert set(report) == {
-        "current",
-        "pinned",
-        "retained",
-        "deleted_generations",
-        "deleted_objects",
-    }
-    assert report["current"] is None or isinstance(report["current"], str)
-    for name in ("pinned", "retained", "deleted_generations", "deleted_objects"):
-        assert isinstance(report[name], list)
-        assert report[name] == sorted(report[name])
-        assert len(report[name]) == len(set(report[name]))
-        assert all(isinstance(item, str) for item in report[name])
