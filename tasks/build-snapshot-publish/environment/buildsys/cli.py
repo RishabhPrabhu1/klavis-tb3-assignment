@@ -9,6 +9,7 @@ from .engine import BuildError
 from .lifecycle import collect_garbage, read_snapshot
 from .request_protocol import build_request
 from .workspace import capture_workspace, collect_workspace_garbage, read_workspace_snapshot
+from .workspace_txn import build_workspace
 
 
 def _write_json(path: str | Path, value: dict[str, object]) -> None:
@@ -43,6 +44,12 @@ def main(argv: list[str] | None = None) -> int:
     workspace_capture.add_argument("--plan", required=True)
     workspace_capture.add_argument("--request-id", required=True)
     workspace_capture.add_argument("--report", required=True)
+
+    workspace_build = subparsers.add_parser("workspace-build")
+    workspace_build.add_argument("--workspace", required=True)
+    workspace_build.add_argument("--plan", required=True)
+    workspace_build.add_argument("--request-id", required=True)
+    workspace_build.add_argument("--report", required=True)
 
     workspace_read = subparsers.add_parser("workspace-read")
     workspace_read.add_argument("--workspace", required=True)
@@ -79,6 +86,12 @@ def main(argv: list[str] | None = None) -> int:
 
         if args.command == "workspace-capture":
             result = capture_workspace(args.workspace, args.plan, args.request_id)
+            _write_json(args.report, result)
+            print(json.dumps(result, sort_keys=True))
+            return 0
+
+        if args.command == "workspace-build":
+            result = build_workspace(args.workspace, args.plan, args.request_id)
             _write_json(args.report, result)
             print(json.dumps(result, sort_keys=True))
             return 0
