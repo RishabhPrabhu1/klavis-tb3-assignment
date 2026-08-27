@@ -8,6 +8,7 @@ from pathlib import Path
 from .engine import BuildError
 from .lifecycle import collect_garbage, read_snapshot
 from .request_protocol import build_request
+from .workspace import capture_workspace, collect_workspace_garbage, read_workspace_snapshot
 
 
 def _write_json(path: str | Path, value: dict[str, object]) -> None:
@@ -37,6 +38,24 @@ def main(argv: list[str] | None = None) -> int:
     gc.add_argument("--keep", required=True, type=int)
     gc.add_argument("--report", required=True)
 
+    workspace_capture = subparsers.add_parser("workspace-capture")
+    workspace_capture.add_argument("--workspace", required=True)
+    workspace_capture.add_argument("--plan", required=True)
+    workspace_capture.add_argument("--request-id", required=True)
+    workspace_capture.add_argument("--report", required=True)
+
+    workspace_read = subparsers.add_parser("workspace-read")
+    workspace_read.add_argument("--workspace", required=True)
+    workspace_read.add_argument("--member", required=True)
+    workspace_read.add_argument("--output", required=True)
+    workspace_read.add_argument("--hold-dir", required=True)
+    workspace_read.add_argument("--dest", required=True)
+
+    workspace_gc = subparsers.add_parser("workspace-gc")
+    workspace_gc.add_argument("--workspace", required=True)
+    workspace_gc.add_argument("--keep", required=True, type=int)
+    workspace_gc.add_argument("--report", required=True)
+
     args = parser.parse_args(argv)
 
     try:
@@ -54,6 +73,30 @@ def main(argv: list[str] | None = None) -> int:
             if args.keep < 0:
                 raise BuildError("--keep must be nonnegative")
             result = collect_garbage(args.project, args.keep)
+            _write_json(args.report, result)
+            print(json.dumps(result, sort_keys=True))
+            return 0
+
+        if args.command == "workspace-capture":
+            result = capture_workspace(args.workspace, args.plan, args.request_id)
+            _write_json(args.report, result)
+            print(json.dumps(result, sort_keys=True))
+            return 0
+
+        if args.command == "workspace-read":
+            read_workspace_snapshot(
+                args.workspace,
+                args.member,
+                args.output,
+                args.hold_dir,
+                args.dest,
+            )
+            return 0
+
+        if args.command == "workspace-gc":
+            if args.keep < 0:
+                raise BuildError("--keep must be nonnegative")
+            result = collect_workspace_garbage(args.workspace, args.keep)
             _write_json(args.report, result)
             print(json.dumps(result, sort_keys=True))
             return 0
