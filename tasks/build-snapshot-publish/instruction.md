@@ -33,7 +33,7 @@ PROJECT/.build-cache/generations/TOKEN/records/
 PROJECT/.build-cache/objects/
 ```
 
-`TOKEN` is nonempty, filename-safe, and contains no `/`. Every committed generation directory contains `snapshot.json`, a JSON object with a positive integer `commit_seq`; project generation commit sequences are unique and strictly increasing in commit order. Every file under a committed generation's `records/` is a JSON object containing a `key` field whose value is the referenced 64-lowercase-hex object key; additional record fields are allowed. Objects are stored in the project object directory with the 64-lowercase-hex key followed by the `.bin` suffix. A record makes its referenced object reachable.
+`TOKEN` is nonempty, filename-safe, and contains no `/`. Every committed generation directory contains `snapshot.json`, a JSON object with a positive integer `commit_seq`; additional snapshot fields are allowed. Project generation commit sequences are unique and strictly increasing in commit order. Every file under a committed generation's `records/` is a JSON object containing a `key` field whose value is the referenced 64-lowercase-hex object key; additional record fields are allowed. Objects are stored in the project object directory with the 64-lowercase-hex key followed by the `.bin` suffix. A record makes its referenced object reachable.
 
 ## Request IDs, project readers, and project GC
 
@@ -78,7 +78,7 @@ The observable transaction requirements are:
 - Overlapping transactions therefore conflict and retry. Disjoint transactions that began from the same older workspace state must both survive: the later publication preserves the other transaction's already-committed member updates rather than replacing them with a stale whole-workspace copy.
 - All members written by one successful transaction become visible through one new workspace generation; readers never observe only part of the write set.
 
-Each transaction-written project generation is committed project history with a fresh positive project `commit_seq`, but is workspace-only: it must not become ordinary project current. Its project `snapshot.json` contains `"workspace_transaction": true`; ordinary project publications omit that field or set it to `false`. This marker is part of the documented generation metadata used to distinguish ordinary-current history from workspace-only history.
+Each transaction-written project generation is committed project history with a fresh positive project `commit_seq`, but is workspace-only: it must not become that physical project's ordinary current generation or ordinary `out/` view. No transaction-specific project metadata field or selector layout is required beyond the documented generation schema.
 
 A successful `workspace-build` report has exactly `request_id`, `snapshot`, `attempts`, `updated`, and `members`. `attempts` is a positive integer. `members` is the complete committed workspace member map. `updated` has exactly the written logical members; each value contains `project`, `generation`, positive project `commit_seq`, requested `target`, and the private build's `outputs`. The corresponding `members` entry names the same `project`, `generation`, and `commit_seq`.
 
