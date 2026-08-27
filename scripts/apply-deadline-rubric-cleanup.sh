@@ -105,7 +105,8 @@ if "build/release infrastructure engineers" not in line:
         " This is the kind of work build/release infrastructure engineers or storage-systems engineers "
         "perform when hardening concurrent build orchestration and publication. The accompanying project "
         "and manifest inputs are synthetic, deliberately small fixtures that preserve realistic dependency "
-        "and source-change relationships while keeping deterministic concurrency verification fast.\""
+        "and source-change relationships while keeping deterministic concurrency verification fast."
+        '"'
     )
     s=s.replace(line,expanded,1)
 p.write_text(s,encoding="utf-8")
