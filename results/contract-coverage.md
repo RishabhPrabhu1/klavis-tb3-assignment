@@ -20,12 +20,12 @@ This matrix tracks the current `tasks/build-snapshot-publish/instruction.md`. Ex
 
 ## Project generation, readers, and GC
 
-The contract explicitly specifies project generations under `.build-cache/generations/TOKEN/`, records, `snapshot.json`, objects, and `commit_seq`; verifier inspection of those paths is therefore contractual rather than a hidden representation assumption.
+The contract specifies project generations, records, `snapshot.json`, object naming, and `commit_seq`; verifier inspection of those small schemas is contractual. Ordinary project current itself is observed through the public `read` interface rather than a selector pathname or transaction-private metadata convention.
 
 | Contract requirement | Primary verifier coverage |
 |---|---|
 | Positive unique/increasing project `commit_seq` | lifecycle/reclamation harness |
-| Reader pins exactly one generation and returns pinned bytes | reclamation reader tests |
+| Reader pins exactly one ordinary-current generation and returns pinned bytes | reclamation reader tests + public current-token probe |
 | Killed reader immediately stops pinning | killed-reader test |
 | Multiple readers pin until last exits | last-reader test |
 | GC retains current + live pins + KEEP history | reclamation tests |
@@ -53,7 +53,7 @@ The contract explicitly specifies project generations under `.build-cache/genera
 
 ## Workspace snapshots
 
-The contract explicitly specifies immutable workspace generations under `.workspace-cache/generations/TOKEN/` with `snapshot.json`, workspace `commit_seq`, and member metadata. It intentionally does **not** prescribe a `CURRENT` pathname; verifier current-state helpers resolve the highest committed workspace sequence.
+The contract specifies immutable workspace generations with `snapshot.json`, workspace `commit_seq`, and member metadata. It intentionally does **not** prescribe a current-selector pathname; verifier current-state helpers resolve the highest committed workspace sequence.
 
 | Contract requirement | Primary verifier coverage | Workspace mutation evidence |
 |---|---|---|
@@ -68,41 +68,41 @@ The contract explicitly specifies immutable workspace generations under `.worksp
 | Retained workspace snapshots transitively protect project generations | project GC protection test | project-gc-ignore-workspace-references |
 | Project generation becomes reclaimable after last workspace reference retires | workspace retirement + project GC | cross-layer mutation suite |
 
-## Optimistic `workspace-build` transactions
+## `workspace-build` transactions
 
 | Contract requirement | Primary verifier coverage | Transaction mutation evidence |
 |---|---|---|
-| Private member generation is published only through workspace; ordinary project current unchanged | `test_workspace_build_publishes_private_member_generations_without_moving_project_currents` | transaction-current/private-generation mutants |
-| Transaction-private project history is explicitly marked `workspace_transaction: true` | same test directly inspects documented `snapshot.json` marker | prevents current/history ambiguity |
-| Expensive private stage holds no global workspace/project publication lock | paused left transaction while disjoint right transaction completes | global-stage-lock mutant |
+| Transaction member generation is visible through workspace while ordinary project current remains unchanged | `test_workspace_build_publishes_private_member_generations_without_moving_project_currents`; ordinary current observed via public `read` | transaction-current mutant |
+| Staged work does not globally block disjoint workspace/project publication | paused left transaction while disjoint right transaction completes | global-stage-lock mutant |
 | Disjoint transactions merge against latest workspace state instead of clobbering | disjoint staged transactions | stale-whole-workspace merge mutant |
-| Overlapping workspace write-set change forces whole retry | competing transaction during pause | write-version-validation mutant |
-| Source change during private stage forces retry/fresh output | source mutation during stage | source-validation mutant |
+| Overlapping workspace write-set change forces retry | competing transaction during pause | write-version-validation mutant |
+| Source change during stage forces retry/fresh output | source mutation during stage | source-validation mutant |
 | Ordinary project publication during stage invalidates transaction | ordinary build while transaction paused | project-version-validation mutant |
-| `workspace-build:after-import` is precommit; workspace unchanged; orphan import reclaimable; request reusable | precommit import crash test | import-boundary mutant |
+| `workspace-build:after-import` is precommit; workspace unchanged; orphan import reclaimable; request reusable | precommit import crash test | import-boundary/request-consumption mutant |
 | `workspace-build:after-publish` is committed response loss | postpublish response-loss test | postpublish-boundary mutant |
-| Replay survives later overlapping transaction, workspace GC, and project GC of original private generation | postpublish replay-after-reclamation test | durable replay/reclamation mutants |
-| Request ID binds exact transaction plan | cross-plan transaction test | cross-plan replay mutant |
-| Successful report includes attempts, updated write set, complete members and private-generation metadata | transaction success/replay assertions | schema/behavior coverage |
+| Replay survives later overlapping transaction, workspace GC, and project GC of original workspace-only generation | public replay-before/after-reclamation comparison | durable replay/reclamation behavior |
+| Request ID binds exact transaction plan | cross-plan transaction test | cross-plan behavior |
+| Successful report includes attempts, updated write set, complete members and generation metadata | transaction success/replay assertions | schema/behavior coverage |
 
-The transaction suite currently contains eight focused non-equivalent mutants. Together with 14 core, 6 lifecycle/GC, 5 project-request, and 7 workspace-snapshot mutants, deterministic qualification expects **40/40 mutants rejected**.
+The transaction suite contains eight focused non-equivalent mutants. Together with 14 core, 6 lifecycle/GC, 5 project-request, and 7 workspace-snapshot mutants, deterministic qualification expects **40/40 mutants rejected**.
 
 ## Representation-neutrality audit
 
-Two prior verifier defects were found and corrected before freeze:
+Three verifier assumptions were found and removed during development rather than counted as model failures:
 
-1. `lifecycle_harness.current_token()` originally equated newest project history generation with ordinary current. Transaction-private generations made that invalid. Current helper filters the contractually documented `workspace_transaction: true` marker before selecting ordinary current by `commit_seq`.
-2. `workspace_txn_harness.workspace_snapshot()` originally required `.workspace-cache/CURRENT`. The contract does not require that selector pathname. Current helper resolves the current workspace generation semantically by workspace `commit_seq`.
+1. Ordinary current was once inferred from newest project-history `commit_seq`; workspace-only transaction history makes that invalid. The verifier now asks the required public `read` interface which generation it acquired.
+2. Workspace current was once read through `.workspace-cache/CURRENT`; current workspace state is now resolved by documented workspace `commit_seq`, so selector naming is private.
+3. Transaction post-publish recovery once read a private `request_report` snapshot field; the test now obtains the original report through public replay and later requires the same replay after workspace/project reclamation.
 
-Current verifier paths that remain directly inspected are explicitly prescribed by the instruction (`.build-cache/generations`, `.build-cache/objects`, `.workspace-cache/generations`, `snapshot.json`, records). Request-journal, lock-file, reader-lease, selector-name, and request-claim representations are not fixed by verifier tests.
+The remaining directly inspected project/workspace generation and object fields are the small schemas explicitly documented by the instruction. Request journals, transaction markers, lock files, reader leases, selector names, and staging layouts are not required by verifier tests.
 
 ## Verifier trust boundary
 
 - `[verifier].environment_mode = "separate"`; tests/reference/reward are verifier-image-owned.
 - Candidate implementation runs as `nobody`; source/reference fixtures remain verifier-controlled.
-- Candidate process groups and detached candidate-UID descendants are cleaned after invocations.
+- Long-lived candidate actors log to verifier-owned files rather than inherited pipes, and process groups/new candidate-UID descendants are cleaned after completion or timeout where isolation requires it.
 - Intentional concurrent sibling processes are excluded from cleanup until their tests complete.
-- Tests assert public behavior and explicitly documented durable storage, not hidden request/lock representations.
+- Tests assert public behavior and explicitly documented durable storage, not hidden request/lock/selector representations.
 - `tests/test.sh` performs no runtime network installation; verifier dependencies are pinned in `tests/Dockerfile`.
 - `/logs/verifier` and reward generation remain verifier-owned.
 
