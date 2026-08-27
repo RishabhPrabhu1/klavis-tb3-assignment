@@ -3,7 +3,19 @@
 ## Current candidate
 
 ```text
-5620526fada6eebea16910fc62bf71746aaa40ea
+fc064cac2fb1241b68a98475dbc8ea04fbe579cc
+```
+
+This exact tree has now passed the deterministic qualification gate:
+
+```text
+static checks:        PASS
+Oracle/reference:     66/66
+non-equivalent mutants rejected: 40/40
+Harbor Oracle:        1
+Harbor NOP:           0
+frontier calls during qualification: 0
+Terminal-Bench HEAD:  79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
 ```
 
 The current benchmark's primary systems crux is composition of optimistic multi-project write transactions with the existing project publication, exactly-once request, reader/writer, workspace snapshot, and bounded-GC protocols.
@@ -103,7 +115,15 @@ Sol implemented a substantive coherent optimistic transaction system. All five f
 
 Classification: **primary F4 verifier defect; secondary representation mismatch. Do not count as difficulty evidence.** The verifier now resolves current workspace state semantically by workspace generation commit sequence.
 
-The resulting corrected task tree is `5620526f...`.
+### Representation-neutral transaction tree — rubric cleanup only
+
+Task tree:
+
+```text
+5620526fada6eebea16910fc62bf71746aaa40ea
+```
+
+Runtime tests, reference implementation, and representation-neutral verifier were retained. Before final measurement, reviewer-facing task README/instruction/metadata wording was minimally cleaned for the live implementation rubric, producing the current `fc064cac...` tree. The runtime semantics did not change, so prior frontier evidence remains historical only and final measurements must use `fc064cac...` exactly.
 
 ## Per-trial analysis template
 
@@ -147,6 +167,16 @@ Decision:
 - invalid run:
 ```
 
+## Freeze rule for current tree
+
+For `fc064cac...`:
+
+- valid reward `1` on a required standard configuration means **do not freeze**;
+- valid reward `0` from a real candidate coding/design error under the explicit contract means **freeze is allowed** under deadline policy;
+- F3/F4 means repair specification/verifier and requalify;
+- F5/F6 means preserve the evidence as invalid and rerun only after the infrastructure/provider issue is resolved;
+- any reward-hacking or suspicious shortcut must be reviewed before the result is used as difficulty evidence.
+
 ## Final synthesis
 
-For the final standard matrix, report every valid trial independently. Repeated failures on the same transaction-composition issue are particularly strong evidence, but the assignment requirement is binary: all required standard trials must genuinely fail the verifier. Any clean reward-1 solve on the frozen tree invalidates that frozen candidate and must not be reinterpreted as a failure.
+For the final standard matrix, report every valid trial independently. Repeated failures on the same transaction-composition issue are particularly strong evidence, but the assignment requirement is binary: all three Sol/xhigh standard trials and all three Opus 5/max standard trials must genuinely fail the verifier. Any clean reward-1 solve on the frozen tree invalidates that frozen candidate and must not be reinterpreted as a failure.
