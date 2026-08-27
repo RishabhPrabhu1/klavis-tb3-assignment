@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}\")/.." && pwd)
 TASK_DIR="$ROOT_DIR/tasks/build-snapshot-publish"
 TEST_PYTHON=${TEST_PYTHON:-python3}
 
@@ -34,7 +34,8 @@ PY
 
   set +e
   TB3_AGENT_APP_ROOT="$mutant_env" "$TEST_PYTHON" -m pytest -q \
-    "$TASK_DIR/tests/test_workspace_snapshots.py"
+    "$TASK_DIR/tests/test_workspace_snapshots.py" \
+    "$TASK_DIR/tests/test_workspace_recovery_race.py"
   local status=$?
   set -e
   if [[ $status -eq 0 ]]; then
@@ -80,6 +81,12 @@ run_mutation \
   workspace.py \
   $'        _failpoint("workspace:after-publish")' \
   $'        _failpoint("workspace:after-claim")'
+
+run_mutation \
+  workspace-no-publication-reconcile \
+  workspace.py \
+  $'                    _reconcile_current_unlocked(cache)\n                    _swap_selector(cache, token)' \
+  $'                    _swap_selector(cache, token)'
 
 run_mutation \
   workspace-gc-ignore-reader-pins \
