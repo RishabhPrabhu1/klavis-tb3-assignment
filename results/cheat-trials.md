@@ -2,7 +2,14 @@
 
 ## Requirement
 
-Klavis requires adversarial `/cheat` trials for both required configurations, and every valid adversarial trial must receive reward 0.
+Current Terminal-Bench defaults set `trials: 3` for the shared `/run` and `/cheat` configuration. Therefore the frozen task needs **three adversarial trials per required agent/model configuration**, and every valid adversarial trial must receive reward 0.
+
+Required final adversarial matrix:
+
+| Agent | Model | Reasoning | Required reward-0 trials |
+|---|---|---|---:|
+| `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 |
+| `claude-code` | `anthropic/claude-opus-5` | `max` | 3 |
 
 A cheat result counts only when:
 
@@ -42,22 +49,26 @@ The guarded frontier runner may use an audited same-tree cybersecurity safety bl
 
 ## Current matrix
 
-| Task tree | Agent | Model | Reasoning | Status |
-|---|---|---|---|---|
-| `5620526f...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | pending same-tree qualification / guarded attempt |
-| `5620526f...` | `claude-code` | `anthropic/claude-opus-5` | `max` | pending same-tree qualification and Claude access |
+| Task tree | Agent | Trial | Status |
+|---|---|---:|---|
+| `5620526f...` | Codex / Sol xhigh | 1 | pending same-tree qualification / guarded attempt |
+| `5620526f...` | Codex / Sol xhigh | 2 | pending freeze |
+| `5620526f...` | Codex / Sol xhigh | 3 | pending freeze |
+| `5620526f...` | Claude Code / Opus 5 max | 1 | pending access/freeze |
+| `5620526f...` | Claude Code / Opus 5 max | 2 | pending access/freeze |
+| `5620526f...` | Claude Code / Opus 5 max | 3 | pending access/freeze |
 
 ## Claude access
 
 The Klavis document's preferred no-API-price route is Claude Code OAuth obtained by `claude setup-token`. That route requires an eligible paid Claude subscription, which is not available locally.
 
-Claude Code also officially supports Amazon Bedrock. Bedrock exposes the required model as `anthropic.claude-opus-5`; a zero-out-of-pocket AWS Free Tier/credit route will be tested only after the task is frozen. Any Bedrock result must still preserve the required Claude Code agent, actual Opus 5 model, max reasoning, Docker environment, and auditable Harbor result.
+Claude Code also officially supports Amazon Bedrock. Bedrock exposes the required model as `anthropic.claude-opus-5`; a zero-out-of-pocket AWS Free Tier/credit route will be tested after the task is frozen. Any Bedrock result must still preserve the required Claude Code agent, actual Opus 5 model, max reasoning, Docker environment, and auditable Harbor result.
 
 ## Outstanding adversarial work
 
 The final frozen tree still needs:
 
-1. a valid completed Codex `/cheat` reward-0 result, unless the hiring evaluator explicitly accepts the documented provider-safety limitation;
-2. a valid completed Claude Code / Opus 5 / max `/cheat` reward-0 result.
+1. three valid completed Codex `/cheat` reward-0 trials;
+2. three valid completed Claude Code / Opus 5 / max `/cheat` reward-0 trials.
 
-Invalid safety/auth/provider runs must be documented but cannot be represented as satisfying the requirement.
+If Codex continues to be blocked by the provider safety classifier, those attempts must be documented as invalid and the written Klavis requirement remains technically outstanding unless the evaluator explicitly accepts the provider limitation.
