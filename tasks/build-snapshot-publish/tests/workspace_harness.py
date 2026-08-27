@@ -11,7 +11,15 @@ import tempfile
 import time
 from pathlib import Path
 
-from harness import APP_ROOT, _NOBODY, _drop_privileges, _pids_for_uid, _set_permissions, _write
+from harness import (
+    APP_ROOT,
+    _NOBODY,
+    _cleanup_candidate_processes,
+    _drop_privileges,
+    _pids_for_uid,
+    _set_permissions,
+    _write,
+)
 
 
 def make_workspace() -> tuple[Path, Path]:
@@ -87,6 +95,36 @@ def _report_path(workspace: Path, label: str) -> Path:
     reports.mkdir(exist_ok=True)
     reports.chmod(0o777)
     return reports / f"{label}-{len(list(reports.iterdir()))}.json"
+
+
+def _attach_runtime(proc: subprocess.Popen[bytes], baseline: set[int], log_dir: Path) -> None:
+    # These private attributes keep the public helper signatures stable while
+    # allowing every async candidate process to be cleaned up deterministically.
+    proc._tb3_baseline_uid_pids = baseline  # type: ignore[attr-defined]
+    proc._tb3_log_dir = log_dir  # type: ignore[attr-defined]
+
+
+def _runtime_baseline(proc: subprocess.Popen[bytes]) -> set[int]:
+    return set(getattr(proc, "_tb3_baseline_uid_pids", set()))
+
+
+def _runtime_stderr(proc: subprocess.Popen[bytes]) -> str:
+    log_dir = getattr(proc, "_tb3_log_dir", None)
+    if not isinstance(log_dir, Path):
+        return ""
+    path = log_dir / "stderr"
+    return path.read_text(errors="replace") if path.exists() else ""
+
+
+def _wait_and_cleanup(proc: subprocess.Popen[bytes], timeout: float) -> tuple[int, str]:
+    baseline = _runtime_baseline(proc)
+    try:
+        returncode = proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _cleanup_candidate_processes(proc.pid, baseline)
+        raise AssertionError(f"candidate timed out: {_runtime_stderr(proc)}")
+    _cleanup_candidate_processes(proc.pid, baseline)
+    return returncode, _runtime_stderr(proc)
 
 
 def run_capture(
@@ -274,6 +312,9 @@ def start_workspace_read(
     hold_dir.chmod(0o777)
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.parent.chmod(0o777)
+    baseline = _pids_for_uid(_NOBODY.pw_uid)
+    log_dir = Path(tempfile.mkdtemp(prefix="tb3-workspace-read-"))
+    stderr = (log_dir / "stderr").open("wb")
     proc = subprocess.Popen(
         [
             sys.executable,
@@ -294,10 +335,12 @@ def start_workspace_read(
         cwd=str(APP_ROOT),
         env=_base_env(),
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
+        stderr=stderr,
         start_new_session=True,
         preexec_fn=_drop_privileges,
     )
+    stderr.close()
+    _attach_runtime(proc, baseline, log_dir)
     return proc
 
 
@@ -308,16 +351,17 @@ def wait_for_workspace_reader(proc: subprocess.Popen[bytes], hold_dir: Path) -> 
         if acquired.exists():
             return acquired.read_text().strip()
         if proc.poll() is not None:
-            stderr = proc.stderr.read().decode(errors="replace") if proc.stderr else ""
+            stderr = _runtime_stderr(proc)
+            _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
             raise AssertionError(f"workspace reader exited early: {stderr}")
         time.sleep(0.01)
+    _cleanup_candidate_processes(proc.pid, _runtime_baseline(proc))
     raise AssertionError("workspace reader did not acquire its snapshot")
 
 
 def release_workspace_reader(proc: subprocess.Popen[bytes], hold_dir: Path) -> None:
     _write(hold_dir / "release", "release\n")
-    returncode = proc.wait(timeout=5)
-    stderr = proc.stderr.read().decode(errors="replace") if proc.stderr else ""
+    returncode, stderr = _wait_and_cleanup(proc, 5)
     assert returncode == 0, stderr
 
 
@@ -326,6 +370,9 @@ def start_plain_build(project: Path, target: str = "app") -> tuple[subprocess.Po
     reports.mkdir(exist_ok=True)
     reports.chmod(0o777)
     report = reports / f"report-{len(list(reports.iterdir()))}.json"
+    baseline = _pids_for_uid(_NOBODY.pw_uid)
+    log_dir = Path(tempfile.mkdtemp(prefix="tb3-plain-build-"))
+    stderr = (log_dir / "stderr").open("wb")
     proc = subprocess.Popen(
         [
             sys.executable,
@@ -342,16 +389,17 @@ def start_plain_build(project: Path, target: str = "app") -> tuple[subprocess.Po
         cwd=str(APP_ROOT),
         env=_base_env(),
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
+        stderr=stderr,
         start_new_session=True,
         preexec_fn=_drop_privileges,
     )
+    stderr.close()
+    _attach_runtime(proc, baseline, log_dir)
     return proc, report
 
 
 def finish_plain_build(proc: subprocess.Popen[bytes], report: Path) -> dict:
-    returncode = proc.wait(timeout=20)
-    stderr = proc.stderr.read().decode(errors="replace") if proc.stderr else ""
+    returncode, stderr = _wait_and_cleanup(proc, 20)
     assert returncode == 0, stderr
     return json.loads(report.read_text())
 
