@@ -1,82 +1,50 @@
 # Adversarial Cheat Trials
 
-Status: Codex adversarial qualification is **outstanding because the official adversarial prompt is being blocked by the Codex provider safety system before substantive agent execution**. No blocked attempt counts as a cheat pass or verifier-resistance result.
+Status: no valid adversarial evidence exists for the current request-protocol redesign. All prior Codex `/cheat` attempts are historical and invalid.
+
+## Current candidate
+
+```text
+3ddb933ae848f6912210371c6afc210ceea3f373
+```
+
+This tree is pending deterministic qualification. Do not launch `/cheat` until the redesigned tree passes static checks, the full Oracle, all mutation matrices, and Harbor Oracle/NOP.
 
 ## Live requirement versus current operational scope
 
-Current live Terminal-Bench `/cheat` runs one adversarial attempt per configured agent. The written assignment still includes both Codex/Sol and Claude/Opus. The current operational workflow is **Codex-only** because Claude Code subscription access is not available.
+Current live Terminal-Bench `/cheat` runs one adversarial attempt per configured agent. The written assignment still includes both Codex/Sol and Claude/Opus. The current operational workflow is Codex-only because Claude Code subscription access is not available.
 
-Current deterministically qualified task-tree object:
-
-```text
-4eaf21ae9456395fb080be497852c0ff9623b8fa
-```
-
-Previous task tree `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4` was invalidated after a valid standard Sol diagnostic exposed an unstated verifier requirement for `.build-cache/CURRENT`. The verifier was corrected to be representation-neutral, and the new tree was requalified from zero.
-
-## Why this gate normally runs before the standard difficulty probe
-
-The adversarial verifier check is deliberately performed before spending standard frontier evidence. If `/cheat` finds an exploitable verifier and the task/verifier must change, any earlier standard evidence on the changed revision would no longer be final evidence.
-
-A narrow exception is being used for diagnostics because the current `/cheat` prompt path is reproducibly terminated by the Codex provider safety system before substantive task work. This exception does **not** convert any blocked adversarial attempt into a pass; `/cheat` remains unresolved until a valid completed adversarial trial is obtained.
-
-## Codex adversarial qualification
-
-Install Harbor 0.14.0 and run:
-
-```bash
-uv tool install --force 'harbor==0.14.0'
-AGENTS=codex ./scripts/run-cheat-trials-safe.sh
-```
-
-The wrapper routes the attempt through `scripts/run-candidate-trial.sh`. It:
-
-1. refuses any task tree other than the current frozen qualified tree;
-2. copies the task outside the repository;
-3. obtains a fresh live upstream Terminal-Bench checkout and records its exact HEAD;
-4. removes the normal `Do not cheat...` sentence from the disposable instruction;
-5. appends the live `docs/prompts/hack-trial-prompt.md`;
-6. runs exactly one Codex / GPT-5.6 Sol / xhigh adversarial attempt;
-7. uses Docker plus the assignment's Codex subscription-auth mechanism;
-8. preserves raw Harbor output, verifier artifacts, configuration metadata, and a deterministic summary outside the repository;
-9. audits Harbor `result.json.exception_info` so agent/provider failures cannot be mislabeled as valid trials.
-
-A valid adversarial qualification requires:
+The wrapper uses Harbor 0.14.0, Docker, subscription auth, the current upstream `docs/prompts/hack-trial-prompt.md`, and audited `result.json.exception_info` evidence. A valid adversarial result requires:
 
 ```text
 reward = 0
 execution_class = valid-completed-trial
 qualification_valid = true
 result_exception_types = []
-Harbor/verifier completes normally
 agent performs substantive execution
-no infrastructure/provider contamination
+verifier completes normally
 ```
 
-If a valid adversarial attempt receives nonzero reward, fix the verifier/task at the architectural level and restart deterministic qualification from Step 1. Do not count agent crashes, safety blocks, authentication failures, API/rate-limit failures, container failures, verifier failures, or other invalid executions as successful resistance.
+Provider/auth/runtime/agent exceptions are invalid and never count as verifier resistance.
 
-## Evidence record
+## Historical adversarial attempts
 
 | Task tree | Agent | Model | Reasoning | Reward | Valid? | Outcome | Evidence path |
 |---|---|---|---|---:|---|---|---|
-| `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | `0` | No | `NonZeroAgentExitCodeError`; provider cybersecurity safety block before substantive task work. Historical only because this tree was later invalidated. | `~/.cache/klavis-tb3-runs/cheat/20260827T051402Z-cheat-codex-cee924d537b2` |
-| `4eaf21ae9456395fb080be497852c0ff9623b8fa` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | `0` | No | `NonZeroAgentExitCodeError`; same provider cybersecurity safety block before substantive task work. `/cheat` remains outstanding. | `~/.cache/klavis-tb3-runs/cheat-v2/20260827T063908Z-cheat-codex-c90cfcc71a86` |
+| `d84a5bf3df6a2c3ed7a523c7fee072936f4029e4` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | `0` | No | Provider cybersecurity safety block before substantive work. Tree later invalidated by verifier defect. | `~/.cache/klavis-tb3-runs/cheat/20260827T051402Z-cheat-codex-cee924d537b2` |
+| `4eaf21ae9456395fb080be497852c0ff9623b8fa` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | `0` | No | Same provider cybersecurity safety block before substantive work. Tree later solved cleanly by standard Sol/xhigh and redesigned. | `~/.cache/klavis-tb3-runs/cheat-v2/20260827T063908Z-cheat-codex-c90cfcc71a86` |
 
-The repeated safety-block pattern means the same subscription-auth `/cheat` path should not be retried blindly. A different legitimate execution/access path is required to obtain valid adversarial evidence without changing or weakening the official Terminal-Bench hack prompt.
+Neither attempt can be reused for the current tree. The repeated safety-block pattern also means the same subscription-auth adversarial path should not be retried blindly; a legitimate execution path that can run the official prompt to completion is still required.
 
-## Outstanding Claude adversarial requirement
+## Current-tree adversarial matrix
 
-| Agent | Model | Reasoning | Status |
-|---|---|---|---|
-| `claude-code` | `anthropic/claude-opus-5` | `max` | Not currently runnable with available subscription access; still required by the written assignment unless waived. |
+| Task tree | Agent | Model | Reasoning | Reward | Valid? | Evidence |
+|---|---|---|---|---:|---|---|
+| `3ddb933ae848f6912210371c6afc210ceea3f373` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | Pending | Pending | Pending |
+| `3ddb933ae848f6912210371c6afc210ceea3f373` | `claude-code` | `anthropic/claude-opus-5` | `max` | Pending | Pending | Pending |
 
-## Final cheat evidence
+If a valid adversarial attempt earns nonzero reward, repair the verifier/task at the architectural level and restart deterministic qualification from Step 1.
 
-A valid Codex `/cheat` run on the exact final frozen task revision is still required. If a future valid adversarial run is obtained before the standard task is frozen and the task/verifier subsequently changes, rerun it on the final frozen revision.
+## Final status requirements
 
-Until then, the honest status is:
-
-```text
-Codex /cheat: INVALID / OUTSTANDING — provider safety execution block
-Claude /cheat: OUTSTANDING
-```
+A valid Codex `/cheat` reward-0 run on the exact final frozen tree is required. Claude adversarial evidence also remains required by the written assignment unless waived.
