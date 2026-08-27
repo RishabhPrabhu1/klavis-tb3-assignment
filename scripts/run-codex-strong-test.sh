@@ -19,7 +19,6 @@ command -v git >/dev/null 2>&1 || fail "git is required"
 command -v python3 >/dev/null 2>&1 || fail "python3 is required"
 command -v docker >/dev/null 2>&1 || fail "Docker is required"
 command -v harbor >/dev/null 2>&1 || fail "Harbor is required; install Harbor 0.14.0"
-command -v codex >/dev/null 2>&1 || fail "Codex CLI is required and must already be signed in"
 
 REPO_SHA=$(git -C "$ROOT_DIR" rev-parse HEAD)
 TASK_TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
@@ -40,9 +39,11 @@ HARBOR_VERSION=$(harbor --version 2>&1 || true)
 [[ "$HARBOR_VERSION" == *"0.14.0"* ]] || fail "frontier trial must use Harbor 0.14.0; found: $HARBOR_VERSION"
 
 docker info >/dev/null 2>&1 || fail "Docker daemon is not available"
-[[ -f "$HOME/.codex/auth.json" ]] || fail "Codex subscription auth not found at ~/.codex/auth.json; run 'codex login' first"
+[[ -f "$HOME/.codex/auth.json" ]] || fail "Codex subscription auth not found at ~/.codex/auth.json; sign in with a Codex-capable ChatGPT client first"
 
-CODEX_VERSION=$(codex --version 2>&1 || true)
+# Harbor's Codex agent consumes ~/.codex/auth.json when CODEX_FORCE_AUTH_JSON=1.
+# The standalone `codex` CLI binary is not required for this runner.
+CODEX_AUTH_SOURCE="$HOME/.codex/auth.json"
 CHEAT_SUMMARY=""
 
 # Enforce the active execution plan: a standard Sol probe cannot run until a
@@ -90,12 +91,12 @@ JOB_NAME="sol-xhigh-${SHORT_SHA}"
 mkdir -p "$RUN_DIR" "$HARBOR_OUTPUT"
 cp -R "$TASK_DIR" "$TASK_COPY"
 
-python3 - "$RUN_DIR/metadata.json" "$REPO_SHA" "$TASK_TREE" "$HARBOR_VERSION" "$CODEX_VERSION" "$PREFLIGHT_ONLY" "$CHEAT_SUMMARY" <<'PY'
+python3 - "$RUN_DIR/metadata.json" "$REPO_SHA" "$TASK_TREE" "$HARBOR_VERSION" "$CODEX_AUTH_SOURCE" "$PREFLIGHT_ONLY" "$CHEAT_SUMMARY" <<'PY'
 import json
 import sys
 from pathlib import Path
 
-path, repo_sha, task_tree, harbor_version, codex_version, preflight_only, cheat_summary = sys.argv[1:]
+path, repo_sha, task_tree, harbor_version, codex_auth_source, preflight_only, cheat_summary = sys.argv[1:]
 Path(path).write_text(json.dumps({
     "repository_sha": repo_sha,
     "task_tree": task_tree,
@@ -104,7 +105,8 @@ Path(path).write_text(json.dumps({
     "reasoning_effort": "xhigh",
     "environment": "docker",
     "harbor_version": harbor_version,
-    "codex_version": codex_version,
+    "codex_cli_required": False,
+    "codex_auth_source": codex_auth_source,
     "auth": "CODEX_FORCE_AUTH_JSON=1",
     "attempts_requested": 0 if preflight_only == "1" else 1,
     "harbor_analyze": False,
@@ -120,11 +122,12 @@ Zero-Sol frontier preflight
 Repository SHA:  $REPO_SHA
 Task tree:       $TASK_TREE
 Harbor:          $HARBOR_VERSION
-Codex:           $CODEX_VERSION
+Codex auth:      $CODEX_AUTH_SOURCE
 Output:          $RUN_DIR
 
 This mode does NOT launch Codex or GPT-5.6 Sol.
 It validates the exact Harbor 0.14.0 + Docker task path with Oracle and NOP only.
+The standalone Codex CLI is not required.
 EOF
 
   run_reference_agent() {
@@ -172,6 +175,7 @@ PY
 repository_sha=$REPO_SHA
 task_tree=$TASK_TREE
 harbor=$HARBOR_VERSION
+codex_auth_source=$CODEX_AUTH_SOURCE
 oracle_reward=1
 nop_reward=0
 sol_calls=0
@@ -199,12 +203,12 @@ Usage-efficient Sol frontier diagnostic
 Repository SHA:  $REPO_SHA
 Task tree:       $TASK_TREE
 Harbor:          $HARBOR_VERSION
-Codex:           $CODEX_VERSION
+Codex auth:      $CODEX_AUTH_SOURCE
 Qualified cheat: $CHEAT_SUMMARY
 Output:          $RUN_DIR
 
 Only the Harbor child agent below uses GPT-5.6 Sol/xhigh.
-There is no outer Codex session and this script never invokes harbor analyze.
+The standalone Codex CLI is not required and this script never invokes harbor analyze.
 Exactly one Harbor task/agent trial is requested.
 EOF
 
@@ -307,6 +311,7 @@ lines = [
     "- Environment: `docker`",
     f"- Harbor: `{metadata['harbor_version']}`",
     f"- Qualifying cheat summary: `{metadata['qualifying_cheat_summary']}`",
+    "- Standalone Codex CLI required: **no**",
     "- Attempts requested: `1`",
     "- `harbor analyze`: **not run**",
     f"- Harbor exit status: `{harbor_status}`",
