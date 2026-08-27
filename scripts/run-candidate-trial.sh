@@ -92,7 +92,10 @@ case "$AGENT" in
     ;;
 esac
 
-STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+# Include BASHPID so multiple independent trials launched in the same second
+# cannot collide in the evidence directory. This is required for deadline-mode
+# parallel matrices and does not alter trial configuration or task content.
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)-${BASHPID}
 RUN_DIR="$RUNS_ROOT/${STAMP}-${MODE}-${AGENT}-${SHORT_SHA}"
 TASK_COPY="$RUN_DIR/task"
 HARBOR_OUTPUT="$RUN_DIR/harbor-output"
@@ -173,7 +176,7 @@ EOF
   exit 0
 fi
 
-JOB_NAME="${MODE}-${AGENT}-${SHORT_SHA}"
+JOB_NAME="${MODE}-${AGENT}-${SHORT_SHA}-${BASHPID}"
 set +e
 harbor run \
   -p "$TASK_COPY" \
