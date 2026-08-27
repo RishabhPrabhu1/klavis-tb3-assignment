@@ -11,6 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
+from concurrency_harness import release_and_wait, start_paused_build, wait_for_pause
 from harness import (
     APP_ROOT,
     _NOBODY,
@@ -235,6 +236,19 @@ def test_request_id_cannot_be_reused_for_a_different_target() -> None:
     assert generation_tokens(candidate) == tokens
 
 
+def test_invalid_request_ids_fail_without_committing() -> None:
+    candidate, _reference, _base = make_workspace_pair()
+    for request_id in ("", "line\nbreak", "line\rbreak", "x" * 257):
+        run_request(
+            candidate,
+            target="app",
+            request_id=request_id,
+            expect_returncode=2,
+            require_report=False,
+        )
+        assert generation_tokens(candidate) == set()
+
+
 def test_precommit_claim_crash_does_not_consume_request_id() -> None:
     candidate, _reference, _base = make_workspace_pair()
     run_request(
@@ -305,6 +319,58 @@ def test_stranded_committed_request_survives_later_commit_and_gc() -> None:
     assert (candidate / "out/app.txt").read_bytes() == before_bytes
 
 
+def test_inflight_ordinary_build_preserves_stranded_request_before_replacing_current() -> None:
+    candidate, reference, base = make_workspace_pair()
+    pause = base / "ordinary-started-first"
+    ordinary, ordinary_base, _ordinary_report, ordinary_log = start_paused_build(
+        candidate,
+        target="docs",
+        pause_dir=pause,
+    )
+    try:
+        wait_for_pause(ordinary, pause)
+        run_request(
+            candidate,
+            target="app",
+            request_id="raced-lost-response",
+            failpoint="request:after-publish",
+            expect_returncode=86,
+            require_report=False,
+        )
+        stranded = current_token(candidate)
+
+        release_and_wait(
+            ordinary,
+            ordinary_base,
+            pause,
+            ordinary_log,
+            expected_returncode=0,
+        )
+        ordinary = None
+        current = current_token(candidate)
+        assert current != stranded
+
+        gc_report = run_gc(candidate, keep=0)
+        assert gc_report is not None
+        assert stranded in gc_report["deleted_generations"]
+        assert generation_tokens(candidate) == {current}
+        before_bytes = (candidate / "out/docs.txt").read_bytes()
+
+        replay = run_request(candidate, target="app", request_id="raced-lost-response")
+        assert replay is not None
+        _assert_old_app_report(replay, reference)
+        assert current_token(candidate) == current
+        assert generation_tokens(candidate) == {current}
+        assert (candidate / "out/docs.txt").read_bytes() == before_bytes
+    finally:
+        if ordinary is not None:
+            try:
+                _write(pause / "release", "release\n")
+            except OSError:
+                pass
+            _cleanup_candidate_processes(ordinary.pid, ordinary_base)
+
+
 def test_duplicate_concurrent_requests_commit_once() -> None:
     candidate, _reference, base = make_workspace_pair()
     pause = base / "duplicate-request"
@@ -340,6 +406,49 @@ def test_duplicate_concurrent_requests_commit_once() -> None:
     finally:
         if leader is not None:
             kill_request(leader, leader_base)
+        if follower is not None:
+            kill_request(follower, follower_base)
+
+
+def test_waiting_duplicate_takes_over_when_live_owner_is_killed() -> None:
+    candidate, _reference, base = make_workspace_pair()
+    pause = base / "waiting-takeover"
+    leader, leader_base, _leader_report, _leader_log = start_request(
+        candidate,
+        target="app",
+        request_id="waiting-takeover",
+        pause_dir=pause,
+    )
+    follower = None
+    follower_base: set[int] = set()
+    try:
+        wait_for_claim(leader, pause)
+        follower, follower_base, follower_report, follower_log = start_request(
+            candidate,
+            target="app",
+            request_id="waiting-takeover",
+        )
+        time.sleep(0.1)
+        assert follower.poll() is None
+
+        # Kill only the owner's process group. Generic UID cleanup is deferred
+        # until the already-waiting follower has completed, otherwise the
+        # verifier itself could mistake that intentional sibling for a leak.
+        try:
+            os.killpg(leader.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        leader.wait(timeout=5)
+
+        replacement = finish_request(follower, follower_base, follower_report, follower_log)
+        follower = None
+        assert replacement is not None
+        assert len(generation_tokens(candidate)) == 1
+        _cleanup_candidate_processes(leader.pid, leader_base)
+        leader = None
+    finally:
+        if leader is not None:
+            _cleanup_candidate_processes(leader.pid, leader_base)
         if follower is not None:
             kill_request(follower, follower_base)
 
