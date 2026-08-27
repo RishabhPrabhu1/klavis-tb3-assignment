@@ -1,6 +1,6 @@
 # Adversarial Cheat Trials
 
-Status: no valid adversarial evidence exists yet for the current deterministically qualified cross-project workspace redesign.
+Status: the current deterministically qualified cross-project workspace redesign has one same-tree Codex adversarial attempt, but it is **invalid** because the provider cybersecurity safety classifier terminated the agent before substantive execution. `/cheat` therefore remains outstanding.
 
 ## Current qualified candidate
 
@@ -42,6 +42,23 @@ verifier completes normally
 
 Provider/auth/runtime/agent exceptions are invalid and never count as verifier resistance.
 
+## Current-tree Codex `/cheat` attempt
+
+| Task tree | Agent | Model | Reasoning | Raw reward | Valid? | Outcome | Evidence path |
+|---|---|---|---|---:|---|---|---|
+| `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | `0.0` | **No** | `NonZeroAgentExitCodeError`: provider cybersecurity safety block before substantive work. Starter remained byte-for-byte unchanged; verifier result is not countable. | `~/.cache/klavis-tb3-runs/workspace-cheat/20260827T153704Z-cheat-codex-67e026df14a0` |
+
+Authoritative classification:
+
+```text
+execution_class = completed-with-exceptions
+qualification_valid = false
+result_exception_types = [NonZeroAgentExitCodeError]
+substantive_execution = false
+```
+
+The raw verifier reward of 0 does **not** satisfy `/cheat`. This same-tree audited provider exception is retained only to authorize the explicit one-off ordinary Sol/xhigh difficulty diagnostic. Do not retry the identical subscription-auth adversarial path during this qualification phase.
+
 ## Historical invalid Codex `/cheat` attempts
 
 | Task tree | Agent | Model | Reasoning | Reward | Valid? | Outcome | Evidence path |
@@ -50,15 +67,13 @@ Provider/auth/runtime/agent exceptions are invalid and never count as verifier r
 | `4eaf21ae9456395fb080be497852c0ff9623b8fa` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | `0` | No | Same provider safety block. Tree later solved cleanly by standard Sol/xhigh. | `~/.cache/klavis-tb3-runs/cheat-v2/20260827T063908Z-cheat-codex-c90cfcc71a86` |
 | `42cba8ad00bebf316048d1470033c1742a20ec97` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | `0` | No | Same provider safety block on superseded exactly-once tree. | `~/.cache/klavis-tb3-runs/cheat-exactly-once/20260827T093440Z-cheat-codex-ae96c0c3a0c2` |
 
-Three subscription-auth Codex `/cheat` attempts have shown the same provider-level safety termination. A legitimate completed adversarial execution is still required; historical exceptions do not satisfy the final requirement.
+Four subscription-auth Codex `/cheat` attempts have now shown the same provider-level safety termination. A legitimate completed adversarial execution is still required on the eventual frozen tree; none of these exceptions waive that requirement.
 
 ## Current workspace-tree matrix
 
 | Task tree | Agent | Model | Reasoning | Status |
 |---|---|---|---|---|
-| `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | Ready for exactly one same-tree adversarial attempt |
+| `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | Same-tree attempt invalid/outstanding; one-off standard diagnostic authorized by audited provider exception |
 | `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` | `claude-code` | `anthropic/claude-opus-5` | `max` | Operationally outstanding |
-
-If the same-tree Codex attempt is again terminated by provider safety before substantive execution, record it as invalid/outstanding and do not retry the identical path in the same phase. That audited current-tree exception may authorize the one-off ordinary difficulty diagnostic, but does not waive `/cheat`.
 
 If a future valid adversarial attempt earns nonzero reward, repair the verifier/task at the architectural level and restart deterministic qualification from Step 1.
