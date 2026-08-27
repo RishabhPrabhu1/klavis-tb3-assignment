@@ -69,11 +69,25 @@ case "$AGENT" in
       AUTH_KIND="Claude Code OAuth token"
       EXTRA_ARGS+=(--ae CLAUDE_FORCE_OAUTH=1)
       EXTRA_ARGS+=(--ae "CLAUDE_CODE_OAUTH_TOKEN=$CLAUDE_CODE_OAUTH_TOKEN")
+    elif [[ -n "${AWS_BEARER_TOKEN_BEDROCK:-}" ]]; then
+      AUTH_KIND="Amazon Bedrock API key"
+      EXTRA_ARGS+=(--ae CLAUDE_CODE_USE_BEDROCK=1)
+      EXTRA_ARGS+=(--ae "AWS_BEARER_TOKEN_BEDROCK=$AWS_BEARER_TOKEN_BEDROCK")
+      EXTRA_ARGS+=(--ae "AWS_REGION=${AWS_REGION:-us-east-1}")
+    elif [[ -n "${AWS_ACCESS_KEY_ID:-}" && -n "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
+      AUTH_KIND="Amazon Bedrock AWS credentials"
+      EXTRA_ARGS+=(--ae CLAUDE_CODE_USE_BEDROCK=1)
+      EXTRA_ARGS+=(--ae "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID")
+      EXTRA_ARGS+=(--ae "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY")
+      EXTRA_ARGS+=(--ae "AWS_REGION=${AWS_REGION:-us-east-1}")
+      if [[ -n "${AWS_SESSION_TOKEN:-}" ]]; then
+        EXTRA_ARGS+=(--ae "AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN")
+      fi
     elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
       AUTH_KIND="Anthropic Console API key"
       EXTRA_ARGS+=(--ae "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
     else
-      fail "Claude auth missing: set CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY"
+      fail "Claude auth missing: set CLAUDE_CODE_OAUTH_TOKEN, AWS_BEARER_TOKEN_BEDROCK, AWS access credentials, or ANTHROPIC_API_KEY"
     fi
     ;;
 esac
