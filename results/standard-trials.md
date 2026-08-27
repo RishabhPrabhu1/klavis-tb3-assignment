@@ -1,6 +1,6 @@
 # Standard Trials
 
-Status: the previous corrected task was solved cleanly by Sol/xhigh and has been redesigned again. Final standard evidence has **not** started for the strengthened request-protocol tree.
+Status: the previous corrected task was solved cleanly by Sol/xhigh and was redesigned again. Final standard evidence has **not** started for the current qualified exactly-once request-protocol tree.
 
 ## Live requirement versus current operational scope
 
@@ -13,15 +13,22 @@ Current live Terminal-Bench defaults specify three standard trials each for:
 
 The current operational workflow is Codex-only because Claude Code subscription access is not available. The repository must not claim full written-assignment compliance unless the Claude requirement is later satisfied or waived.
 
-## Current redesign candidate
+## Current qualified redesign
 
 ```text
-f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8
+42cba8ad00bebf316048d1470033c1742a20ec97
 ```
 
-This tree is **pending deterministic qualification**. No standard trial may count until static checks, the full Oracle, all mutation matrices, and Harbor Oracle/NOP have passed on this exact tree.
+Deterministic qualification is complete on this exact tree:
 
-The earlier request-protocol tree `3ddb933ae848f6912210371c6afc210ceea3f373` was superseded before frontier testing after verifier review found a missing publication race and waiting-duplicate takeover coverage.
+- live static checks: PASS;
+- reference/oracle verifier: 48/48 PASS;
+- core mutations: 14/14 rejected;
+- lifecycle/GC mutations: 6/6 rejected;
+- exactly-once request mutations: 5/5 rejected;
+- Harbor Oracle=1 / NOP=0 / `sol_calls=0`.
+
+The earlier request-protocol trees `3ddb933ae848f6912210371c6afc210ceea3f373`, `f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8`, and `01087195775ecb23b702e0ff3002306e9c84cde7` were superseded before frontier qualification.
 
 ## Why the prior qualified tree was rejected
 
@@ -58,14 +65,15 @@ The strengthened verifier also composes the protocol with publication races:
 
 This changes the transaction model rather than adding trajectory-specific edge cases to the architecture Sol already solved.
 
-## New-tree qualification policy
+## Current-tree frontier policy
 
-1. Re-run all deterministic qualification on `f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8`.
-2. Obtain Harbor Oracle=1/NOP=0 with zero frontier calls.
-3. Attempt valid `/cheat` on the new tree; provider/auth/runtime exceptions remain invalid.
-4. Run exactly one valid Sol/xhigh standard probe.
-5. If Sol solves again, redesign again and restart qualification.
-6. Only a genuine conceptual/architectural reward-0 failure permits freezing for the final 3-trial matrix.
+1. Deterministic qualification on `42cba8ad00bebf316048d1470033c1742a20ec97` is complete.
+2. Attempt one valid `/cheat` on the current tree. Provider/auth/runtime exceptions remain invalid and do not count.
+3. Run exactly one valid Sol/xhigh standard probe on the current tree.
+4. If Sol solves again, redesign again and restart qualification.
+5. Only a genuine conceptual/architectural reward-0 failure permits freezing for the final 3-trial matrix.
+
+Because the Codex subscription-auth `/cheat` path has twice been terminated by the provider safety classifier on historical trees, a same-tree provider exception may be used only as audited evidence that `/cheat` remains blocked; it is never a cheat pass.
 
 ## Frozen Codex matrix
 
@@ -97,5 +105,3 @@ Valid solve evidence for diagnostic 2:
 - Valid Codex `/cheat` reward 0 on the eventual frozen tree.
 - Three valid Codex/Sol xhigh standard failures on the eventual frozen tree.
 - Claude Code / Opus 5 max standard and adversarial evidence remains outstanding under the written assignment unless waived.
-
-Authentication errors, rate limits, subscription limits, model unavailability, Harbor/Docker failures, verifier infrastructure failures, and provider safety terminations are invalid trials and never count as model failures.
