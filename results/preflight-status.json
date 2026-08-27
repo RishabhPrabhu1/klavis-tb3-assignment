@@ -1,20 +1,10 @@
 {
-  "task_tree": "bff3b135d88174ac463d6e35a6cc30c4066dd8ea",
-  "preflight": "pending",
-  "preflight_detail": "Optimistic workspace-build transaction redesign is pending complete zero-model deterministic qualification. Required stages: live TB3 static checks, full Oracle/reference verifier including the new workspace transaction suite, 14 core mutations, 6 lifecycle/GC mutations, 5 exactly-once project-request mutations, 7 non-equivalent workspace snapshot mutations, 8 optimistic workspace transaction mutations, and Harbor Oracle/NOP with sol_calls=0.",
-  "harbor_docker": "pending",
-  "harbor_detail": "pending zero-Sol qualification for optimistic workspace transaction tree",
-  "mutation_detail": "pending: 14 core + 6 lifecycle/GC + 5 project request + 7 workspace snapshot + 8 workspace transaction = 40 mutations",
+  "harbor_detail": "",
+  "harbor_docker": "skipped",
+  "mutation_detail": "",
+  "preflight": "failure",
+  "preflight_detail": "checkout=success,setup_python=success,tooling=success,tb3_checkout=success,static=success,oracle=failure,determinism=skipped,mutations=skipped",
   "qualified": false,
-  "frontier_model_calls": 0,
-  "terminal_bench_head": null,
-  "qualification_evidence": null,
-  "superseded_workspace_solved_task_tree": "17291a73dc954c66db0ef5cc6cf2f70fe1c85db4",
-  "superseded_workspace_qualification_evidence": "/Users/rishabhprabhu/.cache/klavis-tb3-runs/workspace-preflight-v3/20260827T152942Z-8246be350d7d",
-  "superseded_workspace_frontier_evidence": "/Users/rishabhprabhu/.cache/klavis-tb3-runs/workspace-standard-probe/20260827T155729Z-standard-codex-cca1a50c3204",
-  "superseded_workspace_frontier_classification": "valid-completed-trial, reward=1.0, 58/58 tests passed; GPT-5.6 Sol/xhigh cleanly solved the cross-project workspace snapshot tree, so it is disqualified for final qualification",
-  "superseded_workspace_equivalent_mutant_tree": "60fc372b241ca4eb9a4379a0ec5ca6ddec635fee",
-  "superseded_exactly_once_task_tree": "42cba8ad00bebf316048d1470033c1742a20ec97",
-  "previous_valid_solved_task_tree": "4eaf21ae9456395fb080be497852c0ff9623b8fa",
-  "redesign_crux": "optimistic workspace-build transactions: private multi-project evaluation outside global locks, write-set and project-version validation, source revalidation, disjoint-state merge, overlap retry, private project generations, exactly-once crash recovery, and reclamation across workspace/project GC"
+  "task_tree": "1bdd8320ee15b0daf38e2dd256987a062d2133af",
+  "workflow_commit": "cd078ba97b4b5fe8ec6274f901c8d734843c60bd"
 }
