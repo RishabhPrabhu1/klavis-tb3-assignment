@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     build.add_argument("--project", required=True)
     build.add_argument("--target", required=True)
     build.add_argument("--report", required=True)
+    build.add_argument("--request-id")
 
     read = subparsers.add_parser("read")
     read.add_argument("--project", required=True)
@@ -39,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.command == "build":
-            result = Builder(args.project).build(args.target)
+            result = Builder(args.project).build(args.target, args.request_id)
             _write_json(args.report, result)
             print(json.dumps(result, sort_keys=True))
             return 0
