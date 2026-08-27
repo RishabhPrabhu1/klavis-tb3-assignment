@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Reclassify Harbor trial summaries from result.json exception state.
+"""Reclassify Harbor trial summaries from authoritative result.json state.
 
 The shell runners intentionally keep their console parsing simple. This auditor is
 the qualification authority for whether a completed Harbor invocation is a valid
 model trial: any non-null Harbor result.json exception_info invalidates the trial,
-even when the Harbor process exits 0 and a verifier reward is present.
+and the verifier reward is taken from result.json rather than console aggregates.
 """
 from __future__ import annotations
 
@@ -16,6 +16,21 @@ from typing import Any
 
 def _meaningful(value: Any) -> bool:
     return value not in (None, {}, [], "")
+
+
+def _reward_values(result: dict[str, Any]) -> list[float]:
+    verifier = result.get("verifier_result")
+    if not isinstance(verifier, dict):
+        return []
+    rewards = verifier.get("rewards")
+    if not isinstance(rewards, dict) or not rewards:
+        return []
+    values: list[float] = []
+    for value in rewards.values():
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            continue
+        values.append(float(value))
+    return values
 
 
 def audit_summary(path: Path) -> dict[str, Any]:
@@ -47,9 +62,30 @@ def audit_summary(path: Path) -> dict[str, Any]:
                 }
             )
 
+    authoritative_rewards: list[dict[str, Any]] = []
+    for result_path, result in trial_results:
+        values = _reward_values(result)
+        authoritative_rewards.append(
+            {"result_json": str(result_path), "reward_values": values}
+        )
+
+    # run-candidate-trial.sh intentionally requests exactly one trial. Treat
+    # missing/multiple trial results or missing/multiple reward channels as
+    # invalid evidence instead of falling back to Harbor's aggregate Mean line.
+    authoritative_reward: float | None = None
+    reward_error: str | None = None
+    if len(trial_results) != 1:
+        reward_error = f"expected exactly 1 trial result, found {len(trial_results)}"
+    else:
+        values = authoritative_rewards[0]["reward_values"]
+        if len(values) != 1:
+            reward_error = f"expected exactly 1 verifier reward, found {len(values)}"
+        else:
+            authoritative_reward = float(values[0])
+
     old_execution = data.get("execution_class")
     harbor_status = data.get("harbor_exit_status")
-    reward = data.get("reward")
+    console_reward = data.get("reward")
 
     if parse_errors:
         execution = "result-json-parse-error"
@@ -59,8 +95,8 @@ def audit_summary(path: Path) -> dict[str, Any]:
         execution = "completed-with-exceptions"
     elif harbor_status not in (None, 0):
         execution = "infrastructure-or-run-error"
-    elif reward is None:
-        execution = "completed-but-reward-unparsed"
+    elif reward_error is not None:
+        execution = "result-json-reward-missing-or-ambiguous"
     else:
         execution = "valid-completed-trial"
 
@@ -81,6 +117,10 @@ def audit_summary(path: Path) -> dict[str, Any]:
     data["result_exceptions"] = result_exceptions
     data["result_exception_types"] = sorted(set(exception_types))
     data["trial_result_files"] = [str(p) for p, _ in trial_results]
+    data["console_parsed_reward_before_evidence_audit"] = console_reward
+    data["authoritative_result_rewards"] = authoritative_rewards
+    data["authoritative_reward_error"] = reward_error
+    data["reward"] = authoritative_reward
     data["qualification_valid"] = execution == "valid-completed-trial"
 
     path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
@@ -95,6 +135,10 @@ def audit_summary(path: Path) -> dict[str, Any]:
         "result_exceptions": result_exceptions,
         "result_json_parse_errors": parse_errors,
         "trial_result_files": data["trial_result_files"],
+        "console_parsed_reward_before_evidence_audit": console_reward,
+        "authoritative_result_rewards": authoritative_rewards,
+        "authoritative_reward": authoritative_reward,
+        "authoritative_reward_error": reward_error,
     }
     audit_path.write_text(json.dumps(audit_payload, indent=2) + "\n", encoding="utf-8")
     return audit_payload
@@ -132,9 +176,11 @@ def main() -> int:
             return 2
         status = "VALID" if audit["qualification_valid"] else "INVALID"
         types = ",".join(audit["result_exception_types"]) or "none"
+        reward = audit["authoritative_reward"]
+        reward_error = audit["authoritative_reward_error"] or "none"
         print(
             f"{status} {summary} execution={audit['execution_class_after']} "
-            f"result_exceptions={types}"
+            f"result_exceptions={types} reward={reward!r} reward_error={reward_error}"
         )
     return 0
 
