@@ -263,19 +263,11 @@ def test_postpublish_response_loss_replays_after_workspace_and_project_reclamati
         )
         stranded_ws = current_workspace_token(workspace)
         stranded_snapshot = workspace_snapshot(workspace)
-        stranded_project_generation = stranded_snapshot["members"]["left"]["generation"]
+        stranded_member = stranded_snapshot["members"]["left"]
+        stranded_project_generation = stranded_member["generation"]
 
-        # Establish the original externally observable report without inspecting
-        # candidate-private journal or snapshot fields. This replay must not publish.
-        before_replay_tokens = workspace_tokens(workspace)
-        expected_report = run_workspace_build(workspace, plan, "txn-lost-response")
-        assert expected_report is not None
-        assert expected_report["request_id"] == "txn-lost-response"
-        assert expected_report["snapshot"] == stranded_ws
-        assert current_workspace_token(workspace) == stranded_ws
-        assert workspace_tokens(workspace) == before_replay_tokens
-
-        # A later overlapping transaction replaces the original project generation.
+        # No retry occurs here. A later overlapping transaction must not depend on
+        # replay side effects to preserve the committed response-loss result.
         _write(workspace / "left/src/main.txt", "LEFT-LOST-RESPONSE-V3\n")
         newer = run_workspace_build(workspace, plan, "txn-newer-left")
         assert newer is not None
@@ -290,7 +282,26 @@ def test_postpublish_response_loss_replays_after_workspace_and_project_reclamati
 
         before_tokens = workspace_tokens(workspace)
         replay = run_workspace_build(workspace, plan, "txn-lost-response")
-        assert replay == expected_report
+        assert replay is not None
+        assert set(replay) == {"request_id", "snapshot", "attempts", "updated", "members"}
+        assert replay["request_id"] == "txn-lost-response"
+        assert replay["snapshot"] == stranded_ws
+        assert replay["attempts"] == 1
+        assert replay["members"] == stranded_snapshot["members"]
+        assert set(replay["updated"]) == {"left"}
+        replay_left = replay["updated"]["left"]
+        assert replay_left["project"] == stranded_member["project"]
+        assert replay_left["generation"] == stranded_member["generation"]
+        assert replay_left["commit_seq"] == stranded_member["commit_seq"]
+        assert replay_left["target"] == "app"
+        assert isinstance(replay_left["outputs"], dict)
+        assert current_workspace_token(workspace) == current_ws
+        assert workspace_tokens(workspace) == before_tokens
+
+        # Repeating the same request must return byte-for-byte-equivalent JSON data
+        # and still must not publish any new workspace generation.
+        replay_again = run_workspace_build(workspace, plan, "txn-lost-response")
+        assert replay_again == replay
         assert current_workspace_token(workspace) == current_ws
         assert workspace_tokens(workspace) == before_tokens
     finally:
