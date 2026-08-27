@@ -1,97 +1,84 @@
-# Current TB3 Implementation-Rubric Self-Review
+# Current TB3 Implementation-Rubric Review
 
-This is a source-level preflight, **not** a claim that Terminal-Bench's automated implementation-rubric reviewer has passed the task. The live rubric and live review workflow at Terminal-Bench HEAD `79e71650f5b6a6ef5bb46a434c7c04d7d99a9480` remain authoritative.
+This file is a source-level audit, **not** a claim that the live automated implementation-rubric reviewer has passed the final task. Terminal-Bench HEAD `79e71650f5b6a6ef5bb46a434c7c04d7d99a9480` and its `docs/prompts/task-implementation.toml` remain authoritative.
 
-Current qualified candidate task tree:
-
-```text
-fc064cac2fb1241b68a98475dbc8ea04fbe579cc
-```
-
-## Current status
-
-The previously identified reviewer-facing cleanup has been applied and the resulting task tree has been requalified from scratch:
+Current rubric-corrected candidate:
 
 ```text
-TB3 static checks: PASS
-Oracle/reference:  66/66
-mutations:         40/40 rejected
-Harbor Oracle:     1.000
-Harbor NOP:        0.000
+316aaf9804a82cc43e6075a657f3effda0c5717c
 ```
 
-The cleanup did not alter `environment/`, `solution/`, or `tests/`. It only:
+Exact-tree deterministic qualification and automated rubric execution are still required before final submission.
 
-- compressed the statically required task README to non-duplicative reviewer context;
-- aligned the best-case prepared-expert estimate to 3.5 hours;
-- made a few coordination requirements outcome-oriented rather than prescribing a particular lock implementation;
-- strengthened difficulty metadata with real-world role and synthetic-fixture provenance.
+## Review history
 
-## Current risk summary
+A read-only Work review of predecessor tree `fc064cac...` judged it **RUBRIC LIKELY FAIL** and identified concrete issues rather than only stylistic concerns:
 
-Most criteria are strong at source level. Remaining reviewer risks are narrower:
+1. transaction response-loss verification read undocumented `snapshot["request_report"]`;
+2. generation-object reachability parsed a record `"key"` field that was not yet documented;
+3. transaction instructions prescribed internal evaluation/commit state and required a `workspace_transaction` marker;
+4. workspace reader/plain-build helpers used inherited stderr pipes followed by unbounded post-wait reads and lacked equivalent descendant cleanup;
+5. instruction length, reviewer complexity, deterministic sleeps, and expert-time/solvability were additional subjective risks.
 
-1. **`instruction_concision` — MODERATE RISK.** `instruction.md` remains long because it composes project publication, request replay, workspace capture, workspace transactions, reader lifetimes, and two reclamation layers. The length is mostly normative tested semantics rather than filler; further shortening risks creating test/instruction gaps.
-2. **`difficult` — PENDING FINAL EMPIRICAL CALIBRATION.** Earlier simpler designs were solved by Sol. The current optimistic transaction tree is qualified, and the first same-tree frontier probe is now the active calibration gate.
-3. **Automated implementation-rubric execution — OUTSTANDING.** The live reviewer uses Claude Code/Sonnet through Harbor 0.18.0. A source-level audit is not a substitute for that required review.
+The current successor was built specifically to remove the concrete blockers without changing starter/reference runtime difficulty.
 
-The earlier high-confidence `task_readme`, `expert_time_estimate`, and prescriptive `outcome_verified` risks were addressed before final qualification.
+## Corrections in the current candidate
 
-## Criterion review
+- **Private replay state removed from verification.** The post-publish transaction test first obtains the original report by public same-ID replay, verifies that replay does not republish, then requires the exact same report after later replacement plus workspace/project GC.
+- **Record schema made explicit.** The only generation-record field needed for object reachability is now documented: each record is JSON containing a 64-lowercase-hex `key`; extension fields are allowed.
+- **Transaction marker no longer required.** Ordinary project current is observed through the required public `read` interface and its acquired generation token. A candidate may use any internal transaction metadata/layout consistent with the documented generation schema.
+- **Workspace selector remains representation-neutral.** Current workspace generation is resolved by documented `commit_seq`, not a fixed selector pathname.
+- **Async process isolation hardened.** Flagged long-lived helpers use verifier-owned log files rather than inherited stderr pipes and perform bounded process/session cleanup; transaction helpers use the same process-tree cleanup model.
+- **Transaction prose is outcome-oriented.** The instruction now states stale-view rejection/retry, atomic visibility, ordinary-current nonmovement, disjoint progress/merge, overlap conflict, replay, and reclamation outcomes rather than a mandatory lock/read-set algorithm.
+- **Instruction compressed.** Repeated transaction/crash prose was consolidated into invariant groups and compact hook tables.
+- **Expert estimate calibrated to the actual starter.** `expert_time_estimate_hours = 4.0`; the starter already contains the target evaluator and CLI skeleton, while the estimate assumes a focused domain expert who knows the intended approach in advance, matching the live rubric definition.
 
-| Criterion | Self-review | Notes |
+## Current source-level criterion assessment
+
+| Criterion | Current assessment | Basis / remaining risk |
 |---|---|---|
-| `verifiable` | PASS | Deterministic pause/failpoint schedules, independent reference logic, 66-test Oracle, 40 non-equivalent development mutants. |
-| `solvable` | PASS | Working reference passes 66/66; 3.5h best-case expert estimate is aligned with few-hours guidance. |
-| `difficult` | PENDING EMPIRICAL | Current optimistic multi-project transaction design is the final calibration object. |
-| `interesting` | PASS | Build/release transaction consistency and crash recovery have direct systems-engineering value. |
-| `outcome_verified` | PASS | Requirements now state observable serialization/progress/atomicity outcomes rather than a mandatory lock API. |
-| `anti_cheat_robustness` | PASS SOURCE-LEVEL | Separate verifier, no verifier truth in agent image, candidate cannot modify verifier container. Final `/cheat` runs remain required empirically. |
-| `task_security` | PASS | No credential exfiltration, host escape, obfuscation, or unrelated destructive behavior. |
-| `functional_verification` | PASS | Verifier executes behavior; no candidate-source keyword/regex grading. |
-| `deterministic_reproducible` | PASS | Exact current tree passed deterministic qualification; dependencies/tooling are pinned/baked and no task-relevant live service is required. |
-| `essential_difficulty` | PASS | Difficulty is concurrency/recovery/reclamation reasoning, not formatting minutiae. |
-| `test_instruction_alignment` | PASS WITH REVIEW COMPLEXITY | Tested concurrency/crash requirements map to explicit contract invariants; the surface is large but deliberate. |
-| `novel` | PASS | Custom composition of multiple state machines, not a standard textbook exercise. |
-| `agentic` | PASS | Requires repository exploration, multi-file implementation, process coordination, debugging, and repeated execution. |
-| `reviewable` | PASS | Reviewer README, task metadata, reference implementation, deterministic schedules, and contract-coverage records expose rationale and behavior. |
-| `instruction_concision` | MODERATE RISK | Long contract, but most prose defines observable semantics directly exercised by tests. |
-| `difficulty_explanation_quality` | PASS | Names optimistic transaction conflict/merge/recovery crux, professional analogue, and synthetic fixture provenance. |
-| `solution_explanation_quality` | PASS | Summarizes one valid private-evaluation/short-commit implementation without making it normative. |
-| `verification_explanation_quality` | PASS | Describes behavioral schedules, crash boundaries, and mutation negative controls. |
-| `category_and_tags` | PASS | `Software / Systems` with specific concurrency/transactions/build-system tags. |
-| `task_name` | PASS | `build-snapshot-publish` is descriptive kebab-case. |
-| `resource_configuration` | PASS | Within current TB3 8h cap; task difficulty is reasoning rather than compute. |
-| `task_readme` | PASS SOURCE-LEVEL | Required README now contains concise reviewer context and avoids duplicating the full contract/reference. |
-| `expert_time_estimate` | PASS SOURCE-LEVEL | 3.5h best-case prepared-expert estimate. |
-| `task_toml_schema` | PASS | Static checks passed recognized fields/schema. |
-| `no_extraneous_files` | PASS | Task-local files are used or statically required reviewer documentation. |
-| `artifact_efficiency` | PASS | Only the necessary agent artifact surface crosses to the separate verifier. |
-| `verifier_execution_isolation` | PASS | Separate verifier and explicit process cleanup. |
-| `binary_reward` | PASS | Reward is binary verifier completion. |
-| critical identifier/typo checks | PASS SOURCE-LEVEL | Current static checks and manual audit found no unresolved naming/path inconsistencies. |
+| `verifiable` | LIKELY PASS | Deterministic hooks, exact programmatic assertions, pinned verifier deps, no runtime verifier network installs. Final exact-tree repeated qualification still required. |
+| `solvable` | BORDERLINE → LIKELY PASS | Full reference exists. Scope is substantial, but starter is nonblank and 4h is a best-case expert-known-solution estimate. This remains the main subjective risk. |
+| `difficult` | PASS CALIBRATION | Predecessor with same runtime challenge produced a clean Sol/xhigh reward-0 with 45/66 tests passing and 21 failing. Final-tree trial still required for submission evidence. |
+| `interesting` | PASS | Build/release consistency, idempotency, crash recovery, and reclamation are professional systems problems. |
+| `outcome_verified` | LIKELY PASS | Transaction choreography/marker requirement removed; remaining schemas are small durable artifacts needed for externally auditable GC/history behavior. |
+| `anti_cheat_robustness` | LIKELY PASS | Separate verifier, no tests/solution in agent image, candidate runs unprivileged during verification. Empirical `/cheat` remains required. |
+| `task_security` | PASS | No credential access, network exfiltration, host escape, obfuscation, or unrelated destructive behavior. |
+| `functional_verification` | PASS | Candidate code is executed; tests do not grade source keywords or implementation patterns. |
+| `deterministic_reproducible` | BORDERLINE → LIKELY PASS | Dependencies are pinned and most concurrency uses deterministic handshakes. A few bounded fixed-delay assertions remain a reviewer risk but are not the core synchronization mechanism. |
+| `essential_difficulty` | PASS | Failures require concurrency/recovery/GC reasoning, not clerical output formatting. |
+| `test_instruction_alignment` | LIKELY PASS | Previously hidden `request_report`, record schema, selector, and transaction-marker assumptions have been removed or documented. |
+| `structured_data_schema` | LIKELY PASS | Reports/plans and the directly inspected committed-generation schemas are explicitly normative; extension fields are stated where allowed. |
+| `novel` | PASS | Custom composition of build cache, exactly-once, consistent-cut, optimistic transaction, and GC protocols. |
+| `agentic` | PASS | Requires multi-file exploration, implementation, process/concurrency debugging, and repeated execution. |
+| `reviewable` | BORDERLINE → LIKELY PASS | Test suite is large, but metadata and `results/contract-coverage.md` provide requirement-to-test traceability and representation-neutrality history. |
+| `instruction_concision` | BORDERLINE | Contract is still long because eight public interfaces and several crash/concurrency invariants are normative. It is substantially shorter and no longer procedural, but length remains subjective. |
+| `difficulty_explanation_quality` | PASS | States systems crux, professional role, and synthetic-fixture provenance without model pass-rate claims. |
+| `solution_explanation_quality` | PASS | Describes a high-level witness consistent with separate solution source files rather than a step-by-step required algorithm. |
+| `verification_explanation_quality` | PASS | Explains execution schedules, crash/replay/GC checks, and mutation negative controls. |
+| `category_and_tags` | PASS | `Software / Systems` with specific systems tags. |
+| `task_name` | PASS | `build-snapshot-publish` is descriptive kebab-case and three tokens. |
+| `resource_configuration` | PASS | 4h agent timeout / 15m verifier timeout; ordinary CPU/memory/storage limits. Difficulty is reasoning rather than computation. |
+| `task_readme` | LIKELY PASS GIVEN STATIC CONSTRAINT | Live static check requires a README and four headings. Current content is short reviewer-maintenance context rather than a duplicate full specification. |
+| `expert_time_estimate` | BORDERLINE → LIKELY PASS | Nonzero 4.0h best-case expert estimate; final reviewer may still judge scope high. |
+| `task_toml_schema` | LIKELY PASS | Uses recognized metadata/verifier/agent/environment fields only. |
+| `no_extraneous_files` | LIKELY PASS | Task-local files are build/runtime/solution/test scaffolding or statically required reviewer documentation. |
+| `artifact_efficiency` | PASS | Artifact is the small agent-edited `/app/buildsys/` deliverable, not a dependency/build tree. |
+| `separate_verifier_configured` | PASS SOURCE-LEVEL | `/app/buildsys/` is declared as artifact; verifier tooling is baked into `tests/Dockerfile`. |
+| `environment_hygiene` | PASS | Agent image contains starter/project only; verifier image owns test dependencies. |
+| `verifier_execution_isolation` | LIKELY PASS | Concrete inherited-pipe deadlock paths were removed and async process cleanup was strengthened. Exact-tree tests remain the operational check. |
+| binary reward / identifiers / typos | LIKELY PASS | Binary pytest reward; current static checks are the final source of truth. |
 
-## Representation-neutrality audit
+## README/static-check tension
 
-Two verifier assumptions discovered during development were corrected rather than counted as model failures:
+The live rubric describes a task README as optional and says it should not duplicate other task content. Separately, the pinned static checker requires `README.md` plus exactly these headings: `Difficulty explanation`, `Solution explanation`, `Verification explanation`, and `Relevant experience`. The task therefore retains a minimal README whose content is limited to reviewer/maintenance context not otherwise needed by the agent.
 
-- transaction-private project history is no longer mistaken for ordinary project current;
-- workspace transaction tests no longer require an uppercase `.workspace-cache/CURRENT` selector.
+## Remaining gates
 
-Current selection is resolved using documented generation metadata. Request-journal paths, selector filenames, lock filenames, lease representation, and staging layout are not prescribed.
+The task is **not yet marked rubric-passed**. Before final submission:
 
-## Automated-rubric execution
+1. exact task tree must pass current static checks, full Oracle/reference tests, all 40 development mutants, and Harbor Oracle/NOP;
+2. the live implementation-rubric review must return zero failed criteria on that exact tree;
+3. the exact frozen tree must complete the required Sol and Opus standard matrices and current `/cheat` runs.
 
-The live TB3 review workflow uses **Harbor 0.18.0** specifically for implementation autoreview, even though `/run` and `/cheat` use Harbor 0.14.0. It runs an ephemeral review task against `docs/prompts/task-implementation.toml` with Claude Code/Sonnet and requires a complete per-criterion verdict set.
-
-`scripts/run-implementation-rubric-bedrock.sh` is the planned local equivalent for the zero-spend Bedrock route and records exact task-tree/upstream provenance.
-
-**Automated rubric status remains outstanding. Do not state that the implementation rubric passed until a valid review completes with zero failed criteria.**
-
-## Deadline decision rule
-
-1. Preserve the qualified `fc064cac...` task tree while frontier calibration is running.
-2. If the same-tree Sol probe returns a valid reward 0 from a real candidate implementation error under the clear contract, freeze immediately.
-3. If it returns a clean solve, allow at most one targeted semantic strengthening before another full qualification cycle.
-4. Do not alter task files for cosmetic rubric concerns while valid frontier evidence is being collected.
-5. Run the automated implementation-rubric review on the frozen exact tree before final submission.
+Current source-level judgment: **BORDERLINE → LIKELY PASS**, with `instruction_concision` and best-case expert scope the main subjective risks rather than known hidden verifier requirements.
