@@ -77,6 +77,6 @@ target=1
 status=CHEAT_MATRIX_COMPLETE
 ```
 
-The Harbor result contained `NonZeroAgentExitCodeError`, but the pinned adversarial workflow is evaluated by reward rather than by the standard-run validity rule. The exact-tree collector recorded the entry as reward `0`, with correct agent/model/reasoning and Terminal-Bench provenance, and no nonzero, unparsed, incomplete, or wrong-provenance entries. Therefore the controllable Codex `/cheat` requirement is complete.
+The Harbor result contained `NonZeroAgentExitCodeError`, but the pinned adversarial workflow is evaluated by reward rather than by the standard-run validity rule. The exact-tree collector recorded the entry as reward `0`, with correct agent/model/reasoning and Terminal-Bench provenance, and no nonzero, unparsed, incomplete, or wrong-provenance entries. Therefore the Codex `/cheat` requirement is complete.
 
 No historical adversarial attempt counts toward this result. The Claude adversarial requirement remains incomplete solely because Claude access was unavailable.
