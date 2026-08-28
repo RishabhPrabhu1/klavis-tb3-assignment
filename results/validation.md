@@ -17,7 +17,7 @@ static checks:                         PASS
 Oracle/reference:                      68/68
 Harbor 0.14 Oracle:                    1.000
 Harbor 0.14 NOP:                       0.000
-frontier calls during qualification:   0
+model calls during qualification:      0
 ```
 
 Machine-readable status is in `results/preflight-status.json`.
@@ -50,7 +50,7 @@ Source-level review found and corrected the concrete hidden-schema and verifier-
 
 No automated rubric PASS is claimed. `results/implementation-rubric-review.md` documents the source-level assessment and the missing provider-dependent check.
 
-## Frontier evidence policy
+## Evaluation evidence policy
 
 Standard `/run` evidence counts only when all of the following are established from authoritative Harbor output:
 
