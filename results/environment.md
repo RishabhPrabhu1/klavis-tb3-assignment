@@ -60,6 +60,17 @@ Live `.github/harbor-run-defaults.yml` currently specifies:
 
 The standard `/run` workflow expands `trials: 3` into a `(task × agent × trial)` matrix. The live `/cheat` workflow has no trial dimension; it runs one `(task × agent)` entry per configured agent. Therefore the required final model evidence target is **8 runs total**: 3 Codex standard + 3 Claude standard + 1 Codex cheat + 1 Claude cheat.
 
+## Provider availability in the submission environment
+
+| Provider route | Availability | Submission consequence |
+|---|---|---|
+| Codex subscription authentication | **Available** | Codex standard and `/cheat` evidence can be collected. |
+| Claude Code subscription / setup-token route | **Unavailable** | Claude Code standard trials and Claude-driven rubric cannot run. |
+| Anthropic API route | **Unavailable for this submission** | Cannot substitute API-backed Claude execution. |
+| Amazon Bedrock Claude route | **Unavailable for this submission** | Cannot substitute Bedrock-backed Claude execution. |
+
+The missing Claude-dependent results are an explicit provider-access limitation. They are not counted as model failures or treated as passing evidence. The repository keeps the required rows visible and the final submission note will disclose that the automated implementation rubric, three Claude standard trials, and Claude `/cheat` entry were not executed.
+
 ## Live `/cheat` acceptance behavior
 
 At upstream revision `79e71650...`, the adversarial workflow is reward-based:
@@ -108,16 +119,16 @@ artifact: /app/verdicts.json
 
 The current rubric includes criteria such as verifiability, solvability, difficulty, realism/interest, outcome-based verification, anti-cheat robustness, task security, functional verification, reproducibility, essential difficulty, test/instruction alignment, novelty, agentic behavior, reviewability, and instruction concision.
 
-Repository source-level review has already corrected the concrete hidden-representation and verifier-isolation defects found during iteration, but that self-audit is **not** a substitute for the automated exact-tree review. A same-tree automated rubric PASS remains the next pre-frontier gate.
+Repository source-level review has already corrected the concrete hidden-representation and verifier-isolation defects found during iteration, but that self-audit is **not** a substitute for the automated exact-tree review. Because Claude access is unavailable, the automated rubric is marked **NOT RUN** rather than PASS.
 
-Prepared exact-tree routes:
+Prepared exact-tree routes remain in the repository for reproducibility:
 
 ```text
 scripts/run-implementation-rubric-oauth.sh
 scripts/run-implementation-rubric-bedrock.sh
 ```
 
-OAuth is the preferred Klavis subscription route when a valid Claude Code setup token is available. Bedrock is an alternative only when the runtime has valid Bedrock credentials/entitlement and the user has separately confirmed acceptable cost coverage. No provider-access assumption is encoded as a task fact.
+Neither route was usable in the current submission environment. No provider-access assumption is encoded into the task contract itself.
 
 ## Static/verifier properties relevant to this task
 
@@ -133,7 +144,7 @@ OAuth is the preferred Klavis subscription route when a valid Claude Code setup 
 
 ## Repository delivery state
 
-The repository default branch now contains the frozen task tree and current submission documentation. A read-only GitHub `Submission Consistency` workflow checks:
+The repository default branch contains the frozen task tree and current submission documentation. A read-only GitHub `Submission Consistency` workflow checks:
 
 - frozen task-tree identity and cleanliness;
 - `results/preflight-status.json` consistency;
@@ -142,7 +153,7 @@ The repository default branch now contains the frozen task tree and current subm
 - authoritative shell-script syntax;
 - absence of obsolete calibration-tree pins in authoritative launch paths.
 
-The first run of that workflow after promotion to `main` completed successfully.
+The workflow is rerun after reviewer-facing documentation updates; the task subtree remains frozen.
 
 ## Final freshness rule
 
@@ -155,4 +166,6 @@ Immediately before final submission, re-fetch and compare:
 - `.github/workflows/review.yml`;
 - `docs/prompts/task-implementation.toml`.
 
-Any changed model identity, trial count, Harbor behavior, backend behavior, timeout rule, or rubric requirement supersedes this snapshot. After all final model evidence is recorded, `bash scripts/final-submission-audit.sh` must report `FINAL_STATUS=READY_FOR_SUBMISSION` before the repository is sent.
+Any changed model identity, trial count, Harbor behavior, backend behavior, timeout rule, or rubric requirement supersedes this snapshot.
+
+`bash scripts/final-submission-audit.sh` remains intentionally strict. With Claude-dependent requirements unexecuted, it must not report full TB3 readiness even after all controllable Codex evidence is complete; the submission should preserve and disclose that partial status.
