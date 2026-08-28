@@ -1,321 +1,55 @@
-name: Qualification Preflight
+name: Submission Consistency
 
 on:
   push:
     branches: [main]
-    paths:
-      - "tasks/build-snapshot-publish/**"
-      - "scripts/run-static-checks.sh"
-      - "scripts/run-local-reference-tests.sh"
-      - "scripts/run-mutation-checks.sh"
-      - "scripts/run-lifecycle-mutation-checks.sh"
-      - "scripts/run-request-mutation-checks.sh"
-      - ".github/workflows/preflight.yml"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: qualification-${{ github.ref }}
+  group: submission-consistency-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  preflight:
+  repository-consistency:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    outputs:
-      detail: ${{ steps.preflight_summary.outputs.detail }}
-      mutation_detail: ${{ steps.mutations.outputs.detail }}
+    timeout-minutes: 10
     steps:
-      - id: checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - id: setup_python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - id: tooling
-        name: Install verifier test tooling
+      - name: Verify frozen task and reviewer-facing evidence
+        run: python3 scripts/submission-consistency-audit.py
+
+      - name: Compile Python submission tooling
         run: |
-          python -m venv /tmp/tb3-preflight-venv
-          /tmp/tb3-preflight-venv/bin/python -m pip install --disable-pip-version-check \
-            pytest==9.1.1 pytest-json-ctrf==0.5.2
-          chmod -R a+rX /tmp/tb3-preflight-venv
+          python3 -m py_compile \
+            scripts/audit-trial-evidence.py \
+            scripts/submission-consistency-audit.py
 
-      - id: tb3_checkout
-        name: Checkout live Terminal-Bench static checks
+      - name: Parse authoritative shell entry points
         run: |
-          git clone --depth 1 --filter=blob:none --sparse \
-            https://github.com/harbor-framework/terminal-bench.git /tmp/terminal-bench
-          git -C /tmp/terminal-bench sparse-checkout set scripts/checks
-          echo "TB3_HEAD=$(git -C /tmp/terminal-bench rev-parse HEAD)"
+          bash -n scripts/run-final-tree-deadline-qualification.sh
+          bash -n scripts/run-next-qualification-step.sh
+          bash -n scripts/run-next-frontier-step.sh
+          bash -n scripts/run-fast-frontier-cycle.sh
+          bash -n scripts/resume-deadline-cycle.sh
+          bash -n scripts/resume-macos-deadline-cycle.sh
+          bash -n scripts/run-one-qualified-sol-probe.sh
+          bash -n scripts/run-deadline-sol-matrix.sh
+          bash -n scripts/run-deadline-cheat-matrix.sh
+          bash -n scripts/run-deadline-claude-pipeline.sh
+          bash -n scripts/final-submission-audit.sh
 
-      - id: static
-        name: Run live static checks
-        run: TB3_REPO=/tmp/terminal-bench ./scripts/run-static-checks.sh
+      - name: Confirm task subtree was not modified by checks
+        run: test -z "$(git status --porcelain -- tasks/build-snapshot-publish)"
 
-      - id: oracle
-        name: Run oracle regression as verifier root
-        run: sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-local-reference-tests.sh
-
-      - id: determinism
-        name: Stress oracle/verifier determinism
-        run: |
-          set -euo pipefail
-          for iteration in 1 2 3; do
-            echo "oracle stress iteration ${iteration}/3"
-            sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python ./scripts/run-local-reference-tests.sh
-          done
-
-      - id: mutations
-        name: Run mutation matrices as verifier root
-        shell: bash
-        run: |
-          set -uo pipefail
-
-          set +e
-          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
-            bash ./scripts/run-mutation-checks.sh 2>&1 | tee /tmp/core-mutations.log
-          core_status=${PIPESTATUS[0]}
-
-          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
-            bash ./scripts/run-lifecycle-mutation-checks.sh 2>&1 | tee /tmp/lifecycle-mutations.log
-          lifecycle_status=${PIPESTATUS[0]}
-
-          sudo env TEST_PYTHON=/tmp/tb3-preflight-venv/bin/python \
-            bash ./scripts/run-request-mutation-checks.sh 2>&1 | tee /tmp/request-mutations.log
-          request_status=${PIPESTATUS[0]}
-          set -e
-
-          detail=$(
-            {
-              printf 'core_status=%s\n' "$core_status"
-              grep -E '^(PASS|FAIL):' /tmp/core-mutations.log || true
-              printf 'lifecycle_status=%s\n' "$lifecycle_status"
-              grep -E '^(PASS|FAIL):' /tmp/lifecycle-mutations.log || true
-              printf 'request_status=%s\n' "$request_status"
-              grep -E '^(PASS|FAIL):' /tmp/request-mutations.log || true
-            } | tr '\n' ';' | sed 's/;$//'
-          )
-          echo "detail=$detail" >> "$GITHUB_OUTPUT"
-          printf 'mutation detail: %s\n' "$detail"
-
-          if [[ $core_status -ne 0 || $lifecycle_status -ne 0 || $request_status -ne 0 ]]; then
-            exit 1
-          fi
-
-      - id: preflight_summary
-        name: Capture preflight phase outcomes
-        if: always()
-        env:
-          CHECKOUT: ${{ steps.checkout.outcome }}
-          SETUP_PYTHON: ${{ steps.setup_python.outcome }}
-          TOOLING: ${{ steps.tooling.outcome }}
-          TB3_CHECKOUT: ${{ steps.tb3_checkout.outcome }}
-          STATIC: ${{ steps.static.outcome }}
-          ORACLE: ${{ steps.oracle.outcome }}
-          DETERMINISM: ${{ steps.determinism.outcome }}
-          MUTATIONS: ${{ steps.mutations.outcome }}
-        run: |
-          echo "detail=checkout=$CHECKOUT,setup_python=$SETUP_PYTHON,tooling=$TOOLING,tb3_checkout=$TB3_CHECKOUT,static=$STATIC,oracle=$ORACLE,determinism=$DETERMINISM,mutations=$MUTATIONS" >> "$GITHUB_OUTPUT"
-
-  harbor-docker:
-    needs: preflight
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    outputs:
-      detail: ${{ steps.harbor_summary.outputs.detail }}
-    steps:
-      - id: checkout
-        uses: actions/checkout@v4
-
-      - id: setup_python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - id: setup_uv
-        uses: astral-sh/setup-uv@v4
-
-      - id: harbor018_install
-        name: Install live validation Harbor version
-        run: uv tool install harbor==0.18.0
-
-      - id: docker_build
-        name: Build task environment with Docker
-        run: docker build -t qualification-build-snapshot-publish tasks/build-snapshot-publish/environment
-
-      - id: oracle018
-        name: Harbor 0.18 Oracle must reward 1
-        shell: bash
-        run: |
-          set -euo pipefail
-          OUTPUT=$(harbor run \
-            -p tasks/build-snapshot-publish \
-            --agent oracle \
-            --env docker \
-            -o /tmp/harbor-output-018 \
-            --job-name qualification-oracle-018 2>&1)
-          printf '%s\n' "$OUTPUT"
-          REWARD=$(printf '%s\n' "$OUTPUT" | grep -oP 'Mean[:\s]+\K[0-9.]+' | tail -1 || true)
-          python - "$REWARD" <<'PY'
-          import sys
-          raw = sys.argv[1]
-          if not raw:
-              raise SystemExit("could not parse Oracle reward")
-          reward = float(raw)
-          if reward != 1.0:
-              raise SystemExit(f"Oracle reward must be exactly 1.0, got {reward}")
-          print(f"Oracle reward: {reward:.3f}")
-          PY
-
-      - id: nop018
-        name: Harbor 0.18 NOP must reward 0
-        shell: bash
-        run: |
-          set -euo pipefail
-          OUTPUT=$(harbor run \
-            -p tasks/build-snapshot-publish \
-            --agent nop \
-            --env docker \
-            -o /tmp/harbor-output-018 \
-            --job-name qualification-nop-018 2>&1)
-          printf '%s\n' "$OUTPUT"
-          REWARD=$(printf '%s\n' "$OUTPUT" | grep -oP 'Mean[:\s]+\K[0-9.]+' | tail -1 || true)
-          python - "$REWARD" <<'PY'
-          import sys
-          raw = sys.argv[1]
-          if not raw:
-              raise SystemExit("could not parse NOP reward")
-          reward = float(raw)
-          if reward != 0.0:
-              raise SystemExit(f"NOP reward must be exactly 0.0, got {reward}")
-          print(f"NOP reward: {reward:.3f}")
-          PY
-
-      - id: harbor014_install
-        name: Install live agent-trial Harbor version
-        run: uv tool install --force harbor==0.14.0
-
-      - id: oracle014
-        name: Harbor 0.14 Oracle must reward 1
-        shell: bash
-        run: |
-          set -euo pipefail
-          OUTPUT=$(harbor run \
-            -p tasks/build-snapshot-publish \
-            --agent oracle \
-            --env docker \
-            -o /tmp/harbor-output-014 \
-            --job-name qualification-oracle-014 2>&1)
-          printf '%s\n' "$OUTPUT"
-          REWARD=$(printf '%s\n' "$OUTPUT" | grep -oP 'Mean[:\s]+\K[0-9.]+' | tail -1 || true)
-          python - "$REWARD" <<'PY'
-          import sys
-          raw = sys.argv[1]
-          if not raw:
-              raise SystemExit("could not parse Oracle reward")
-          reward = float(raw)
-          if reward != 1.0:
-              raise SystemExit(f"Oracle reward must be exactly 1.0, got {reward}")
-          print(f"Oracle reward: {reward:.3f}")
-          PY
-
-      - id: nop014
-        name: Harbor 0.14 NOP must reward 0
-        shell: bash
-        run: |
-          set -euo pipefail
-          OUTPUT=$(harbor run \
-            -p tasks/build-snapshot-publish \
-            --agent nop \
-            --env docker \
-            -o /tmp/harbor-output-014 \
-            --job-name qualification-nop-014 2>&1)
-          printf '%s\n' "$OUTPUT"
-          REWARD=$(printf '%s\n' "$OUTPUT" | grep -oP 'Mean[:\s]+\K[0-9.]+' | tail -1 || true)
-          python - "$REWARD" <<'PY'
-          import sys
-          raw = sys.argv[1]
-          if not raw:
-              raise SystemExit("could not parse NOP reward")
-          reward = float(raw)
-          if reward != 0.0:
-              raise SystemExit(f"NOP reward must be exactly 0.0, got {reward}")
-          print(f"NOP reward: {reward:.3f}")
-          PY
-
-      - id: harbor_summary
-        name: Capture Harbor phase outcomes
-        if: always()
-        env:
-          CHECKOUT: ${{ steps.checkout.outcome }}
-          SETUP_PYTHON: ${{ steps.setup_python.outcome }}
-          SETUP_UV: ${{ steps.setup_uv.outcome }}
-          HARBOR018_INSTALL: ${{ steps.harbor018_install.outcome }}
-          DOCKER_BUILD: ${{ steps.docker_build.outcome }}
-          ORACLE018: ${{ steps.oracle018.outcome }}
-          NOP018: ${{ steps.nop018.outcome }}
-          HARBOR014_INSTALL: ${{ steps.harbor014_install.outcome }}
-          ORACLE014: ${{ steps.oracle014.outcome }}
-          NOP014: ${{ steps.nop014.outcome }}
-        run: |
-          echo "detail=checkout=$CHECKOUT,setup_python=$SETUP_PYTHON,setup_uv=$SETUP_UV,harbor018_install=$HARBOR018_INSTALL,docker_build=$DOCKER_BUILD,oracle018=$ORACLE018,nop018=$NOP018,harbor014_install=$HARBOR014_INSTALL,oracle014=$ORACLE014,nop014=$NOP014" >> "$GITHUB_OUTPUT"
-
-  record-status:
-    needs: [preflight, harbor-docker]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Record qualification outcome
-        env:
-          RUN_SHA: ${{ github.sha }}
-          PREFLIGHT_RESULT: ${{ needs.preflight.result }}
-          PREFLIGHT_DETAIL: ${{ needs.preflight.outputs.detail }}
-          MUTATION_DETAIL: ${{ needs.preflight.outputs.mutation_detail }}
-          HARBOR_RESULT: ${{ needs['harbor-docker'].result }}
-          HARBOR_DETAIL: ${{ needs['harbor-docker'].outputs.detail }}
-        run: |
-          set -euo pipefail
-          mkdir -p results
-          TASK_TREE=$(git rev-parse "${RUN_SHA}:tasks/build-snapshot-publish")
-          python - "$RUN_SHA" "$TASK_TREE" "$PREFLIGHT_RESULT" "$PREFLIGHT_DETAIL" "$MUTATION_DETAIL" "$HARBOR_RESULT" "$HARBOR_DETAIL" <<'PY'
-          import json
-          import sys
-          from pathlib import Path
-
-          run_sha, task_tree, preflight, preflight_detail, mutation_detail, harbor, harbor_detail = sys.argv[1:]
-          status = {
-              "workflow_commit": run_sha,
-              "task_tree": task_tree,
-              "preflight": preflight,
-              "preflight_detail": preflight_detail,
-              "mutation_detail": mutation_detail,
-              "harbor_docker": harbor,
-              "harbor_detail": harbor_detail,
-              "qualified": preflight == "success" and harbor == "success",
-          }
-          Path("results/preflight-status.json").write_text(
-              json.dumps(status, indent=2, sort_keys=True) + "\n",
-              encoding="utf-8",
-          )
-          print(json.dumps(status, indent=2, sort_keys=True))
-          PY
-
-      - name: Commit qualification outcome
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add results/preflight-status.json
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "Record qualification preflight status [skip ci]"
-          git push origin HEAD:main
+# Deterministic task qualification is intentionally not regenerated by this
+# workflow. The frozen-tree static/reference/mutation/Harbor evidence is recorded
+# separately and model calls are local, guarded, exact-tree runs. This workflow
+# must never rewrite evidence files or create bot commits on the submission branch.
