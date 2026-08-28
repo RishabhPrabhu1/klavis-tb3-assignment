@@ -13,24 +13,24 @@ This is the only task tree eligible for final Klavis model evidence.
 Recorded exact-tree qualification:
 
 ```text
-static checks:       PASS
-Oracle/reference:    68/68
-Harbor 0.14 Oracle:  1.000
-Harbor 0.14 NOP:     0.000
-frontier calls:      0
+static checks:                         PASS
+Oracle/reference:                      68/68
+Harbor 0.14 Oracle:                    1.000
+Harbor 0.14 NOP:                       0.000
+frontier calls during qualification:   0
 ```
 
 Machine-readable status is in `results/preflight-status.json`.
 
-The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejected all 40/40 development mutation controls. The frozen successor differs only in `tasks/build-snapshot-publish/tests/conftest.py`, where verifier teardown/reaping was hardened. Because this delta does not alter the instruction, starter, reference behavior, or graded contract, the frozen successor reran current-tree static checks, the complete 68-test reference verifier, and exact-tree Harbor Oracle/NOP.
+The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejected all 40/40 development mutation controls. The frozen successor differs only in `tasks/build-snapshot-publish/tests/conftest.py`, where verifier teardown/process reaping was hardened. Because this delta does not alter the instruction, starter, reference behavior, or graded contract, the frozen successor reran current-tree static checks, the complete 68-test reference verifier, and exact-tree Harbor Oracle/NOP.
 
-For a fresh full exact-tree reproduction that reruns all mutation controls as well:
+A full exact-tree reproduction, including mutation controls, is available through:
 
 ```bash
 bash scripts/run-final-tree-deadline-qualification.sh
 ```
 
-## Verifier hardening history
+## Verifier hardening
 
 Earlier development trees were intentionally invalidated when review exposed hidden representation assumptions. None of those failures is counted as final model evidence. The current verifier no longer requires:
 
@@ -40,25 +40,26 @@ Earlier development trees were intentionally invalidated when review exposed hid
 - undocumented transaction metadata markers;
 - undocumented exact retry counts.
 
-Direct filesystem inspection is limited to the small generation/object schemas explicitly stated in `instruction.md`. Candidate execution is isolated from verifier truth and runs unprivileged.
+Direct filesystem inspection is limited to the generation/object schemas stated in `instruction.md`. Candidate execution is isolated from verifier truth and runs unprivileged.
 
-`results/contract-coverage.md` contains the requirement-to-test and representation-neutrality audit.
+`results/contract-coverage.md` contains the detailed requirement-to-test and representation-neutrality audit.
 
-## Implementation-rubric gate — OUTSTANDING
+## Automated implementation rubric — OUTSTANDING
 
-Source-level review has no known concrete hidden-schema or verifier-isolation blocker remaining. The automated current Terminal-Bench implementation-rubric result is still required on the exact frozen tree and must return zero failed criteria before frontier calls begin.
+Source-level review found and corrected the concrete hidden-schema and verifier-isolation defects identified during development. The automated current Terminal-Bench implementation-rubric result is nevertheless a separate required check and is **not claimed as passed** until a same-tree reviewer result records zero failed criteria.
 
-The repository provides exact-tree OAuth and Bedrock rubric runners. `scripts/run-next-frontier-step.sh` refuses to launch Codex unless a same-tree automated rubric PASS exists.
+Prepared OAuth and Bedrock runners are documented in `results/implementation-rubric-review.md`.
 
-## Frontier validity policy
+## Frontier evidence policy
 
-Standard `/run` evidence counts only when:
+Standard `/run` evidence counts only when all of the following are established from authoritative Harbor output:
 
 ```text
 execution_class = valid-completed-trial
 qualification_valid = true
 result_exception_types = []
 reward = 0
+verifier completed normally
 ```
 
 Provider/auth/quota failures, model unavailability, Docker/Harbor failures, verifier execution failures, timeouts, and other infrastructure errors do not count as model failures.
@@ -68,34 +69,24 @@ Adversarial `/cheat` follows the pinned live workflow's reward acceptance rule: 
 ## Current frontier status
 
 ```text
-Codex / Sol xhigh standard:       0/3
-Claude Code / Opus 5 max standard: 0/3
-Codex /cheat:                     0/1
-Claude /cheat:                    0/1
+Codex / Sol xhigh standard:         collection in progress; 0/3 counted until audited
+Claude Code / Opus 5 max standard: 0/3 counted
+Codex /cheat:                       0/1 counted
+Claude /cheat:                      0/1 counted
 ```
 
-No final-tree frontier model call has been counted yet.
+An invocation is not entered as evidence merely because it was launched. Each standard run is audited after completion before it can count.
 
-## Current gate order
-
-1. **DONE** — frozen exact-tree deterministic qualification (`68/68`, Harbor `1/0`, zero frontier calls).
-2. **NEXT** — automated implementation-rubric PASS on `d862ab3...`.
-3. One guarded Sol/xhigh standard probe on the exact tree.
-4. Inspect the result: genuine candidate reward-0 failure → freeze; solve → requirement not met; spec/verifier/infrastructure failure → do not count.
-5. Complete the three valid Codex standard failures if the first probe is legitimate.
-6. Complete one Codex `/cheat` reward-0 run.
-7. Complete three valid Claude Opus 5/max standard failures.
-8. Complete one Claude `/cheat` reward-0 run.
-9. Update evidence ledgers and failure analysis with exact paths/results.
-10. Run `bash scripts/final-submission-audit.sh` and require `FINAL_STATUS=READY_FOR_SUBMISSION`.
-11. Verify the default GitHub branch exposes this exact task tree and current documentation before sending the repository URL.
+Claude-dependent evaluation, including the automated implementation-rubric run, remains outstanding pending usable Claude access. If that access is unavailable at delivery time, those gaps are disclosed explicitly rather than represented as passed.
 
 ## Pinned evaluation snapshot
 
-The local workflow currently pins Terminal-Bench revision:
+The local workflow pins Terminal-Bench revision:
 
 ```text
 79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
 ```
 
-Immediately before final frontier execution/submission, recheck current Terminal-Bench defaults and rubric. If required models, trial counts, Harbor behavior, timeout policy, or rubric criteria changed upstream, the current source of truth supersedes this snapshot.
+At that snapshot, the required matrix is three Codex/Sol `xhigh` standard failures, three Claude Code/Opus 5 `max` standard failures, and one reward-0 `/cheat` entry for each agent.
+
+The current Terminal-Bench defaults and rubric should be rechecked immediately before final delivery; any upstream change to required model identity, trial count, Harbor behavior, timeout rules, or rubric requirements supersedes this pinned snapshot.
