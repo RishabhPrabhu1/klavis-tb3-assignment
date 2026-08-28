@@ -1,4 +1,4 @@
-# TB3 Environment and Assignment Snapshot
+# Evaluation Environment
 
 Reverified against live `harbor-framework/terminal-bench` on 2026-08-27 immediately before final evaluation.
 
@@ -16,13 +16,13 @@ The Klavis deliverable is a standalone GitHub repository; an upstream Terminal-B
 task tree: d862ab3cc79718e959e9cc7ec1b792540990a24d
 ```
 
-Recorded zero-frontier qualification on this tree:
+Recorded deterministic qualification on this tree:
 
 ```text
 static checks:       PASS
 Oracle/reference:    68/68
 Harbor Oracle/NOP:   1/0
-frontier calls:      0
+model calls:         0
 ```
 
 The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejected all 40/40 development mutation controls. The frozen successor differs only in verifier teardown/reaping hygiene in `tests/conftest.py` and reran current-tree static checks, the complete 68-test reference verifier, and exact-tree Harbor Oracle/NOP.
@@ -60,7 +60,7 @@ Live `.github/harbor-run-defaults.yml` currently specifies:
 
 The standard `/run` workflow expands `trials: 3` into a `(task × agent × trial)` matrix. The live `/cheat` workflow has no trial dimension; it runs one `(task × agent)` entry per configured agent. Therefore the required final model evidence target is **8 runs total**: 3 Codex standard + 3 Claude standard + 1 Codex cheat + 1 Claude cheat.
 
-## Provider availability in the submission environment
+## Provider availability
 
 | Provider route | Availability | Submission consequence |
 |---|---|---|
@@ -69,7 +69,7 @@ The standard `/run` workflow expands `trials: 3` into a `(task × agent × trial
 | Anthropic API route | **Unavailable for this submission** | Cannot provide the required Claude execution. |
 | Amazon Bedrock Claude route | **Unavailable for this submission** | Cannot provide the required Claude execution. |
 
-The missing Claude-dependent results are an explicit provider-access limitation. They are not counted as model failures or treated as passing evidence. The repository keeps the required rows visible and the final submission note will disclose that the automated implementation rubric, three Claude standard trials, and Claude `/cheat` entry were not executed.
+The missing Claude-dependent results are an explicit provider-access limitation. They are not counted as model failures or treated as passing evidence. The repository therefore marks the automated implementation rubric, three Claude standard trials, and Claude `/cheat` entry as not run.
 
 ## Live `/cheat` acceptance behavior
 
@@ -150,7 +150,7 @@ The repository default branch contains the frozen task tree and current submissi
 - current reviewer-facing task hashes/counts;
 - Python audit-tool compilation;
 - retained shell-tool syntax;
-- absence of development-only orchestration and stale candidate pins.
+- repository hygiene and absence of local-development residue.
 
 The workflow is rerun after reviewer-facing documentation updates; the task subtree remains frozen.
 
@@ -167,4 +167,4 @@ Immediately before final submission, re-fetch and compare:
 
 Any changed model identity, trial count, Harbor behavior, backend behavior, timeout rule, or rubric requirement supersedes this snapshot.
 
-`bash scripts/final-submission-audit.sh` remains intentionally strict. With Claude-dependent requirements unexecuted, it must not report full TB3 readiness even after all controllable Codex evidence is complete; the submission should preserve and disclose that partial status.
+`bash scripts/final-submission-audit.sh` remains intentionally strict. With Claude-dependent requirements unexecuted, it must not report full TB3 readiness even after all controllable Codex evidence is complete; the submission preserves and discloses that partial status.
