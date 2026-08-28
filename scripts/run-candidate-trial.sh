@@ -12,7 +12,6 @@ EXPECTED_SHA=${EXPECTED_SHA:-}
 EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-}
 EXPECTED_TB3_HEAD=${EXPECTED_TB3_HEAD:-}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs"}
-CONFIRM_ZERO_COST_COVERAGE=${CONFIRM_ZERO_COST_COVERAGE:-0}
 
 fail() {
   echo "ERROR: $*" >&2
@@ -54,15 +53,14 @@ EXTRA_ARGS=()
 
 case "$AGENT" in
   codex)
-    [[ -f "$HOME/.codex/auth.json" ]] || fail "Codex subscription auth missing at ~/.codex/auth.json"
+    [[ -f "$HOME/.codex/auth.json" ]] || fail "Codex subscription authentication is missing at ~/.codex/auth.json"
     MODEL="openai/gpt-5.6-sol"
     REASONING="xhigh"
     AGENT_NAME="codex"
-    AUTH_KIND="ChatGPT Codex auth.json"
+    AUTH_KIND="Codex subscription auth.json"
     EXTRA_ARGS+=(--ae CODEX_FORCE_AUTH_JSON=1 --ak reasoning_effort=xhigh)
     ;;
   claude)
-    [[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Claude call blocked. Set CONFIRM_ZERO_COST_COVERAGE=1 only after confirming this auth/provider route creates zero out-of-pocket spend."
     MODEL="anthropic/claude-opus-5"
     REASONING="max"
     AGENT_NAME="claude-code"
@@ -87,10 +85,10 @@ case "$AGENT" in
         EXTRA_ARGS+=(--ae "AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN")
       fi
     elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-      AUTH_KIND="Anthropic Console API key"
+      AUTH_KIND="Anthropic API key"
       EXTRA_ARGS+=(--ae "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
     else
-      fail "Claude auth missing: set a confirmed zero-cost-covered Claude Code OAuth, Bedrock, or API credential"
+      fail "Claude authentication is missing: configure Claude Code OAuth, Anthropic API, or Bedrock credentials"
     fi
     ;;
 esac
