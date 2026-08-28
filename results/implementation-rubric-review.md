@@ -46,10 +46,10 @@ Read-only source review of earlier predecessors exposed concrete issues. They we
 |---|---|---|
 | Verifiable | Deterministic hooks, explicit observable schemas, separate verifier, and a reference witness are present. | Automated rubric review not executed. |
 | Solvable | A complete reference exists and starter scaffolding is nonblank. | The composed state-machine surface is large. |
-| Difficult | Historical qualified-tree calibration produced a clean Sol/xhigh reward-0 with broad failures. | Only exact final-tree trials count for submission evidence. |
+| Difficult | The frozen tree produced 3/3 valid Codex/Sol `xhigh` standard reward-0 failures. | Claude standard evidence was not run. |
 | Interesting / realistic | The task exercises build consistency, idempotency, crash recovery, optimistic transactions, readers, and reclamation. | Automated rubric judgment not available. |
 | Outcome verified | Previously identified representation assumptions were either removed or made contractual. | Remaining hidden assumptions would require external review to detect. |
-| Anti-cheat robustness | Verifier and reference state are separate from the agent environment; candidate execution is unprivileged. | Required empirical `/cheat` evidence remains separate. |
+| Anti-cheat robustness | Verifier and reference state are separate from the agent environment; candidate execution is unprivileged. | Codex `/cheat` completed at reward 0; Claude adversarial evidence was not run. |
 | Functional verification | Candidate code is executed and reward is behavior-based. | No automated rubric verdict available. |
 | Deterministic / reproducible | Dependencies are pinned and pause/failpoint schedules replace uncontrolled timing races. | Platform-specific behavior remains a general systems-test risk. |
 | Test/instruction alignment | Replay, schemas, current-state observation, duplicate ownership, and transaction outcomes are explicitly documented. | External rubric review remains the authoritative check. |
