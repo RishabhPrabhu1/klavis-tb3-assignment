@@ -75,7 +75,6 @@ The repository retains the OAuth runner required to reproduce that check if Clau
 ```bash
 EXPECTED_TASK_TREE=d862ab3cc79718e959e9cc7ec1b792540990a24d \
 EXPECTED_TB3_HEAD=79e71650f5b6a6ef5bb46a434c7c04d7d99a9480 \
-CONFIRM_ZERO_COST_COVERAGE=1 \
 bash scripts/run-implementation-rubric-oauth.sh
 ```
 
