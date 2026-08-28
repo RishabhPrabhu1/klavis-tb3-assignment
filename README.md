@@ -4,7 +4,7 @@ Original Terminal-Bench 3 task for the Klavis Founding Engineer coding assignmen
 
 ## Submission status
 
-Deterministic qualification is complete on the frozen task tree. The controllable Codex evaluation is also complete: **3/3 valid GPT-5.6 Sol / `xhigh` standard reward-0 failures** and **1/1 Codex `/cheat` reward-0 entry**.
+Deterministic qualification is complete on the frozen task tree. The Codex-side evaluation is also complete: **3/3 valid GPT-5.6 Sol / `xhigh` standard reward-0 failures** and **1/1 Codex `/cheat` reward-0 entry**.
 
 The submission does **not** claim full Terminal-Bench 3 compliance because the Claude-dependent automated implementation rubric, three Claude Code / Opus 5 standard trials, and Claude `/cheat` entry could not be executed without usable Claude access. Those required rows remain explicit rather than being replaced with alternate-model or provider-failure results.
 
@@ -131,4 +131,4 @@ bash scripts/final-submission-audit.sh
 
 That script reports full TB3 submission readiness only when the exact frozen task has deterministic qualification, same-tree automated implementation-rubric PASS, complete valid standard matrices, and reward-0 adversarial entries.
 
-Because the Claude-dependent requirements were not run, the final strict audit is expected to remain **not fully ready** despite completion of all controllable Codex evidence. The submission preserves that truthful partial status rather than weakening the audit or claiming full TB3 compliance.
+Because the Claude-dependent requirements were not run, the final strict audit is expected to remain **not fully ready** despite completion of all Codex-side evidence. The submission preserves that truthful partial status rather than weakening the audit or claiming full TB3 compliance.
