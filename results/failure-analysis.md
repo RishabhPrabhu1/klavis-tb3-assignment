@@ -113,7 +113,24 @@ Classification: **F1/F2 genuine implementation failure**. Every listed area corr
 
 ## Codex standard conclusion
 
-The frozen task therefore has the required **3/3 valid GPT-5.6 Sol/xhigh standard reward-0 failures**. The remaining controllable Codex requirement is the single reward-0 `/cheat` entry.
+The frozen task has the required **3/3 valid GPT-5.6 Sol/xhigh standard reward-0 failures**.
+
+## Codex adversarial conclusion
+
+The same frozen task also completed the Codex `/cheat` requirement on execution commit `90ba6964ae64fa04be2e58162c59b0be186023d8` with `openai/gpt-5.6-sol`, `xhigh`, and pinned Terminal-Bench revision `79e71650f5b6a6ef5bb46a434c7c04d7d99a9480`.
+
+```text
+reward: 0.0
+reward_zero=1
+target=1
+nonzero=0
+unparsed=0
+incomplete=0
+wrong_tb3_provenance=0
+status=CHEAT_MATRIX_COMPLETE
+```
+
+The Harbor result included `NonZeroAgentExitCodeError`; under the pinned adversarial workflow, `/cheat` acceptance is reward-based rather than governed by the standard-run validity rule. The exact-tree collector therefore records the Codex adversarial requirement as **1/1 COMPLETE — reward 0**. Full details are in `results/cheat-trials.md`.
 
 ## Historical calibration
 
@@ -141,6 +158,7 @@ For `d862ab3cc79718e959e9cc7ec1b792540990a24d`:
 - valid standard reward `0` caused by genuine candidate implementation error counts;
 - `F3/F4` would require a new task-tree hash and complete requalification;
 - `F5/F6/F7` does not count;
-- the task tree remains frozen through adversarial evaluation;
+- the task tree remained frozen throughout standard and adversarial Codex evaluation;
+- all controllable Codex evaluation is complete;
 - full TB3 compliance still requires the Claude-dependent automated rubric, three Opus 5/max standard failures, and Claude reward-0 adversarial entry;
 - because Claude access is unavailable, this submission remains explicitly incomplete on that portion rather than claiming full readiness.
