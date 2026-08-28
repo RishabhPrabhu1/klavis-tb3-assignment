@@ -32,7 +32,7 @@ printf '\n[1/2] Deterministic qualification: static + 68-test reference verifier
 TB3_REPO="$TB3_REPO" EXPECTED_TASK_TREE="$TREE" \
   bash "$ROOT_DIR/scripts/run-deterministic-qualification.sh"
 
-printf '\n[2/2] Exact-tree Harbor 0.14 Docker Oracle/NOP; zero frontier calls\n'
+printf '\n[2/2] Exact-tree Harbor 0.14 Docker Oracle/NOP; zero model calls\n'
 mkdir -p "$RUNS_ROOT" "$QUAL_ROOT"
 EXPECTED_TASK_TREE="$TREE" PREFLIGHT_ONLY=1 RUNS_ROOT="$RUNS_ROOT" \
   bash "$ROOT_DIR/scripts/run-harbor-preflight.sh"
@@ -97,7 +97,7 @@ printf 'oracle_reference=68/68\n'
 printf 'mutants=40/40_rejected\n'
 printf 'harbor_oracle=1\n'
 printf 'harbor_nop=0\n'
-printf 'frontier_calls=0\n'
+printf 'model_calls=0\n'
 printf 'qualification_marker=%s\n' "$MARKER"
 printf 'status=PASS\n'
 printf '=== END QUALIFICATION REPORT ===\n'
