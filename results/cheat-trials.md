@@ -21,50 +21,62 @@ Pinned Terminal-Bench revision:
 d862ab3cc79718e959e9cc7ec1b792540990a24d
 ```
 
-The frozen task is deterministically qualified (`68/68`, Harbor Oracle/NOP `1/0`). Deterministic qualification itself made zero frontier-model calls. Codex standard trial 1 has been audited and counted as a genuine exact-tree reward-0 failure; the remaining Codex standard trials are still being collected. No exact-tree `/cheat` result has yet been counted.
-
-The automated implementation-rubric PASS remains outstanding and is not claimed here.
+The frozen task is deterministically qualified (`68/68`, Harbor Oracle/NOP `1/0`) and the Codex standard matrix is complete at `3/3` valid reward-0 failures.
 
 ## Claude access limitation
 
-The Claude adversarial entry is required by the current TB3 matrix, but it is **not being run for this submission** because the submission environment has no Claude Code subscription and no usable Anthropic API or Bedrock route. This missing entry remains explicitly visible below and is not replaced by an alternate model, authentication error, or inferred reward.
+The Claude adversarial entry is required by the current TB3 matrix, but it was **not run for this submission** because the submission environment has no Claude Code subscription and no usable Anthropic API or Bedrock route. This missing entry remains explicit and is not replaced by an alternate model, authentication failure, or inferred result.
 
-## Live `/cheat` reward semantics
+## `/cheat` acceptance semantics
 
-The pinned workflow is reward-based. At its acceptance boundary, a failed `harbor run` is recorded as adversarial reward `0`; otherwise the parsed reward is recorded. The Klavis requirement is that every required adversarial entry receive zero reward and that any nonzero reward fails the requirement.
+The pinned workflow is reward-based. At its acceptance boundary, every required task × agent entry must receive reward `0`; any nonzero reward fails the adversarial requirement. This differs intentionally from standard `/run`, where provider/auth/quota/container/timeout/agent exceptions cannot be counted as model failures.
 
-This intentionally differs from standard `/run`, where provider/auth/quota/container/timeout/agent exceptions invalidate the trial and cannot be counted as model failures.
-
-The live workflow has no trial dimension for `/cheat`; its remote-backend JobConfig also uses `n_attempts: 1`. Therefore one exact-tree entry per required agent is the current adversarial target.
-
-The repository's adversarial collector is `scripts/run-cheat-matrix.sh`. It requires:
-
-- the exact current task tree;
-- the same-tree qualification marker;
-- exact agent/model/reasoning identity;
-- exact pinned Terminal-Bench provenance;
-- zero nonzero rewards;
-- zero successful-but-unparsed rewards;
-- zero incomplete same-tree evidence.
+The live workflow has no trial dimension for `/cheat`; its remote-backend JobConfig also uses `n_attempts: 1`.
 
 ## Final matrix
 
 | Task tree | Agent | Required | Status |
 |---|---|---:|---|
-| `d862ab3...` | Codex / Sol xhigh | 1 reward-0 | pending after remaining Codex standards |
+| `d862ab3...` | Codex / Sol xhigh | 1 reward-0 | **COMPLETE — reward 0** |
 | `d862ab3...` | Claude Code / Opus 5 max | 1 reward-0 | **NOT RUN — Claude access unavailable** |
 
-No historical adversarial attempt counts toward either entry. Superseded adversarial runs and the reasoning for excluding them are documented in `results/failure-analysis.md`.
+## Codex adversarial result
 
-## Remaining adversarial work
-
-After the remaining Codex standard runs are completed and audited:
-
-```bash
-CONFIRM_FREEZE=1 AGENT=codex TARGET_CHEATS=1 \
-bash scripts/run-cheat-matrix.sh
+```text
+execution commit: 90ba6964ae64fa04be2e58162c59b0be186023d8
+task tree: d862ab3cc79718e959e9cc7ec1b792540990a24d
+agent/model: codex / openai/gpt-5.6-sol
+reasoning: xhigh
+environment: docker
+Harbor: 0.14.0
+Terminal-Bench HEAD: 79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
+runtime: 1m50s
+Harbor exit status: 0
+reward: 0.0
+result exception: NonZeroAgentExitCodeError
+verifier: 6 passed / 62 failed / 0 skipped
 ```
 
-The Claude adversarial requirement will remain incomplete in the submitted matrix unless genuine Claude access becomes available. No non-Claude evidence will be used to fill it.
+Evidence directory:
 
-Any nonzero Codex adversarial reward blocks the controllable Codex-side adversarial result. Exact evidence directory, execution commit, Harbor status, result provenance, and reward will be recorded here after the Codex `/cheat` run.
+```text
+~/.cache/klavis-tb3-runs/transaction-cheat-final/20260828T031436Z-92630-cheat-codex-90ba6964ae64
+```
+
+Collector summary:
+
+```text
+runner_status=0
+reward_zero_now=1/1
+nonzero_now=0
+unparsed_now=0
+incomplete_now=0
+wrong_tb3_provenance_now=0
+reward_zero=1
+target=1
+status=CHEAT_MATRIX_COMPLETE
+```
+
+The Harbor result contained `NonZeroAgentExitCodeError`, but the pinned adversarial workflow is evaluated by reward rather than by the standard-run validity rule. The exact-tree collector recorded the entry as reward `0`, with correct agent/model/reasoning and Terminal-Bench provenance, and no nonzero, unparsed, incomplete, or wrong-provenance entries. Therefore the controllable Codex `/cheat` requirement is complete.
+
+No historical adversarial attempt counts toward this result. The Claude adversarial requirement remains incomplete solely because Claude access was unavailable.
