@@ -148,18 +148,32 @@ vals={}
 for line in path.read_text(encoding="utf-8").splitlines():
     if "=" in line:
         k,v=line.split("=",1); vals[k.strip()]=v.strip()
-# These are the exact-tree submission gates. Development mutation counts are
-# useful negative-control evidence but are not a live TB3 qualification field.
 expected={
     "task_tree":tree,
     "terminal_bench_head":tb3,
     "static_checks":"PASS",
-    "oracle_tests":"66",
     "harbor_oracle":"1",
     "harbor_nop":"0",
     "sol_calls":"0",
 }
 wrong={k:(vals.get(k),v) for k,v in expected.items() if vals.get(k)!=v}
+try:
+    oracle_tests=int(vals.get("oracle_tests", "0"))
+except ValueError:
+    oracle_tests=0
+if oracle_tests < 68:
+    wrong["oracle_tests"]=(vals.get("oracle_tests"), ">=68")
+# The frozen successor uses an exact-tree static/reference/Harbor rerun while
+# inheriting the 40/40 mutation negative controls from its fully-qualified
+# predecessor because the only task delta is verifier teardown hygiene.
+mode=vals.get("qualification_mode")
+if mode not in {"full-exact-tree", "successor-delta-exact-tree"}:
+    wrong["qualification_mode"]=(mode, "recognized exact-tree qualification mode")
+if mode == "successor-delta-exact-tree":
+    if vals.get("mutations_predecessor_status") != "40/40_rejected":
+        wrong["mutations_predecessor_status"]=(vals.get("mutations_predecessor_status"), "40/40_rejected")
+    if vals.get("successor_task_delta") != "tasks/build-snapshot-publish/tests/conftest.py":
+        wrong["successor_task_delta"]=(vals.get("successor_task_delta"), "tasks/build-snapshot-publish/tests/conftest.py")
 if wrong:
     print(f"qualification marker mismatch: {wrong}", file=sys.stderr)
     raise SystemExit(1)
