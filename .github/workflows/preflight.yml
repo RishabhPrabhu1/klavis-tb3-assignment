@@ -32,9 +32,12 @@ jobs:
             scripts/audit-trial-evidence.py \
             scripts/submission-consistency-audit.py
 
-      - name: Parse authoritative shell entry points
+      - name: Parse active shell execution paths
         run: |
+          bash -n scripts/run-candidate-trial.sh
+          bash -n scripts/run-codex-strong-test.sh
           bash -n scripts/run-final-tree-deadline-qualification.sh
+          bash -n scripts/run-fast-final-successor-qualification.sh
           bash -n scripts/run-next-qualification-step.sh
           bash -n scripts/run-next-frontier-step.sh
           bash -n scripts/run-fast-frontier-cycle.sh
@@ -42,9 +45,26 @@ jobs:
           bash -n scripts/resume-macos-deadline-cycle.sh
           bash -n scripts/run-one-qualified-sol-probe.sh
           bash -n scripts/run-deadline-sol-matrix.sh
+          bash -n scripts/run-parallel-final-matrix.sh
           bash -n scripts/run-deadline-cheat-matrix.sh
+          bash -n scripts/run-deadline-claude-matrix.sh
           bash -n scripts/run-deadline-claude-pipeline.sh
+          bash -n scripts/run-implementation-rubric-oauth.sh
+          bash -n scripts/run-implementation-rubric-bedrock.sh
+          bash -n scripts/smoke-test-claude-bedrock.sh
           bash -n scripts/final-submission-audit.sh
+
+      - name: Confirm obsolete launchers are absent
+        run: |
+          test ! -e scripts/adopt-qualified-tree.sh
+          test ! -e scripts/apply-deadline-rubric-cleanup.sh
+          test ! -e scripts/run-standard-diagnostic-safe.sh
+          test ! -e scripts/run-standard-trials.sh
+          test ! -e scripts/run-cheat-trials.sh
+          test ! -e scripts/run-cheat-trials-safe.sh
+          test ! -e scripts/run-codex-strong-test-safe.sh
+          test ! -e scripts/run-claude-bedrock-trial.sh
+          test ! -e scripts/run-deadline-claude-bedrock-matrix.sh
 
       - name: Confirm task subtree was not modified by checks
         run: test -z "$(git status --porcelain -- tasks/build-snapshot-publish)"
