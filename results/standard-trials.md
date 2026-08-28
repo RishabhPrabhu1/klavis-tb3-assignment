@@ -30,6 +30,12 @@ The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejec
 
 The automated implementation-rubric PASS remains outstanding and is not claimed here.
 
+## Provider availability for this submission
+
+Codex authentication is available and the required Codex matrix is being completed on the exact frozen tree.
+
+Claude-dependent execution is not available in the submission environment: there is no Claude Code subscription and no usable Anthropic API or Bedrock route. Accordingly, the three Claude Code / Opus 5 standard trials are **not being run for this submission**. They remain visible below because they are part of the required TB3 matrix; their absence is disclosed rather than replaced with a different model or counted provider failure.
+
 ## Final exact-tree matrix
 
 | Task tree | Agent | Model | Reasoning | Trial | Status |
@@ -37,9 +43,9 @@ The automated implementation-rubric PASS remains outstanding and is not claimed 
 | `d862ab3...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 | **COUNTED — valid reward 0** |
 | `d862ab3...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 2 | pending |
 | `d862ab3...` | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 3 | pending |
-| `d862ab3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | pending provider access |
-| `d862ab3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | pending provider access |
-| `d862ab3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | pending provider access |
+| `d862ab3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 1 | **NOT RUN — Claude access unavailable** |
+| `d862ab3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 2 | **NOT RUN — Claude access unavailable** |
+| `d862ab3...` | `claude-code` | `anthropic/claude-opus-5` | `max` | 3 | **NOT RUN — Claude access unavailable** |
 
 ### Codex standard trial 1
 
@@ -126,4 +132,6 @@ With trial 1 accepted, the remaining Codex standard runs can be collected with:
 CONFIRM_FREEZE=1 bash scripts/run-deadline-sol-matrix.sh
 ```
 
-Exact evidence directories, pass/fail counts, failed tests, execution commit, and classifications will be inserted after each completed run.
+The Claude rows will remain `NOT RUN` unless genuine Claude access becomes available; provider failures or alternate models will not be used to fill those slots.
+
+Exact evidence directories, pass/fail counts, failed tests, execution commit, and classifications will be inserted after each completed Codex run.
