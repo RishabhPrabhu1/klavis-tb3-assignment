@@ -21,9 +21,13 @@ Pinned Terminal-Bench revision:
 d862ab3cc79718e959e9cc7ec1b792540990a24d
 ```
 
-The frozen task is deterministically qualified (`68/68`, Harbor Oracle/NOP `1/0`). Deterministic qualification itself made zero frontier-model calls. An exact-tree Codex **standard** invocation is currently running, but no final model result has yet been counted. No `/cheat` invocation has yet been counted on the frozen tree.
+The frozen task is deterministically qualified (`68/68`, Harbor Oracle/NOP `1/0`). Deterministic qualification itself made zero frontier-model calls. Codex standard trial 1 has now been audited and counted as a genuine exact-tree reward-0 failure; the remaining Codex standard trials are still being collected. No exact-tree `/cheat` result has yet been counted.
 
 The automated implementation-rubric PASS remains outstanding and is not claimed here.
+
+## Claude access limitation
+
+The Claude adversarial entry is required by the current TB3 matrix, but it is **not being run for this submission** because the submission environment has no Claude Code subscription and no usable Anthropic API or Bedrock route. This missing entry remains explicitly visible below and is not replaced by an alternate model, authentication error, or inferred reward.
 
 ## Live `/cheat` reward semantics
 
@@ -47,8 +51,8 @@ The repository's authoritative adversarial collector is `scripts/run-deadline-ch
 
 | Task tree | Agent | Required | Status |
 |---|---|---:|---|
-| `d862ab3...` | Codex / Sol xhigh | 1 reward-0 | pending completion/audit of standard freeze decision |
-| `d862ab3...` | Claude Code / Opus 5 max | 1 reward-0 | pending provider access |
+| `d862ab3...` | Codex / Sol xhigh | 1 reward-0 | pending after remaining Codex standards |
+| `d862ab3...` | Claude Code / Opus 5 max | 1 reward-0 | **NOT RUN — Claude access unavailable** |
 
 No historical adversarial attempt counts toward either entry.
 
@@ -60,13 +64,13 @@ Those runs remain historical because their task trees differ from `d862ab3...`. 
 
 ## Remaining adversarial work
 
-After the Codex standard tree is accepted as frozen for the final matrix:
+After the remaining Codex standard runs are completed and audited:
 
 ```bash
 CONFIRM_FREEZE=1 AGENT=codex TARGET_CHEATS=1 \
 bash scripts/run-deadline-cheat-matrix.sh
 ```
 
-If Claude access becomes available, the required Claude adversarial entry uses the same frozen tree and pinned upstream workflow. If access remains unavailable at delivery, that missing entry must be disclosed rather than inferred.
+The Claude adversarial requirement will remain incomplete in the submitted matrix unless genuine Claude access becomes available. No non-Claude evidence will be used to fill it.
 
-Any nonzero adversarial reward blocks full submission readiness. Exact evidence directory, execution commit, Harbor status, result provenance, and reward will be recorded here after each final run.
+Any nonzero Codex adversarial reward blocks the controllable Codex-side adversarial result. Exact evidence directory, execution commit, Harbor status, result provenance, and reward will be recorded here after the Codex `/cheat` run.
