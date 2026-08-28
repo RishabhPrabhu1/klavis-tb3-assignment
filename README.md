@@ -2,6 +2,12 @@
 
 Original Terminal-Bench 3 task for the Klavis Founding Engineer coding assignment.
 
+## Submission status
+
+Deterministic qualification is complete on the frozen task tree. Codex evaluation evidence is being collected and audited against that exact tree.
+
+The submission does **not** claim full Terminal-Bench 3 compliance because the Claude-dependent automated implementation rubric, three Claude Code / Opus 5 standard trials, and Claude `/cheat` entry could not be executed without usable Claude access. Those required rows remain explicit below rather than being replaced with alternate-model or provider-failure results.
+
 ## Overview
 
 `tasks/build-snapshot-publish/` asks an agent to repair an incremental build system that must correctly compose:
@@ -51,7 +57,7 @@ The frozen tree differs from its fully-qualified predecessor only by verifier te
 | Claude Code / Opus 5 `max` standard matrix | **NOT RUN — Claude access unavailable** | [`results/standard-trials.md`](results/standard-trials.md) |
 | Claude `/cheat` | **NOT RUN — Claude access unavailable** | [`results/cheat-trials.md`](results/cheat-trials.md) |
 
-The deterministic qualification itself made **zero frontier-model calls**. Model evidence is represented as complete only after Harbor result evidence is audited and the failure cause is reviewed.
+The deterministic qualification itself made **zero model calls**. Model evidence is represented as complete only after Harbor result evidence is audited and the failure cause is reviewed.
 
 ## Claude access limitation
 
@@ -67,7 +73,7 @@ The repository is pinned to Terminal-Bench revision:
 79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
 ```
 
-At that source-of-truth snapshot, the required frontier matrix is:
+At that source-of-truth snapshot, the required evaluation matrix is:
 
 | Mode | Agent | Model | Reasoning | Required result |
 |---|---|---|---|---|
@@ -101,7 +107,7 @@ A complete exact-tree deterministic qualification is available with:
 bash scripts/run-qualification.sh
 ```
 
-This path runs static checks, the 68-test reference verifier, mutation controls, and exact-tree Harbor Oracle/NOP without frontier-model calls.
+This path runs static checks, the 68-test reference verifier, mutation controls, and exact-tree Harbor Oracle/NOP without model calls.
 
 ## Trial tooling
 
