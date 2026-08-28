@@ -91,13 +91,11 @@ if EXPECTED_TB3 not in environment:
 if "8 runs total" not in environment:
     fail("environment snapshot does not state the current eight-run matrix")
 
-# Operational entry points retained in the submission must not be pinned to the
-# superseded difficulty-calibration task tree.
 authoritative_scripts = [
-    "scripts/run-final-tree-deadline-qualification.sh",
-    "scripts/run-deadline-sol-matrix.sh",
-    "scripts/run-deadline-cheat-matrix.sh",
-    "scripts/run-deadline-claude-matrix.sh",
+    "scripts/run-qualification.sh",
+    "scripts/run-codex-standard-matrix.sh",
+    "scripts/run-claude-standard-matrix.sh",
+    "scripts/run-cheat-matrix.sh",
     "scripts/run-candidate-trial.sh",
     "scripts/final-submission-audit.sh",
 ]
@@ -115,36 +113,39 @@ for rel in authoritative_scripts:
     if any(re.search(pattern, text) for pattern in pin_patterns):
         fail(f"{rel} is still operationally pinned to historical calibration tree")
 
-qualifier = (ROOT / "scripts/run-final-tree-deadline-qualification.sh").read_text(encoding="utf-8")
+qualifier = (ROOT / "scripts/run-qualification.sh").read_text(encoding="utf-8")
 if "oracle_tests=68" not in qualifier or "oracle_reference=68/68" not in qualifier:
-    fail("full qualifier does not record/report 68 tests")
+    fail("qualification entry point does not record/report 68 tests")
 
-# Development-only orchestration and provider experiments do not belong on the
-# submission branch. Keep this list explicit so accidental reintroduction fails CI.
 forbidden_paths = [
     "results/execution-plan.md",
     "results/submission-checklist.md",
     "scripts/deadline-status.sh",
     "scripts/resume-deadline-cycle.sh",
     "scripts/resume-macos-deadline-cycle.sh",
+    "scripts/run-codex-strong-test.sh",
+    "scripts/run-corrected-tree-local-qualification.sh",
+    "scripts/run-deadline-cheat-matrix.sh",
+    "scripts/run-deadline-claude-matrix.sh",
+    "scripts/run-deadline-claude-pipeline.sh",
+    "scripts/run-deadline-sol-matrix.sh",
     "scripts/run-fast-cycle.sh",
     "scripts/run-fast-final-successor-qualification.sh",
     "scripts/run-fast-frontier-cycle.sh",
+    "scripts/run-final-tree-deadline-qualification.sh",
     "scripts/run-four-hour-codex-finish.sh",
+    "scripts/run-implementation-rubric-bedrock.sh",
     "scripts/run-next-frontier-step.sh",
     "scripts/run-next-qualification-step.sh",
     "scripts/run-one-qualified-sol-probe.sh",
     "scripts/run-parallel-final-matrix.sh",
     "scripts/run-required-cheat.sh",
-    "scripts/run-deadline-claude-pipeline.sh",
-    "scripts/run-implementation-rubric-bedrock.sh",
     "scripts/smoke-test-claude-bedrock.sh",
 ]
 for rel in forbidden_paths:
     if (ROOT / rel).exists():
         fail(f"development-only residue remains on submission branch: {rel}")
 
-# Common assistant/scratch markers should not appear in reviewer-facing files.
 reviewer_text = "\n".join((ROOT / rel).read_text(encoding="utf-8") for rel in current_docs)
 for marker in ("ChatGPT", "Luna Max", "TODO", "FIXME", "/Users/rishabhprabhu/"):
     if marker in reviewer_text:
