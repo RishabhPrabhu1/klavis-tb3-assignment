@@ -163,9 +163,6 @@ except ValueError:
     oracle_tests=0
 if oracle_tests < 68:
     wrong["oracle_tests"]=(vals.get("oracle_tests"), ">=68")
-# The frozen successor uses an exact-tree static/reference/Harbor rerun while
-# inheriting the 40/40 mutation negative controls from its fully-qualified
-# predecessor because the only task delta is verifier teardown hygiene.
 mode=vals.get("qualification_mode")
 if mode not in {"full-exact-tree", "successor-delta-exact-tree"}:
     wrong["qualification_mode"]=(mode, "recognized exact-tree qualification mode")
@@ -193,6 +190,13 @@ printf 'terminal_bench_head_expected=%s\n' "$TB3_HEAD_EXPECTED"
 printf 'standard_trials_per_agent=%s\n' "$STANDARD_TARGET"
 printf 'cheat_trials_per_agent=%s\n' "$CHEAT_TARGET"
 
+if python3 "$ROOT_DIR/scripts/submission-consistency-audit.py"; then
+  echo "repository_consistency=PASS"
+else
+  echo "repository_consistency=FAIL"
+  failures=$((failures+1))
+fi
+
 if [[ -n "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]]; then
   echo "task_tree_clean=NO"
   failures=$((failures+1))
@@ -212,6 +216,7 @@ check_cheat_reward "Claude cheat reward-0" "$CLAUDE_CHEAT_ROOTS" claude-code ant
 for required in \
   README.md \
   results/preflight-status.json \
+  results/validation.md \
   results/standard-trials.md \
   results/cheat-trials.md \
   results/failure-analysis.md \
