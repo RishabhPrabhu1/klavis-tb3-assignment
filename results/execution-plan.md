@@ -42,49 +42,55 @@ Adversarial runs follow the pinned live TB3 reward rule: every required task × 
 ## Current execution state
 
 - Deterministic qualification: **complete**.
-- Automated implementation rubric: **outstanding**; no PASS is claimed.
-- Codex standard matrix: **first exact-tree invocation currently being collected; no result counts until post-run evidence audit**.
-- Codex `/cheat`: **outstanding**.
-- Claude Code standard and `/cheat`: **outstanding**.
+- Codex standard matrix: **1/3 counted**. Trial 1 completed in 32m46s with authoritative reward `0.0`, no result exceptions, and `62 passed / 6 failed`; the failures were reviewed as genuine candidate-behavior failures.
+- Codex standard trials 2–3: **remaining**.
+- Codex `/cheat`: **remaining after standard matrix**.
+- Automated implementation rubric: **NOT RUN — Claude access unavailable**.
+- Claude Code / Opus 5 standard trials 1–3: **NOT RUN — Claude access unavailable**.
+- Claude Code / Opus 5 `/cheat`: **NOT RUN — Claude access unavailable**.
 
-The automated rubric and Claude matrix depend on Claude access. If that access remains unavailable at submission time, the repository and submission note will disclose those items as incomplete rather than infer or fabricate results.
+## Claude-dependent submission limitation
+
+The current submission environment has no Claude Code subscription and no usable Anthropic API or Bedrock route. The Claude-dependent requirements are therefore not scheduled for this submission. They remain required by TB3 and remain visibly incomplete in the repository.
+
+No alternate model, provider/authentication error, or manual source review will be substituted for those missing results. The submission email will disclose that the automated implementation rubric, three Claude standard trials, and Claude adversarial entry could not be executed because required Claude access was unavailable.
 
 ## Codex completion path
 
 For each standard run, use the exact frozen task tree and required configuration:
 
 ```text
-agent:     codex
-model:     openai/gpt-5.6-sol
-reasoning: xhigh
+agent:       codex
+model:       openai/gpt-5.6-sol
+reasoning:   xhigh
 environment: docker
-Harbor:    0.14.0
+Harbor:      0.14.0
 ```
 
 After each invocation:
 
 1. Preserve the raw Harbor output.
-2. Run `scripts/audit-trial-evidence.py` against its `summary.json`.
+2. Run `scripts/audit-trial-evidence.py` against its evidence directory.
 3. Require `execution_class = valid-completed-trial`, `qualification_valid = true`, no result exceptions, and authoritative reward `0`.
 4. Inspect failed tests and implementation behavior to ensure the failure is genuine rather than a specification/verifier defect.
 5. Only then insert the run into `results/standard-trials.md` and `results/failure-analysis.md`.
 
-After the first accepted failure, the remaining Codex standard runs can be collected with:
+Trial 1 has completed this process successfully. The remaining Codex standard runs are collected with:
 
 ```bash
 CONFIRM_FREEZE=1 bash scripts/run-deadline-sol-matrix.sh
 ```
 
-The Codex adversarial entry is collected with:
+The Codex adversarial entry is then collected with:
 
 ```bash
 CONFIRM_FREEZE=1 AGENT=codex TARGET_CHEATS=1 \
 bash scripts/run-deadline-cheat-matrix.sh
 ```
 
-## Claude-dependent evaluation
+## Claude-dependent routes retained for reproducibility
 
-Required configuration:
+Required Claude standard configuration:
 
 ```text
 agent:     claude-code
@@ -92,13 +98,13 @@ model:     anthropic/claude-opus-5
 reasoning: max
 ```
 
-The repository contains prepared OAuth and Bedrock runners, but no Claude result is represented as complete without an actual same-tree run.
+The repository retains prepared OAuth and Bedrock runners so the intended execution path is auditable, but no Claude result is represented as complete without an actual same-tree run. In the current submission environment those routes are unavailable.
 
-The automated implementation rubric likewise remains outstanding until the current TB3 reviewer produces a same-tree result with the complete criterion set and zero failures.
+The automated implementation rubric likewise remains incomplete because the current TB3 reviewer uses Claude Code / Sonnet.
 
 ## Final evidence update
 
-Before delivery, every completed run must record:
+Before delivery, every completed Codex run must record:
 
 - execution commit;
 - frozen task tree;
@@ -118,7 +124,7 @@ The repository's final audit is:
 bash scripts/final-submission-audit.sh
 ```
 
-`FINAL_STATUS=READY_FOR_SUBMISSION` is reserved for full TB3 compliance. If Claude-dependent requirements remain incomplete, the repository must report the partial state explicitly instead of weakening the audit.
+`FINAL_STATUS=READY_FOR_SUBMISSION` is reserved for full TB3 compliance. Because the Claude-dependent requirements are not being run, the strict audit is expected to remain not fully ready. That partial state must be preserved and disclosed rather than weakening the audit.
 
 ## Historical calibration
 
