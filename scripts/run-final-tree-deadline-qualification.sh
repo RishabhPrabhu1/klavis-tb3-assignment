@@ -28,7 +28,7 @@ printf 'execution_commit=%s\n' "$(git rev-parse HEAD)"
 printf 'task_tree=%s\n' "$TREE"
 printf 'terminal_bench_head=%s\n' "$ACTUAL_TB3_HEAD"
 
-printf '\n[1/2] Full deterministic qualification: static + Oracle + all 40 development mutants\n'
+printf '\n[1/2] Full deterministic qualification: static + 68-test Oracle/reference + all 40 development mutants\n'
 TB3_REPO="$TB3_REPO" \
 EXPECTED_TASK_TREE="$TREE" \
   bash "$ROOT_DIR/scripts/run-corrected-tree-local-qualification.sh"
@@ -79,7 +79,7 @@ task_tree=$TREE
 terminal_bench_head=$ACTUAL_TB3_HEAD
 qualification_mode=full-exact-tree
 static_checks=PASS
-oracle_tests=66
+oracle_tests=68
 mutations_core=14
 mutations_lifecycle=6
 mutations_project_request=5
@@ -96,7 +96,7 @@ EOF
 printf '\n=== FINAL-TREE QUALIFICATION REPORT ===\n'
 printf 'task_tree=%s\n' "$TREE"
 printf 'static_checks=PASS\n'
-printf 'oracle_reference=66/66\n'
+printf 'oracle_reference=68/68\n'
 printf 'mutants=40/40_rejected\n'
 printf 'harbor_oracle=1\n'
 printf 'harbor_nop=0\n'
