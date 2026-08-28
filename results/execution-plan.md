@@ -1,28 +1,29 @@
-# Active Execution Plan — Deadline Mode
+# Submission Execution Plan
 
 ## Frozen candidate
 
 ```text
-task tree: d862ab3cc79718e959e9cc7ec1b792540990a24d
+d862ab3cc79718e959e9cc7ec1b792540990a24d
 ```
 
-Difficulty strengthening is finished. Do not change `tasks/build-snapshot-publish/` unless a concrete final-tree specification/verifier defect is demonstrated.
+The task is frozen. `tasks/build-snapshot-publish/` must not change unless a concrete specification or verifier defect is demonstrated. Any task-tree change invalidates same-tree model evidence and requires requalification.
 
-## Current hard status
+## Validated baseline
 
-```text
-Static checks:                 PASS
-Oracle/reference:              68/68
-Harbor Oracle/NOP:             1/0
-Predecessor mutation controls: 40/40 rejected
-Frozen successor task delta:   tests/conftest.py teardown/reaping only
-Frozen-tree frontier calls:    0
-Automated implementation rubric: OUTSTANDING
-```
+| Check | Status |
+|---|---|
+| Current TB3 static checks | PASS |
+| Reference verifier | 68/68 PASS |
+| Harbor 0.14 Oracle | 1.000 |
+| Harbor 0.14 NOP | 0.000 |
+| Frontier calls during deterministic qualification | 0 |
+| Predecessor mutation controls | 40/40 rejected |
 
-The predecessor mutation evidence belongs to `301107828273e249fbd31ed34d86bf3fed7143a1`. The frozen successor reran current-tree static checks, all 68 reference tests, and exact-tree Harbor Oracle/NOP because its sole task delta is verifier teardown hygiene.
+The mutation evidence belongs to fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1`. The frozen successor differs only in verifier teardown/process-reaping hygiene in `tests/conftest.py`, then reran current-tree static checks, all 68 reference tests, and exact-tree Harbor Oracle/NOP.
 
-## Required final model matrix
+Machine-readable qualification evidence is in `results/preflight-status.json`.
+
+## Required evaluation matrix
 
 ```text
 Standard /run:
@@ -34,84 +35,56 @@ Adversarial /cheat:
   1 × claude-code / anthropic/claude-opus-5 / max
 ```
 
-Standard runs must be genuine clean model failures. Provider/auth/quota/container/timeout/verifier failures do not count. `/cheat` follows the pinned live reward condition: every required adversarial entry must record reward 0 and any nonzero reward fails.
+Standard runs count only when Harbor and the verifier complete normally and reward `0` is caused by candidate behavior. Authentication, quota, provider, container, timeout, Harbor, verifier, or other infrastructure failures do not count as model failures.
 
-## Gate 1 — Deterministic qualification: COMPLETE
+Adversarial runs follow the pinned live TB3 reward rule: every required task × agent entry must receive reward `0`.
 
-Existing frozen-tree evidence is recorded in `results/preflight-status.json`.
+## Current execution state
 
-A fresh full reproduction, including all 40 mutation controls, is available via:
+- Deterministic qualification: **complete**.
+- Automated implementation rubric: **outstanding**; no PASS is claimed.
+- Codex standard matrix: **first exact-tree invocation currently being collected; no result counts until post-run evidence audit**.
+- Codex `/cheat`: **outstanding**.
+- Claude Code standard and `/cheat`: **outstanding**.
 
-```bash
-bash scripts/run-final-tree-deadline-qualification.sh
-```
+The automated rubric and Claude matrix depend on Claude access. If that access remains unavailable at submission time, the repository and submission note will disclose those items as incomplete rather than infer or fabricate results.
 
-Do not rerun it merely to create another marker if the existing exact-tree evidence remains intact and the task tree has not changed.
+## Codex completion path
 
-## Gate 2 — Automated implementation rubric: NEXT
-
-The source-level review is `BORDERLINE -> LIKELY PASS`, with no known concrete hidden-schema/process-isolation defect remaining. The empirical automated rubric is still required.
-
-Preferred Klavis subscription OAuth route when available:
-
-```bash
-EXPECTED_TASK_TREE=d862ab3cc79718e959e9cc7ec1b792540990a24d \
-EXPECTED_TB3_HEAD=79e71650f5b6a6ef5bb46a434c7c04d7d99a9480 \
-CONFIRM_ZERO_COST_COVERAGE=1 \
-bash scripts/run-implementation-rubric-oauth.sh
-```
-
-Bedrock is supported only if eligible coverage is separately confirmed. Do not silently fall back to a paid provider route.
-
-Acceptance condition:
+For each standard run, use the exact frozen task tree and required configuration:
 
 ```text
-exact task tree = d862ab3...
-exact pinned TB3 revision
-all live criteria present
-failed criteria = 0
-overall = PASS
+agent:     codex
+model:     openai/gpt-5.6-sol
+reasoning: xhigh
+environment: docker
+Harbor:    0.14.0
 ```
 
-## Gate 3 — First exact-tree Sol probe
+After each invocation:
 
-Only after Gate 2 passes:
+1. Preserve the raw Harbor output.
+2. Run `scripts/audit-trial-evidence.py` against its `summary.json`.
+3. Require `execution_class = valid-completed-trial`, `qualification_valid = true`, no result exceptions, and authoritative reward `0`.
+4. Inspect failed tests and implementation behavior to ensure the failure is genuine rather than a specification/verifier defect.
+5. Only then insert the run into `results/standard-trials.md` and `results/failure-analysis.md`.
 
-```bash
-bash scripts/run-next-frontier-step.sh
-```
-
-That entry point verifies the same-tree qualification marker and automated rubric PASS before delegating to the guarded one-probe runner.
-
-Decision rule:
-
-- valid reward `0` caused by genuine candidate implementation behavior → accept as first final failure and freeze;
-- reward `1` → final matrix requirement is not met; do not reinterpret it as failure;
-- specification/verifier defect → repair narrowly, then completely requalify the changed task tree;
-- provider/auth/quota/container/timeout/other execution error → preserve as invalid evidence and do not count or blindly retry.
-
-## Gate 4 — Complete Codex standard matrix
-
-After reviewing and accepting the first exact-tree reward-0 failure:
+After the first accepted failure, the remaining Codex standard runs can be collected with:
 
 ```bash
 CONFIRM_FREEZE=1 bash scripts/run-deadline-sol-matrix.sh
 ```
 
-The first accepted probe counts. The runner launches only enough additional valid failures to reach 3/3 and stops on solve or invalid execution.
-
-## Gate 5 — Codex adversarial entry
+The Codex adversarial entry is collected with:
 
 ```bash
 CONFIRM_FREEZE=1 AGENT=codex TARGET_CHEATS=1 \
 bash scripts/run-deadline-cheat-matrix.sh
 ```
 
-Require reward 0 with exact pinned Terminal-Bench provenance.
+## Claude-dependent evaluation
 
-## Gate 6 — Claude Code / Opus 5
-
-Required identity:
+Required configuration:
 
 ```text
 agent:     claude-code
@@ -119,48 +92,36 @@ model:     anthropic/claude-opus-5
 reasoning: max
 ```
 
-The prepared Claude pipeline can reuse an exact-tree rubric PASS, collect 3 valid standard failures, run the adversarial entry, and invoke the final audit:
+The repository contains prepared OAuth and Bedrock runners, but no Claude result is represented as complete without an actual same-tree run.
 
-```bash
-CONFIRM_FREEZE=1 CONFIRM_ZERO_COST_COVERAGE=1 \
-bash scripts/run-deadline-claude-pipeline.sh
-```
+The automated implementation rubric likewise remains outstanding until the current TB3 reviewer produces a same-tree result with the complete criterion set and zero failures.
 
-Do not count provider/auth/quota failures as standard model failures.
+## Final evidence update
 
-## Gate 7 — Evidence update and final audit
+Before delivery, every completed run must record:
 
-After each final run, record exact execution commit, task tree, agent/model/reasoning, evidence directory, Harbor/result status, verifier counts, reward, exceptions, and failure classification in the relevant ledger.
+- execution commit;
+- frozen task tree;
+- agent/model/reasoning;
+- Harbor and Terminal-Bench provenance where applicable;
+- evidence directory;
+- authoritative reward;
+- exception state;
+- verifier pass/fail counts;
+- failed tests;
+- failure classification;
+- whether the run counts toward the required matrix.
 
-Then run:
+The repository's final audit is:
 
 ```bash
 bash scripts/final-submission-audit.sh
 ```
 
-Required end state:
+`FINAL_STATUS=READY_FOR_SUBMISSION` is reserved for full TB3 compliance. If Claude-dependent requirements remain incomplete, the repository must report the partial state explicitly instead of weakening the audit.
 
-```text
-same-tree qualification:          PASS
-same-tree implementation rubric:  PASS
-Codex standard reward-0:           3/3 valid
-Claude standard reward-0:          3/3 valid
-Codex cheat reward-0:              1/1
-Claude cheat reward-0:             1/1
-FINAL_STATUS=READY_FOR_SUBMISSION
-```
+## Historical calibration
 
-## Gate 8 — Repository delivery hygiene
+Historical trees are retained only to document iteration. They do not fill final matrix slots.
 
-Before sending the repository URL:
-
-1. Confirm `git rev-parse HEAD:tasks/build-snapshot-publish` equals `d862ab3cc79718e959e9cc7ec1b792540990a24d`.
-2. Confirm the task subtree is clean.
-3. Confirm current-state docs do not name a superseded tree or 66-test verifier as current.
-4. Confirm the default GitHub branch points to the final submission commit.
-5. Recheck live Terminal-Bench defaults/rubric for freshness.
-6. Leave at least a small upload/submission buffer before midnight.
-
-## Historical calibration — not final evidence
-
-`fc064cac2fb1241b68a98475dbc8ea04fbe579cc` passed its then-current 66/66 verifier and 40/40 mutation controls and produced a valid Sol/xhigh reward-0 with 45 passed / 21 failed. It proves the task family is difficult but cannot satisfy any final matrix slot because it is a different task tree.
+The superseded calibration tree `fc064cac2fb1241b68a98475dbc8ea04fbe579cc` produced a valid Sol/xhigh reward-0 result with `45 passed / 21 failed`. Later verifier/schema/process corrections changed the task tree, so that run is difficulty evidence only.
