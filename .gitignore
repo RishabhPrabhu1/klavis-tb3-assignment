@@ -7,21 +7,6 @@
 *.swp
 *.swo
 
-# Local agent instructions and assistant state
-AGENTS.md
-agent.md
-agents.md
-CLAUDE.md
-claude.md
-CODEX.md
-codex.md
-GEMINI.md
-gemini.md
-.cursor/
-.cursorrules
-.windsurf/
-.claude/
-
 # Credentials and local configuration
 .env
 .env.*
