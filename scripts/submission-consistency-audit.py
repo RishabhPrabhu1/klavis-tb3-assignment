@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""Fail closed on stale current-state submission metadata.
+
+This intentionally does not reject historical calibration hashes/counts when they are
+clearly historical. It verifies the files that describe the *current* submission all
+identify the actual task subtree and the recorded frozen-tree qualification.
+"""
+from __future__ import annotations
+
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+TASK_REL = "tasks/build-snapshot-publish"
+EXPECTED_ORACLE = "68/68"
+EXPECTED_TB3 = "79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"
+
+
+def fail(message: str) -> None:
+    print(f"CONSISTENCY FAIL: {message}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+def git(*args: str) -> str:
+    return subprocess.check_output(["git", "-C", str(ROOT), *args], text=True).strip()
+
+
+tree = git("rev-parse", f"HEAD:{TASK_REL}")
+if git("status", "--porcelain", "--", TASK_REL):
+    fail("task subtree is dirty")
+
+status_path = ROOT / "results/preflight-status.json"
+try:
+    status = json.loads(status_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    fail(f"cannot parse {status_path.relative_to(ROOT)}: {exc}")
+
+expected_status = {
+    "task_tree": tree,
+    "qualified": True,
+    "oracle_reference": EXPECTED_ORACLE,
+    "harbor_oracle": 1,
+    "harbor_nop": 0,
+    "frontier_model_calls": 0,
+    "terminal_bench_head": EXPECTED_TB3,
+}
+for key, expected in expected_status.items():
+    actual = status.get(key)
+    if actual != expected:
+        fail(f"preflight status {key}={actual!r}, expected {expected!r}")
+
+if status.get("qualification_mode") == "successor-delta-exact-tree":
+    if status.get("predecessor_mutants") != "40/40_rejected":
+        fail("successor qualification does not record predecessor 40/40 rejection")
+    if status.get("fully_qualified_predecessor_tree") != "301107828273e249fbd31ed34d86bf3fed7143a1":
+        fail("unexpected fully-qualified predecessor tree")
+
+current_docs = [
+    "README.md",
+    "results/validation.md",
+    "results/execution-plan.md",
+    "results/standard-trials.md",
+    "results/cheat-trials.md",
+    "results/failure-analysis.md",
+    "results/implementation-rubric-review.md",
+]
+for rel in current_docs:
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    if tree not in text:
+        fail(f"{rel} does not identify current task tree {tree}")
+
+# These hashes were once incorrectly presented as the current candidate. They may
+# remain in Git history, but not in the active reviewer-facing current-state docs.
+obsolete_current_hashes = {
+    "85eb3be3ce69a625a06eab3e37c69badbab89779",
+    "f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8",
+}
+for rel in current_docs:
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    for old in obsolete_current_hashes:
+        if old in text:
+            fail(f"{rel} still contains obsolete current-candidate hash {old}")
+
+readme = (ROOT / "README.md").read_text(encoding="utf-8")
+if "Oracle/reference:         68/68" not in readme:
+    fail("README does not state current 68/68 qualification")
+if "Automated implementation-rubric PASS remains outstanding" not in (ROOT / "results/validation.md").read_text(encoding="utf-8"):
+    # Wording check is intentionally broad below if the sentence changes.
+    validation = (ROOT / "results/validation.md").read_text(encoding="utf-8").lower()
+    if "implementation-rubric gate" not in validation or "outstanding" not in validation:
+        fail("validation record does not truthfully mark the automated rubric gate outstanding")
+
+# Authoritative operational entry points must not be hard-pinned to the obsolete
+# difficulty-calibration tree.
+authoritative_scripts = [
+    "scripts/run-final-tree-deadline-qualification.sh",
+    "scripts/run-next-qualification-step.sh",
+    "scripts/run-next-frontier-step.sh",
+    "scripts/run-fast-frontier-cycle.sh",
+    "scripts/resume-deadline-cycle.sh",
+    "scripts/resume-macos-deadline-cycle.sh",
+    "scripts/run-one-qualified-sol-probe.sh",
+    "scripts/run-deadline-sol-matrix.sh",
+    "scripts/run-deadline-cheat-matrix.sh",
+    "scripts/run-deadline-claude-pipeline.sh",
+    "scripts/final-submission-audit.sh",
+]
+calibration_tree = "fc064cac2fb1241b68a98475dbc8ea04fbe579cc"
+for rel in authoritative_scripts:
+    text = (ROOT / rel).read_text(encoding="utf-8")
+    pin_patterns = [
+        rf'FROZEN_TASK_TREE=["\']{re.escape(calibration_tree)}["\']',
+        rf'EXPECTED_TREE=["\']{re.escape(calibration_tree)}["\']',
+        rf'EXPECTED_TASK_TREE=["\']{re.escape(calibration_tree)}["\']',
+    ]
+    if any(re.search(pattern, text) for pattern in pin_patterns):
+        fail(f"{rel} is still operationally pinned to historical calibration tree")
+
+qualifier = (ROOT / "scripts/run-final-tree-deadline-qualification.sh").read_text(encoding="utf-8")
+if "oracle_tests=68" not in qualifier or "oracle_reference=68/68" not in qualifier:
+    fail("full final qualifier does not record/report 68 tests")
+
+frontier = (ROOT / "scripts/run-next-frontier-step.sh").read_text(encoding="utf-8")
+if "same-tree implementation-rubric PASS is missing" not in frontier:
+    fail("frontier entry point does not enforce automated same-tree rubric PASS")
+
+print("=== SUBMISSION CONSISTENCY AUDIT ===")
+print(f"task_tree={tree}")
+print("preflight_status=PASS")
+print("oracle_reference=68/68")
+print("reviewer_docs=PASS")
+print("authoritative_entry_points=PASS")
+print("task_tree_clean=YES")
+print("CONSISTENCY_STATUS=PASS")
