@@ -27,6 +27,13 @@ tree = git("rev-parse", f"HEAD:{TASK_REL}")
 if git("status", "--porcelain", "--", TASK_REL):
     fail("task subtree is dirty")
 
+# Keep the submission root intentionally small and reviewer-facing.
+allowed_top_level = {".github", ".gitignore", "README.md", "results", "scripts", "tasks"}
+tracked_top_level = {line.split("/", 1)[0] for line in git("ls-files").splitlines() if line}
+unexpected_top_level = sorted(tracked_top_level - allowed_top_level)
+if unexpected_top_level:
+    fail(f"unexpected tracked top-level entries: {unexpected_top_level}")
+
 status_path = ROOT / "results/preflight-status.json"
 try:
     status = json.loads(status_path.read_text(encoding="utf-8"))
@@ -39,7 +46,7 @@ expected_status = {
     "oracle_reference": EXPECTED_ORACLE,
     "harbor_oracle": 1,
     "harbor_nop": 0,
-    "frontier_model_calls": 0,
+    "model_calls": 0,
     "terminal_bench_head": EXPECTED_TB3,
 }
 for key, expected in expected_status.items():
