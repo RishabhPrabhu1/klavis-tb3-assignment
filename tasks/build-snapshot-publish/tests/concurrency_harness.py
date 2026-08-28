@@ -123,10 +123,16 @@ def release_and_wait(
     expected_returncode: int,
 ) -> None:
     _write(pause_dir / "release", "release\n")
-    returncode = proc.wait(timeout=5)
+    try:
+        returncode = proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
+        proc.wait(timeout=5)
+        raise AssertionError("candidate build timed out after release")
     stderr_text = (log_dir / "stderr").read_text(errors="replace")
-    assert returncode == expected_returncode, stderr_text
     _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
+    proc.wait(timeout=5)
+    assert returncode == expected_returncode, stderr_text
 
 
 def release_for_cleanup(
@@ -143,5 +149,8 @@ def release_for_cleanup(
     try:
         proc.wait(timeout=1)
     except subprocess.TimeoutExpired:
-        pass
-    _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
+        _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
+        proc.wait(timeout=5)
+    else:
+        _cleanup_candidate_processes(proc.pid, baseline_uid_pids)
+        proc.wait(timeout=5)
