@@ -82,8 +82,15 @@ if not re.search(r"(?:Oracle/reference|Reference verifier).{0,120}68/68", readme
     fail("README does not state current 68/68 qualification")
 if not re.search(r"Codex.{0,160}3/3", readme, flags=re.IGNORECASE | re.DOTALL):
     fail("README does not state completed 3/3 Codex standard matrix")
+if not re.search(r"Codex.{0,120}/cheat.{0,120}(?:1/1|COMPLETE)", readme, flags=re.IGNORECASE | re.DOTALL):
+    fail("README does not state completed Codex cheat result")
 if "Claude access unavailable" not in readme:
     fail("README does not disclose the Claude access limitation")
+
+cheat = (ROOT / "results/cheat-trials.md").read_text(encoding="utf-8")
+for required in ("reward_zero=1", "target=1", "status=CHEAT_MATRIX_COMPLETE", EXPECTED_TB3):
+    if required not in cheat:
+        fail(f"cheat ledger missing final Codex evidence marker: {required}")
 
 environment = (ROOT / "results/environment.md").read_text(encoding="utf-8")
 if EXPECTED_TB3 not in environment:
@@ -162,6 +169,8 @@ print("=== SUBMISSION CONSISTENCY AUDIT ===")
 print(f"task_tree={tree}")
 print("preflight_status=PASS")
 print("oracle_reference=68/68")
+print("codex_standard=3/3")
+print("codex_cheat=1/1_reward_zero")
 print("environment_snapshot=PASS")
 print("reviewer_docs=PASS")
 print("submission_hygiene=PASS")
