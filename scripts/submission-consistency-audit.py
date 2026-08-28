@@ -80,8 +80,8 @@ for rel in current_docs:
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
 if not re.search(r"(?:Oracle/reference|Reference verifier).{0,120}68/68", readme, flags=re.IGNORECASE | re.DOTALL):
     fail("README does not state current 68/68 qualification")
-if "1/3 counted" not in readme:
-    fail("README does not state current counted Codex status")
+if not re.search(r"Codex.{0,160}3/3", readme, flags=re.IGNORECASE | re.DOTALL):
+    fail("README does not state completed 3/3 Codex standard matrix")
 if "Claude access unavailable" not in readme:
     fail("README does not disclose the Claude access limitation")
 
