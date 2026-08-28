@@ -19,7 +19,7 @@ frontier calls during deterministic qualification: 0
 
 The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejected 40/40 development mutation controls. The frozen successor changes only verifier teardown/reaping hygiene in `tests/conftest.py`; it reran current-tree static checks, all 68 reference tests, and exact-tree Harbor Oracle/NOP.
 
-Automated implementation-rubric acceptance remains outstanding and is not claimed until same-tree evidence exists.
+Automated implementation-rubric acceptance remains outstanding. It is **not run in this submission because Claude access is unavailable**; no source-level assessment or alternate model is treated as an automated PASS. The required Claude Code / Opus 5 standard and adversarial results are likewise not being executed and remain explicitly incomplete.
 
 ## Standard-trial validity
 
@@ -203,4 +203,5 @@ For `d862ab3cc79718e959e9cc7ec1b792540990a24d`:
 - `F3/F4` requires a narrow task/verifier repair, a **new task-tree hash**, and complete requalification before further counted trials;
 - `F5/F6/F7` is preserved as invalid evidence and does not count;
 - the first legitimate exact-tree reward-0 failure has now been reviewed, so the task tree is frozen for the remainder of the standard/adversarial matrix;
-- final submission requires three valid Sol/xhigh failures, three valid Opus 5/max failures, and one zero-reward adversarial entry for each agent under the pinned live `/cheat` behavior.
+- full TB3 compliance requires three valid Sol/xhigh failures, three valid Opus 5/max failures, and one zero-reward adversarial entry for each agent under the pinned live `/cheat` behavior;
+- because Claude access is unavailable, this submission will intentionally remain incomplete on the Claude-dependent portion rather than claim full readiness.
