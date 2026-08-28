@@ -77,6 +77,7 @@ The reviewer-facing evidence is intentionally separated by purpose:
 - [`results/cheat-trials.md`](results/cheat-trials.md) — required adversarial `/cheat` matrix.
 - [`results/failure-analysis.md`](results/failure-analysis.md) — model-failure validity rules and per-trial analysis.
 - [`results/environment.md`](results/environment.md) — pinned versions, auth modes, and evaluation environment.
+- [`results/submission-checklist.md`](results/submission-checklist.md) — final delivery/access/evidence checklist.
 
 Raw local Harbor evidence is stored outside the repository under `~/.cache/klavis-tb3-runs/` and keyed by repository/task/upstream identities. Submission-facing summaries contain the exact evidence paths and classifications after each accepted run.
 
