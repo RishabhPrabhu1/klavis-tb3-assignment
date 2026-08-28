@@ -34,9 +34,9 @@ jobs:
             exit 1
           fi
 
-          junk=$(git ls-files | grep -E '(^|/)(\.DS_Store|__pycache__)(/|$)|\.(log|tmp|swp|pyc)$|(^|/)\.env($|\.)' || true)
+          junk=$(git ls-files | grep -E '(^|/)(\.DS_Store|__pycache__)(/|$)|\.(log|tmp|swp|pyc)$|(^|/)\.env($|\.)|(^|/)(AGENTS|agent|agents|CLAUDE|claude|CODEX|codex|GEMINI|gemini)\.md$' || true)
           if [ -n "$junk" ]; then
-            echo "Committed build/editor residue found:"
+            echo "Committed build/editor/local-instruction residue found:"
             echo "$junk"
             exit 1
           fi
