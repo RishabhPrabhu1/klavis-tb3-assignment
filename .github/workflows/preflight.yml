@@ -28,7 +28,8 @@ jobs:
 
       - name: Check repository hygiene
         run: |
-          if git grep -nE 'ChatGPT|Luna Max|CONFIRM_ZERO_COST_COVERAGE|/Users/rishabhprabhu/' -- .; then
+          marker_pattern='Chat''GPT|Luna'' Max|CONFIRM_''ZERO_COST_COVERAGE|/Users/''rishabhprabhu/'
+          if git grep -nE "$marker_pattern" -- .; then
             echo "Submission-only repository contains an internal assistant/workstation marker."
             exit 1
           fi
