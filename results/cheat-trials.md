@@ -2,69 +2,68 @@
 
 ## Requirement
 
-At Terminal-Bench HEAD `79e71650f5b6a6ef5bb46a434c7c04d7d99a9480`, Docker `/cheat` runs one matrix entry per `(task × agent_config)` with no three-trial dimension. The final frozen task therefore needs one adversarial run for each required configuration:
+At the pinned Terminal-Bench workflow snapshot, `/cheat` runs one matrix entry per `(task × agent_config)` with no three-trial dimension. The frozen task therefore needs one adversarial run for each required configuration:
 
 | Agent | Model | Reasoning | Required |
 |---|---|---|---:|
 | `codex` | `openai/gpt-5.6-sol` | `xhigh` | 1 reward-0 run |
 | `claude-code` | `anthropic/claude-opus-5` | `max` | 1 reward-0 run |
 
-This differs deliberately from standard `/run`, where provider/auth/quota/container/timeout/agent exceptions invalidate a trial and three genuine verifier failures per agent are required.
-
-## Live TB3 reward semantics
-
-The pinned `/cheat` workflow is reward-based. Its Docker job does the equivalent of:
+The pinned Terminal-Bench revision used for adversarial provenance is:
 
 ```text
-if harbor run succeeds:
-    reward = parsed Mean, default 0
-else:
-    reward = 0
+79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
 ```
 
-It then records that adversarial reward. The written Klavis requirement likewise says every adversarial trial must have reward 0 and any nonzero reward fails.
-
-Therefore a `/cheat` agent exception or provider safety refusal is **not evaluated under the stricter standard `/run` validity rule**. If the exact required adversarial run records reward `0`, it satisfies the live `/cheat` reward condition; any nonzero reward means the verifier was defeated.
-
-## Current candidate
+## Frozen candidate
 
 ```text
-85eb3be3ce69a625a06eab3e37c69badbab89779
+d862ab3cc79718e959e9cc7ec1b792540990a24d
 ```
 
-Final exact-tree qualification/freeze is pending. No historical adversarial run counts toward this final tree.
+The frozen task is deterministically qualified (`68/68`, Harbor Oracle/NOP `1/0`) and has not yet made a frontier-model call. The automated implementation-rubric PASS is a separate pre-frontier gate.
 
-## Historical Codex safety behavior
+## Live `/cheat` reward semantics
 
-Codex adversarial attempts have repeatedly exited through OpenAI's cybersecurity safety classifier with `NonZeroAgentExitCodeError` and reward `0`. Earlier local bookkeeping labeled those runs invalid because it reused standard-trial validity rules. Review of the actual TB3 `/cheat` workflow showed that this was stricter than the source of truth: the workflow explicitly maps a failed `harbor run` to adversarial reward 0.
+The pinned workflow is reward-based. At its acceptance boundary, a failed `harbor run` is recorded as adversarial reward `0`; otherwise the parsed reward is recorded. The Klavis requirement is that every required adversarial entry receive zero reward and that any nonzero reward fails the requirement.
 
-A predecessor-tree Codex attempt on `fc064cac...` showed the same pattern:
+This intentionally differs from standard `/run`, where provider/auth/quota/container/timeout/agent exceptions invalidate the trial and cannot be counted as model failures.
 
-```text
-reward = 0
-result exception = NonZeroAgentExitCodeError
-classification in old local audit = safety block
-```
+The repository's authoritative adversarial collector is `scripts/run-deadline-cheat-matrix.sh`. It requires:
 
-That run remains historical because the task tree changed, but the outcome confirms the expected adversarial provider behavior. Final Codex `/cheat` still needs one exact-tree run after freeze.
+- the exact current task tree;
+- the same-tree qualification marker;
+- exact agent/model/reasoning identity;
+- exact pinned Terminal-Bench provenance;
+- zero nonzero rewards;
+- zero successful-but-unparsed rewards;
+- zero incomplete same-tree evidence.
 
 ## Final matrix
 
 | Task tree | Agent | Required | Status |
 |---|---|---:|---|
-| `85eb3be3...` | Codex / Sol xhigh | 1 reward-0 | pending qualification/freeze |
-| `85eb3be3...` | Claude Code / Opus 5 max | 1 reward-0 | pending provider access/freeze |
+| `d862ab3...` | Codex / Sol xhigh | 1 reward-0 | pending rubric gate/freeze |
+| `d862ab3...` | Claude Code / Opus 5 max | 1 reward-0 | pending rubric gate/provider access/freeze |
 
-Final collection uses `scripts/run-deadline-cheat-matrix.sh`, which mirrors the live reward semantics and stops on any nonzero/unparsed/incomplete exact-tree adversarial result.
+No historical adversarial attempt counts toward either entry.
 
-## Claude access
+## Historical Codex safety behavior
 
-The required configuration remains Claude Code / `anthropic/claude-opus-5` / max. Direct paid Anthropic access is not assumed. Repository tooling can route Claude Code through Amazon Bedrock and includes a bounded entitlement smoke test, but a zero-out-of-pocket eligible provider entitlement is still an external prerequisite.
+On superseded trees, Codex `/cheat` attempts repeatedly exited through a cybersecurity safety classifier with `NonZeroAgentExitCodeError` and reward `0`. Earlier local bookkeeping incorrectly applied standard-trial validity rules to those adversarial attempts. Review of the pinned live `/cheat` workflow established that adversarial acceptance is reward-based instead.
 
-## Outstanding adversarial work
+Those runs remain historical because their task trees differ from `d862ab3...`. They provide no final matrix credit.
 
-After exact-tree qualification and freeze:
+## Remaining adversarial work
 
-1. run one Codex `/cheat` attempt on the final tree and require recorded reward 0;
-2. run one Claude Code / Opus 5 / max `/cheat` attempt on the final tree and require recorded reward 0;
-3. any nonzero adversarial reward blocks submission readiness.
+After the automated exact-tree rubric gate and freeze decision:
+
+```bash
+CONFIRM_FREEZE=1 AGENT=codex TARGET_CHEATS=1 \
+bash scripts/run-deadline-cheat-matrix.sh
+
+CONFIRM_FREEZE=1 CONFIRM_ZERO_COST_COVERAGE=1 AGENT=claude TARGET_CHEATS=1 \
+bash scripts/run-deadline-cheat-matrix.sh
+```
+
+Any nonzero adversarial reward blocks submission readiness. Exact evidence directories, execution commit, Harbor exit status, result provenance, and reward must be recorded here after each final run.
