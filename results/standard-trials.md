@@ -129,7 +129,7 @@ For every exact-tree standard invocation:
 With trial 1 accepted, the remaining Codex standard runs can be collected with:
 
 ```bash
-CONFIRM_FREEZE=1 bash scripts/run-deadline-sol-matrix.sh
+CONFIRM_FREEZE=1 bash scripts/run-codex-standard-matrix.sh
 ```
 
 The Claude rows will remain `NOT RUN` unless genuine Claude access becomes available; provider failures or alternate models will not be used to fill those slots.
