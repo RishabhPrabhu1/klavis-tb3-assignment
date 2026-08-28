@@ -37,12 +37,12 @@ The frozen tree differs from its fully-qualified predecessor only by verifier te
 | Harbor 0.14 NOP | **0.000** | [`results/preflight-status.json`](results/preflight-status.json) |
 | Development mutation controls | **40/40 rejected on fully-qualified predecessor** | [`results/contract-coverage.md`](results/contract-coverage.md) |
 | Automated implementation rubric | **Outstanding** | [`results/implementation-rubric-review.md`](results/implementation-rubric-review.md) |
-| Codex / Sol `xhigh` standard matrix | **In progress / not counted until audited** | [`results/standard-trials.md`](results/standard-trials.md) |
+| Codex / Sol `xhigh` standard matrix | **1/3 counted; 2 remaining** | [`results/standard-trials.md`](results/standard-trials.md) |
 | Codex `/cheat` | **Outstanding** | [`results/cheat-trials.md`](results/cheat-trials.md) |
 | Claude Code / Opus 5 `max` standard matrix | **Outstanding** | [`results/standard-trials.md`](results/standard-trials.md) |
 | Claude `/cheat` | **Outstanding** | [`results/cheat-trials.md`](results/cheat-trials.md) |
 
-The deterministic qualification itself made **zero frontier-model calls**. An in-progress or unaudited model invocation is never represented as completed evidence.
+The deterministic qualification itself made **zero frontier-model calls**. Model evidence is represented as complete only after Harbor result evidence is audited and the failure cause is reviewed.
 
 ## Evaluation configuration
 
