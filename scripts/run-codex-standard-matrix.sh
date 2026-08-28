@@ -92,7 +92,8 @@ else:
     if not valid: kind="INVALID"
     elif data.get("reward") in (0,0.0): kind="FAIL"
     else: kind="SOLVE"
-    print(f"{kind}|{path}|reward={data.get('reward')!r}|passed={data.get('tests_passed')!r}|failed={data.get('tests_failed')!r}|exceptions={data.get('result_exception_types')!r}")
+    tests=data.get("tests") if isinstance(data.get("tests"), dict) else {}
+    print(f"{kind}|{path}|reward={data.get('reward')!r}|passed={tests.get('passed')!r}|failed={tests.get('failed')!r}|exceptions={data.get('result_exception_types')!r}")
 PY
   )
   echo "$classification"
