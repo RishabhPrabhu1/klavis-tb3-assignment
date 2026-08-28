@@ -4,42 +4,102 @@ This repository contains one original Terminal-Bench 3 task for the Klavis Found
 
 ## Task
 
-`tasks/build-snapshot-publish/` repairs an incremental build system that composes:
-
-- crash-consistent immutable project publication;
-- concurrent incremental builds with stable-input validation and reusable-cache merging;
-- exactly-once requests across duplicate concurrency, owner death, response loss, later publication, and GC;
-- live readers plus bounded project/object reclamation;
-- simultaneous cross-project workspace snapshots;
-- atomic optimistic multi-project workspace write transactions;
-- workspace readers/GC with transitive project-generation protection.
+`tasks/build-snapshot-publish/` repairs an incremental build system that composes crash-consistent publication, concurrent incremental builds, exactly-once requests, live readers and reclamation, cross-project workspace snapshots, and atomic optimistic multi-project workspace write transactions.
 
 The intended difficulty is systems composition, not hidden file-layout requirements. Deterministic pause/fail hooks expose concurrency and crash boundaries without relying on uncontrolled races.
 
-## Current candidate
-
-Current rubric-corrected task tree:
+## Frozen submission candidate
 
 ```text
-85eb3be3ce69a625a06eab3e37c69badbab89779
+task tree: d862ab3cc79718e959e9cc7ec1b792540990a24d
 ```
 
-This successor preserves the same starter and reference implementation as the difficulty-proven transaction task while removing verifier assumptions found during review:
+This is the frozen task tree for final evaluation. Do not count model evidence from any other task tree toward the required matrix.
 
-- ordinary project current is observed through the public `read` interface, not a private selector or transaction marker;
-- workspace current is resolved from documented workspace generation metadata, not a fixed `CURRENT` pathname;
-- the transaction response-loss test performs its **first** replay only after later overlapping publication plus workspace/project reclamation, so an early retry cannot repair missing durability;
-- the replay validator checks observable report fields and output bytes/hashes rather than assuming a private snapshot journal field or a particular internal retry count;
-- the small generation-record object-reference schema inspected by GC verification is explicitly documented;
-- candidate executions use verifier-owned log files, isolated sessions, UID baselines, and bounded process-tree cleanup on success, failure, and timeout;
-- host-only process-signaling permission limitations are separated from authoritative root-verifier cleanup failures;
-- duplicate live-owner waiting semantics tested by the verifier are explicitly stated in the contract.
+The immediately preceding fully-qualified task tree was:
 
-Final deterministic qualification and model evidence must use this exact task tree or a later explicitly documented successor. Do not count historical-tree trials toward the final matrix.
+```text
+301107828273e249fbd31ed34d86bf3fed7143a1
+```
 
-## Difficulty calibration
+The only task-tree delta from that predecessor is verifier teardown/reaping hygiene in `tasks/build-snapshot-publish/tests/conftest.py`; the instruction, starter, and reference runtime semantics are unchanged.
 
-The preceding semantic task, `fc064cac2fb1241b68a98475dbc8ea04fbe579cc`, passed 66/66 reference tests, rejected 40/40 development mutants, and produced Harbor Oracle/NOP rewards `1/0`. A clean GPT-5.6 Sol/xhigh standard trial then returned:
+## Deterministic qualification
+
+Recorded qualification for the frozen tree:
+
+```text
+TB3 static checks:        PASS
+Oracle/reference:         68/68
+Harbor 0.14 Oracle:       1.000
+Harbor 0.14 NOP:          0.000
+frontier calls:           0
+```
+
+The predecessor rejected all 40/40 development mutation negative controls. Because the frozen successor changes only verifier teardown/reaping hygiene, it reran current-tree static checks, all 68 reference tests, and exact-tree Harbor Oracle/NOP. The machine-readable record is `results/preflight-status.json`.
+
+For a fully fresh exact-tree rerun including all 40 mutation controls:
+
+```bash
+bash scripts/run-final-tree-deadline-qualification.sh
+```
+
+The successor-delta qualification path used for the recorded frozen-tree evidence is:
+
+```bash
+bash scripts/run-fast-final-successor-qualification.sh
+```
+
+Both qualification paths are zero-frontier-model gates.
+
+## Implementation rubric
+
+The task has undergone repeated source-level rubric audits and concrete verifier/specification defects found during those reviews were corrected before the frozen tree was qualified. The automated Terminal-Bench implementation-rubric result on the exact frozen tree is still a required gate and must not be represented as passed until a same-tree result records zero failed criteria.
+
+Prepared exact-tree runners:
+
+```bash
+# Klavis/Claude subscription OAuth route
+EXPECTED_TASK_TREE=d862ab3cc79718e959e9cc7ec1b792540990a24d \
+CONFIRM_ZERO_COST_COVERAGE=1 \
+bash scripts/run-implementation-rubric-oauth.sh
+
+# Amazon Bedrock route, only with confirmed eligible coverage
+EXPECTED_TASK_TREE=d862ab3cc79718e959e9cc7ec1b792540990a24d \
+bash scripts/run-implementation-rubric-bedrock.sh
+```
+
+`bash scripts/run-next-frontier-step.sh` refuses to launch a frontier probe unless the exact-tree deterministic qualification marker **and** an exact-tree automated rubric PASS both exist.
+
+## Required frontier matrix
+
+At the pinned Terminal-Bench workflow snapshot, the required configurations are:
+
+| Mode | Agent | Model | Reasoning | Required |
+|---|---|---|---|---:|
+| `/run` | Codex | `openai/gpt-5.6-sol` | `xhigh` | 3 genuine verifier failures |
+| `/run` | Claude Code | `anthropic/claude-opus-5` | `max` | 3 genuine verifier failures |
+| `/cheat` | Codex | `openai/gpt-5.6-sol` | `xhigh` | 1 reward-0 run |
+| `/cheat` | Claude Code | `anthropic/claude-opus-5` | `max` | 1 reward-0 run |
+
+Standard-trial crashes, auth/provider/quota failures, container failures, timeouts, and other infrastructure errors do **not** count as model failures. `/cheat` follows the pinned live workflow's reward condition: any nonzero reward fails the adversarial requirement.
+
+### Frozen-tree frontier status
+
+No frontier model call has yet been counted on `d862ab3cc79718e959e9cc7ec1b792540990a24d`.
+
+```text
+Codex standard:   0/3
+Claude standard:  0/3
+Codex cheat:      0/1
+Claude cheat:     0/1
+```
+
+These records are updated in `results/standard-trials.md` and `results/cheat-trials.md` as exact-tree evidence is collected.
+
+## Difficulty calibration — historical only
+
+The superseded calibration tree `fc064cac2fb1241b68a98475dbc8ea04fbe579cc` passed its then-current 66/66 reference suite, rejected 40/40 development mutants, and produced Harbor Oracle/NOP `1/0`. A clean GPT-5.6 Sol/xhigh standard trial on that historical tree returned:
 
 ```text
 reward = 0
@@ -50,103 +110,60 @@ result_exception_types = []
 runtime = 29m44s
 ```
 
-The failures spanned publication, exactly-once durability, readers/GC, reclamation interleavings, recovery, and transaction replay. Later rubric review found verifier/schema/process issues in that tree, so this trial is **difficulty calibration only**, not final required evidence. The current successor changes verifier observation/documentation/process hygiene rather than starter/reference runtime code; no further difficulty strengthening is planned.
+That result demonstrates difficulty only. Later verifier/schema/process review superseded the tree, so it does **not** count toward the final matrix.
 
-Earlier calibration history is documented in `results/failure-analysis.md`.
+## Source-of-truth snapshot
 
-## Repository structure
-
-```text
-tasks/build-snapshot-publish/   task, starter, reference solution, verifier
-scripts/                        qualification, trial, audit, and deadline runners
-results/                        validation state, trial records, coverage, failure analysis
-```
-
-## Source of truth
-
-Pinned Terminal-Bench source-of-truth revision for this submission workflow:
+The local evaluation workflow is pinned to Terminal-Bench revision:
 
 ```text
 79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
 ```
 
-Klavis requires current TB3 static/implementation review, Docker, Oracle/NOP, three standard trials for each required agent configuration, and current `/cheat` behavior.
+Immediately before final frontier evaluation/submission, the live Terminal-Bench defaults and rubric should be rechecked; any upstream change to required model identity, trial count, Harbor behavior, timeout rules, or rubric requirements supersedes this snapshot.
 
-## Deterministic qualification
-
-For the checked-out candidate tree:
+## Authoritative commands
 
 ```bash
+# Current local state
+bash scripts/deadline-status.sh
+
+# Fresh deterministic qualification if needed
 bash scripts/run-final-tree-deadline-qualification.sh
-```
 
-The final qualifier runs all current TB3 static checks, the complete 66-test reference verifier, all 40 development mutation negative controls, then exact-tree Harbor 0.14 Docker Oracle/NOP with zero frontier-model calls. The resulting same-tree qualification marker is stored under `~/.cache/klavis-tb3-runs/transaction-preflight/`.
+# First frontier call only after exact-tree rubric PASS
+bash scripts/run-next-frontier-step.sh
 
-## Required frontier matrix
-
-At the pinned TB3 workflow, standard `/run` requires three attempts per agent configuration. Docker `/cheat` has one matrix entry per `(task × agent)` and no extra trial dimension.
-
-| Mode | Agent | Model | Reasoning | Required |
-|---|---|---|---|---:|
-| `/run` | Codex | `openai/gpt-5.6-sol` | xhigh | 3 genuine verifier failures |
-| `/run` | Claude Code | `anthropic/claude-opus-5` | max | 3 genuine verifier failures |
-| `/cheat` | Codex | `openai/gpt-5.6-sol` | xhigh | 1 reward-0 run |
-| `/cheat` | Claude Code | `anthropic/claude-opus-5` | max | 1 reward-0 run |
-
-Standard-trial crashes, provider/auth/quota failures, container failures, timeouts, and other infrastructure errors do **not** count as model failures.
-
-Adversarial evaluation follows the live TB3 workflow's reward semantics: any nonzero `/cheat` reward fails the requirement; a Harbor/agent failure is recorded by that workflow as reward 0 rather than being subjected to the stricter `/run` validity rule.
-
-## Frontier workflow
-
-After exact-tree deterministic qualification and implementation-rubric review, launch only one first Sol probe:
-
-```bash
-bash scripts/run-one-qualified-sol-probe.sh
-```
-
-The runner refuses duplicate/incomplete same-tree Sol evidence and distinguishes valid reward-0, valid solve, and invalid execution.
-
-After a valid same-tree model failure is reviewed and the tree is frozen, complete Sol standard evidence with:
-
-```bash
+# Complete Codex standards after a legitimate first reward-0 failure is reviewed/frozen
 CONFIRM_FREEZE=1 bash scripts/run-deadline-sol-matrix.sh
-```
 
-Adversarial evidence uses the live reward-based semantics:
-
-```bash
+# Exact-tree adversarial runs
 CONFIRM_FREEZE=1 AGENT=codex TARGET_CHEATS=1 bash scripts/run-deadline-cheat-matrix.sh
+CONFIRM_FREEZE=1 CONFIRM_ZERO_COST_COVERAGE=1 AGENT=claude TARGET_CHEATS=1 bash scripts/run-deadline-cheat-matrix.sh
+
+# Final acceptance audit
+bash scripts/final-submission-audit.sh
 ```
 
-## Claude access
+Legacy/development wrappers are not evidence sources. Current-tree guards in the authoritative entry points are the submission path.
 
-The required Claude configuration is Claude Code / `anthropic/claude-opus-5` / max. Repository tooling supports Claude Code through Amazon Bedrock without changing that requested agent/model identity. `scripts/smoke-test-claude-bedrock.sh` performs a bounded entitlement check before any full benchmark trial, and `scripts/run-deadline-claude-pipeline.sh` is guarded against silent fallback to direct Anthropic billing.
+## Evidence records
 
-Zero-cost provider entitlement is an external prerequisite; the repository does not assume ordinary AWS Free Tier credits cover third-party Anthropic usage.
+- `results/preflight-status.json` — frozen-tree deterministic qualification
+- `results/implementation-rubric-review.md` — rubric audit and automated-gate status
+- `results/standard-trials.md` — required `/run` matrix
+- `results/cheat-trials.md` — required `/cheat` matrix
+- `results/failure-analysis.md` — model-failure classification
+- `results/contract-coverage.md` — instruction-to-verifier traceability
+- `results/environment.md` — Terminal-Bench/configuration snapshot
+- `results/execution-plan.md` — remaining gate order
 
-## Evidence policy
+Raw local evidence remains under `~/.cache/klavis-tb3-runs/`, keyed by repository/task/upstream SHAs and agent configuration.
 
-For standard `/run`, a result counts only when it is on the exact qualified/frozen tree, completes without invalidating infrastructure/provider exceptions, runs the verifier normally, and receives reward 0 because of candidate behavior under a clear contract.
-
-For `/cheat`, the exact tree/configuration must be used and the recorded reward must be 0; any nonzero reward means the verifier was defeated.
-
-Final readiness is checked with:
+## Final readiness
 
 ```bash
 bash scripts/final-submission-audit.sh
 ```
 
-The audit requires exact-tree qualification, implementation-rubric PASS, three valid reward-0 standard trials for each required agent, one reward-0 adversarial run for each required agent, and the repository evidence records.
-
-## Evidence records
-
-- `results/preflight-status.json`
-- `results/implementation-rubric-review.md`
-- `results/standard-trials.md`
-- `results/cheat-trials.md`
-- `results/failure-analysis.md`
-- `results/contract-coverage.md`
-- `results/execution-plan.md`
-
-Raw local evidence remains under `~/.cache/klavis-tb3-runs/` with repository/task/upstream SHAs, model configuration, Harbor output, verifier CTRF, trajectories, and evidence audits.
+Submission is ready only when that audit reports `FINAL_STATUS=READY_FOR_SUBMISSION` and the repository documentation has been updated with the exact final trial evidence.
