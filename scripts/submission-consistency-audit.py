@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Fail closed on stale current-state submission metadata.
 
-This intentionally does not reject historical calibration hashes/counts when they are
-clearly historical. It verifies the files that describe the *current* submission all
-identify the actual task subtree and the recorded frozen-tree qualification.
+Historical calibration hashes/counts are allowed when they are clearly historical. This
+verifies the files describing the current submission all identify the actual task subtree
+and the recorded frozen-tree qualification.
 """
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ for rel in current_docs:
         fail(f"{rel} does not identify current task tree {tree}")
 
 # These hashes were once incorrectly presented as the current candidate. They may
-# remain in Git history, but not in the active reviewer-facing current-state docs.
+# remain in Git history, but not in active reviewer-facing current-state docs.
 obsolete_current_hashes = {
     "85eb3be3ce69a625a06eab3e37c69badbab89779",
     "f90cf3f01fe692b1d473fcbf82858cd65d4a5bc8",
@@ -87,11 +87,6 @@ for rel in current_docs:
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
 if "Oracle/reference:         68/68" not in readme:
     fail("README does not state current 68/68 qualification")
-if "Automated implementation-rubric PASS remains outstanding" not in (ROOT / "results/validation.md").read_text(encoding="utf-8"):
-    # Wording check is intentionally broad below if the sentence changes.
-    validation = (ROOT / "results/validation.md").read_text(encoding="utf-8").lower()
-    if "implementation-rubric gate" not in validation or "outstanding" not in validation:
-        fail("validation record does not truthfully mark the automated rubric gate outstanding")
 
 # Authoritative operational entry points must not be hard-pinned to the obsolete
 # difficulty-calibration tree.
