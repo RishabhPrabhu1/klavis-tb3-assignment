@@ -86,7 +86,9 @@ for rel in current_docs:
             fail(f"{rel} still contains obsolete current-candidate hash {old}")
 
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
-if "Oracle/reference:         68/68" not in readme:
+# Accept either prose or a Markdown table. Keep this semantic rather than tying the
+# audit to one exact spacing/layout so presentation cleanup cannot create a false failure.
+if not re.search(r"(?:Oracle/reference|Reference verifier).{0,120}68/68", readme, flags=re.IGNORECASE | re.DOTALL):
     fail("README does not state current 68/68 qualification")
 
 environment = (ROOT / "results/environment.md").read_text(encoding="utf-8")
