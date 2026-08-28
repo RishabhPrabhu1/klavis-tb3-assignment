@@ -17,10 +17,10 @@ Pinned Terminal-Bench revision:
 Deterministic qualification on the exact frozen tree is complete:
 
 ```text
-static checks:                         PASS
-Oracle/reference:                      68/68
-Harbor Oracle/NOP:                     1/0
-frontier calls during qualification:   0
+static checks:                    PASS
+Oracle/reference:                 68/68
+Harbor Oracle/NOP:                1/0
+model calls during qualification: 0
 ```
 
 Its fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejected all 40/40 development mutation negative controls. The sole successor task delta is verifier teardown/process-reaping hygiene in `tests/conftest.py`; the frozen successor reran current-tree static checks, the complete 68-test reference verifier, and exact-tree Harbor Oracle/NOP.
@@ -40,24 +40,26 @@ Read-only source review of earlier predecessors exposed concrete issues. They we
 9. Exact retry-count assumptions were removed.
 10. Verifier teardown child reaping was added to eliminate cross-test contamination.
 
-## Source-level criterion assessment
+## Source-level criterion review
 
-| Criterion | Assessment | Basis / residual risk |
+| Criterion | Source-level observation | Residual risk |
 |---|---|---|
-| Verifiable | Likely pass | Deterministic hooks, explicit observable schemas, separate verifier, reference witness. |
-| Solvable | Borderline | Complete reference exists and starter scaffolding is nonblank, but the composed state-machine surface is large. |
-| Difficult | Supported by calibration | A superseded qualified tree produced a clean Sol/xhigh reward-0 with broad failures; exact final-tree matrix is still required. |
-| Interesting / realistic | Likely pass | Build consistency, idempotency, crash recovery, optimistic transactions, readers, and reclamation are professional systems concerns. |
-| Outcome verified | Likely pass | Representation assumptions identified during review were removed or documented. |
-| Anti-cheat robustness | Likely pass | Separate verifier, unprivileged candidate, verifier/reference excluded from agent environment; empirical `/cheat` remains required. |
-| Functional verification | Likely pass | Candidate code is executed and reward is behavior-based. |
-| Deterministic / reproducible | Likely pass | Fixed dependencies and deterministic pause/failpoint schedules dominate; teardown cleanup is hardened. |
-| Test/instruction alignment | Likely pass | Replay, record schema, current-state observation, duplicate ownership, and transaction outcomes are explicitly aligned. |
-| Structured-data schema | Likely pass | Directly graded report/generation schemas are normative with extension policy stated. |
-| Reviewable | Likely pass | `results/contract-coverage.md` maps requirements to tests and trust boundaries. |
-| Instruction concision | Borderline | The contract is long because eight interfaces and several crash/concurrency invariants are normative. |
-| Expert-time estimate | Borderline | The 4-hour estimate assumes an expert working from the provided starter and understanding the intended systems approach. |
-| Verifier separation / hygiene | Likely pass | Artifact boundary, pinned verifier dependencies, unprivileged candidate execution, and cleanup are explicit. |
+| Verifiable | Deterministic hooks, explicit observable schemas, separate verifier, and a reference witness are present. | Automated rubric review not executed. |
+| Solvable | A complete reference exists and starter scaffolding is nonblank. | The composed state-machine surface is large. |
+| Difficult | Historical qualified-tree calibration produced a clean Sol/xhigh reward-0 with broad failures. | Only exact final-tree trials count for submission evidence. |
+| Interesting / realistic | The task exercises build consistency, idempotency, crash recovery, optimistic transactions, readers, and reclamation. | Automated rubric judgment not available. |
+| Outcome verified | Previously identified representation assumptions were either removed or made contractual. | Remaining hidden assumptions would require external review to detect. |
+| Anti-cheat robustness | Verifier and reference state are separate from the agent environment; candidate execution is unprivileged. | Required empirical `/cheat` evidence remains separate. |
+| Functional verification | Candidate code is executed and reward is behavior-based. | No automated rubric verdict available. |
+| Deterministic / reproducible | Dependencies are pinned and pause/failpoint schedules replace uncontrolled timing races. | Platform-specific behavior remains a general systems-test risk. |
+| Test/instruction alignment | Replay, schemas, current-state observation, duplicate ownership, and transaction outcomes are explicitly documented. | External rubric review remains the authoritative check. |
+| Structured-data schema | Directly graded report/generation schemas are normative with an extension policy. | No automated rubric verdict available. |
+| Reviewable | `results/contract-coverage.md` maps requirements to verifier coverage and trust boundaries. | The task is necessarily large. |
+| Instruction concision | The contract is organized by interface and invariant. | Length remains a material risk because several crash/concurrency contracts are normative. |
+| Expert-time estimate | Starter code and a complete reference implementation are provided. | The 4-hour estimate may be aggressive for an unfamiliar expert. |
+| Verifier separation / hygiene | Verifier artifacts, dependencies, unprivileged execution, and cleanup boundaries are explicit. | Automated rubric review not executed. |
+
+These observations are supporting source review only; they are deliberately not converted into pass/fail rubric claims.
 
 ## Automated check — NOT RUN
 
