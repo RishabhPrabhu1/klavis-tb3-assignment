@@ -66,8 +66,8 @@ The standard `/run` workflow expands `trials: 3` into a `(task × agent × trial
 |---|---|---|
 | Codex subscription authentication | **Available** | Codex standard and `/cheat` evidence can be collected. |
 | Claude Code subscription / setup-token route | **Unavailable** | Claude Code standard trials and Claude-driven rubric cannot run. |
-| Anthropic API route | **Unavailable for this submission** | Cannot substitute API-backed Claude execution. |
-| Amazon Bedrock Claude route | **Unavailable for this submission** | Cannot substitute Bedrock-backed Claude execution. |
+| Anthropic API route | **Unavailable for this submission** | Cannot provide the required Claude execution. |
+| Amazon Bedrock Claude route | **Unavailable for this submission** | Cannot provide the required Claude execution. |
 
 The missing Claude-dependent results are an explicit provider-access limitation. They are not counted as model failures or treated as passing evidence. The repository keeps the required rows visible and the final submission note will disclose that the automated implementation rubric, three Claude standard trials, and Claude `/cheat` entry were not executed.
 
@@ -93,7 +93,7 @@ RAM:     2 GiB
 storage: 10 GiB
 ```
 
-so local Docker is sufficient for the task's declared computational requirements. Final evidence must state the actual backend used rather than implying upstream Modal execution.
+so local Docker is sufficient for the task's declared computational requirements. Final evidence states the actual backend used rather than implying upstream Modal execution.
 
 ## Timeout rule
 
@@ -121,14 +121,13 @@ The current rubric includes criteria such as verifiability, solvability, difficu
 
 Repository source-level review has already corrected the concrete hidden-representation and verifier-isolation defects found during iteration, but that self-audit is **not** a substitute for the automated exact-tree review. Because Claude access is unavailable, the automated rubric is marked **NOT RUN** rather than PASS.
 
-Prepared exact-tree routes remain in the repository for reproducibility:
+For reproducibility, the repository retains the Claude Code OAuth implementation-rubric runner:
 
 ```text
 scripts/run-implementation-rubric-oauth.sh
-scripts/run-implementation-rubric-bedrock.sh
 ```
 
-Neither route was usable in the current submission environment. No provider-access assumption is encoded into the task contract itself.
+It was not executed because the required Claude Code access is unavailable in the submission environment.
 
 ## Static/verifier properties relevant to this task
 
@@ -150,8 +149,8 @@ The repository default branch contains the frozen task tree and current submissi
 - `results/preflight-status.json` consistency;
 - current reviewer-facing task hashes/counts;
 - Python audit-tool compilation;
-- authoritative shell-script syntax;
-- absence of obsolete calibration-tree pins in authoritative launch paths.
+- retained shell-tool syntax;
+- absence of development-only orchestration and stale candidate pins.
 
 The workflow is rerun after reviewer-facing documentation updates; the task subtree remains frozen.
 
