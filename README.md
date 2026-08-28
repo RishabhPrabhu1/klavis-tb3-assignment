@@ -13,7 +13,16 @@ Original Terminal-Bench 3 task for the Klavis Founding Engineer coding assignmen
 - cross-project workspace snapshots;
 - optimistic atomic multi-project workspace write transactions.
 
-The difficulty is in preserving system-wide invariants across concurrency, recovery, reclamation, and replay. Deterministic pause/fail hooks expose those boundaries without relying on uncontrolled races or hidden timing assumptions.
+The difficulty is preserving system-wide invariants across concurrency, recovery, reclamation, and replay. Deterministic pause/fail hooks expose those boundaries without relying on uncontrolled races or hidden timing assumptions.
+
+## Repository layout
+
+```text
+tasks/build-snapshot-publish/  Terminal-Bench task, environment, solution, and verifier
+results/                       qualification, evaluation, and failure-analysis evidence
+scripts/                       reproducible validation and evaluation tooling
+.github/workflows/             read-only submission consistency CI
+```
 
 ## Frozen task
 
@@ -46,7 +55,7 @@ The deterministic qualification itself made **zero frontier-model calls**. Model
 
 ## Claude access limitation
 
-The current Terminal-Bench configuration requires Claude Code for the automated implementation-rubric review and requires Claude Code / Opus 5 for three standard trials plus one adversarial `/cheat` entry. Those Claude-dependent requirements are **not being executed in this submission** because no Claude Code subscription or other usable Claude provider route (Anthropic API or Bedrock) is available in the submission environment.
+The current Terminal-Bench configuration requires Claude Code for the automated implementation-rubric review and requires Claude Code / Opus 5 for three standard trials plus one adversarial `/cheat` entry. Those Claude-dependent requirements are **not being executed in this submission** because no Claude Code subscription or other usable Claude provider route is available in the submission environment.
 
 This is an explicit submission limitation, not a claimed pass. No substitute model result, failed authentication attempt, or provider error is counted as Claude evidence. The repository keeps the required Claude rows visible and marks them incomplete so a reviewer can distinguish completed validation from unavailable provider-dependent evaluation.
 
@@ -73,51 +82,42 @@ For `/cheat`, acceptance follows the pinned live TB3 workflow: every required ta
 
 ## Evidence map
 
-The reviewer-facing evidence is intentionally separated by purpose:
-
-- [`results/validation.md`](results/validation.md) — frozen-tree deterministic qualification and verifier hardening summary.
+- [`results/validation.md`](results/validation.md) — frozen-tree deterministic qualification and verifier-hardening summary.
 - [`results/preflight-status.json`](results/preflight-status.json) — machine-readable qualification record.
 - [`results/contract-coverage.md`](results/contract-coverage.md) — instruction-to-verifier traceability and representation-neutrality audit.
-- [`results/implementation-rubric-review.md`](results/implementation-rubric-review.md) — implementation-rubric analysis, Claude access limitation, and automated-gate status.
+- [`results/implementation-rubric-review.md`](results/implementation-rubric-review.md) — source-level rubric assessment and the missing Claude-dependent automated check.
 - [`results/standard-trials.md`](results/standard-trials.md) — required standard `/run` matrix and counted Codex evidence.
 - [`results/cheat-trials.md`](results/cheat-trials.md) — required adversarial `/cheat` matrix.
 - [`results/failure-analysis.md`](results/failure-analysis.md) — model-failure validity rules and per-trial analysis.
-- [`results/environment.md`](results/environment.md) — pinned versions, auth modes, provider availability, and evaluation environment.
-- [`results/submission-checklist.md`](results/submission-checklist.md) — final delivery/access/evidence checklist.
+- [`results/environment.md`](results/environment.md) — pinned versions, provider availability, and evaluation environment.
 
 Raw local Harbor evidence is stored outside the repository under `~/.cache/klavis-tb3-runs/` and keyed by repository/task/upstream identities. Submission-facing summaries contain the exact evidence paths and classifications after each accepted run.
 
 ## Reproducing deterministic qualification
 
-A full exact-tree rerun is available with:
+A complete exact-tree deterministic qualification is available with:
 
 ```bash
 bash scripts/run-final-tree-deadline-qualification.sh
 ```
 
-The recorded frozen-tree successor qualification can be reproduced with:
-
-```bash
-bash scripts/run-fast-final-successor-qualification.sh
-```
-
-Both paths are zero-frontier-model qualification gates.
+This path runs static checks, the 68-test reference verifier, mutation controls, and exact-tree Harbor Oracle/NOP without frontier-model calls.
 
 ## Trial tooling
 
-The authoritative generic trial runner is:
+The generic trial runner is:
 
 ```bash
 bash scripts/run-candidate-trial.sh
 ```
 
-It records repository SHA, task tree, model, reasoning level, Harbor version, auth mode, and raw result locations, then `scripts/audit-trial-evidence.py` reclassifies standard-trial validity from authoritative Harbor `result.json` state rather than relying on console text alone.
+It records repository SHA, task tree, model, reasoning level, Harbor version, auth mode, and raw result locations. `scripts/audit-trial-evidence.py` then reclassifies standard-trial validity from authoritative Harbor `result.json` state rather than relying on console text alone.
 
-Matrix wrappers are provided for the final Codex, Claude, and adversarial runs. These scripts preserve the frozen task tree and fail closed on inconsistent evidence. Claude runners remain in the repository for reproducibility, but they are not represented as executed without actual provider access.
+Matrix collectors are provided for the required Codex, Claude, and adversarial configurations. They preserve the frozen task tree and fail closed on inconsistent evidence. Claude tooling remains reproducible in the repository, but no Claude result is represented as executed without actual provider access.
 
 ## Historical calibration
 
-Historical model runs are retained because they document task iteration, but are explicitly excluded from the final matrix.
+Historical model runs are retained in the evidence documents because they explain task iteration, but they are explicitly excluded from the final matrix.
 
 The strongest superseded calibration tree, `fc064cac2fb1241b68a98475dbc8ea04fbe579cc`, produced a clean GPT-5.6 Sol/xhigh reward-0 trial with `45 passed / 21 failed`. Later verifier/schema/process corrections superseded that tree, so the result demonstrates difficulty only. Earlier solved and verifier-defect trees are documented in [`results/failure-analysis.md`](results/failure-analysis.md).
 
@@ -131,4 +131,4 @@ bash scripts/final-submission-audit.sh
 
 That script reports full TB3 submission readiness only when the exact frozen task has the required deterministic qualification, same-tree automated implementation-rubric PASS, complete valid standard matrices, and reward-0 adversarial entries.
 
-Because the Claude-dependent requirements are not being run without Claude access, the final strict audit is expected to remain **not fully ready** even after the remaining Codex evidence is complete. The submission will preserve that truthful partial status and disclose the Claude limitation rather than weaken the audit or claim full TB3 compliance.
+Because the Claude-dependent requirements are not being run without Claude access, the final strict audit is expected to remain **not fully ready** even after the remaining Codex evidence is complete. The submission preserves that truthful partial status rather than weakening the audit or claiming full TB3 compliance.
