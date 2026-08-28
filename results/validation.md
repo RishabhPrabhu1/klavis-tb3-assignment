@@ -60,7 +60,7 @@ Adversarial `/cheat` follows the pinned live workflow's reward acceptance rule: 
 
 ```text
 Codex / Sol xhigh standard:         3/3 counted — COMPLETE
-Codex /cheat:                       0/1 counted — OUTSTANDING
+Codex /cheat:                       1/1 reward-0 — COMPLETE
 Claude Code / Opus 5 max standard: NOT RUN — Claude access unavailable
 Claude /cheat:                      NOT RUN — Claude access unavailable
 Automated implementation rubric:   NOT RUN — Claude access unavailable
@@ -74,7 +74,21 @@ target=3
 status=SOL_MATRIX_COMPLETE
 ```
 
-The three counted verifier outcomes were `62/6`, `64/4`, and `54/14` passed/failed, each with Harbor exit status `0`, authoritative reward `0.0`, and no trial exceptions. `results/standard-trials.md` and `results/failure-analysis.md` contain exact evidence paths and failure analysis.
+The three counted verifier outcomes were `62/6`, `64/4`, and `54/14` passed/failed, each with Harbor exit status `0`, authoritative reward `0.0`, and no standard-trial exceptions. `results/standard-trials.md` and `results/failure-analysis.md` contain exact evidence paths and failure analysis.
+
+The exact-tree Codex adversarial collector then completed with:
+
+```text
+agent=codex
+model=openai/gpt-5.6-sol
+reasoning=xhigh
+terminal_bench_head=79e71650f5b6a6ef5bb46a434c7c04d7d99a9480
+reward_zero=1
+target=1
+status=CHEAT_MATRIX_COMPLETE
+```
+
+The adversarial Harbor result had reward `0.0`; `results/cheat-trials.md` records its exact evidence directory, result exception, and reward-based acceptance rationale.
 
 Claude-dependent requirements remain visible as incomplete rather than being replaced with another model or an authentication/provider failure.
 
