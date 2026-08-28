@@ -1,23 +1,25 @@
 # Failure Analysis
 
-## Current candidate
+## Frozen candidate
 
 ```text
-85eb3be3ce69a625a06eab3e37c69badbab89779
+d862ab3cc79718e959e9cc7ec1b792540990a24d
 ```
 
-This is the frozen rubric-corrected successor to the difficulty-proven `fc064cac...` task. It preserves the same starter and reference implementation and the same observable runtime challenge, while removing verifier/process assumptions found during review:
+This is the only task tree whose frontier results may count toward the final Klavis matrix.
 
-- workspace current is resolved semantically rather than through a fixed selector pathname;
-- transaction post-publish replay is checked only after later replacement plus workspace/project GC and does not read private `request_report` state;
-- ordinary project current is observed through the required public `read` interface rather than a transaction-specific metadata marker;
-- directly inspected generation-record object references are an explicit documented schema;
-- workspace candidate subprocesses use verifier-owned log files, isolated sessions, UID baselines, and bounded process-tree cleanup;
-- host-only signal permission limits no longer contaminate local mutation failures, while authoritative root-verifier cleanup errors still fail;
-- live-owner duplicate waiting behavior tested by the verifier is explicit in the contract;
-- deferred replay validates observable member/output identity and requires only the documented positive `attempts` value, not an invented exact retry count.
+Deterministic qualification is complete:
 
-Final deterministic qualification and frontier evidence must use this exact tree. Historical trials below are calibration evidence only.
+```text
+static checks:      PASS
+Oracle/reference:   68/68
+Harbor Oracle/NOP:  1/0
+frontier calls:     0
+```
+
+The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejected 40/40 development mutation controls. The frozen successor changes only verifier teardown/reaping hygiene in `tests/conftest.py`; it reran current-tree static checks, all 68 reference tests, and exact-tree Harbor Oracle/NOP.
+
+Automated implementation-rubric acceptance remains a pre-frontier gate and is not claimed until same-tree evidence exists.
 
 ## Standard-trial validity
 
@@ -31,9 +33,9 @@ reward = 0
 verifier completed normally
 ```
 
-Authentication, provider/quota, timeout, container, Harbor, or other execution failures do not count as standard model failures.
+Authentication, provider/quota, timeout, container, Harbor, verifier, or other execution failures do not count as standard model failures.
 
-For `/cheat`, the live TB3 workflow is reward-based: each task × agent adversarial run must have reward `0`; any nonzero reward fails the requirement. The live workflow records reward 0 when `harbor run` itself exits nonzero, so an adversarial safety refusal is not treated the same way as an invalid `/run` model failure.
+For `/cheat`, the pinned live Terminal-Bench workflow is reward-based: every task × agent adversarial entry must receive reward `0`; any nonzero reward fails the requirement. This acceptance rule is intentionally distinct from standard `/run` validity.
 
 ## Failure categories
 
@@ -45,13 +47,13 @@ For `/cheat`, the live TB3 workflow is reward-based: each task × agent adversar
 - `F6` — auth/provider/model/tooling failure.
 - `F7` — other invalid/non-difficulty evidence, including suspicious shortcut behavior.
 
-Under deadline policy, a valid reward-0 caused by a genuine candidate implementation error under a clear contract is sufficient difficulty evidence; F3-F7 are not.
+Only F1/F2-style genuine candidate failures under a clear contract can satisfy the standard-failure requirement. F3-F7 do not.
 
 ## Historical calibration
 
 ### Workspace snapshot design — solved
 
-Task tree `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` produced a clean GPT-5.6 Sol/xhigh solve:
+Tree `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` produced a clean GPT-5.6 Sol/xhigh solve:
 
 ```text
 reward = 1
@@ -59,33 +61,32 @@ reward = 1
 execution_class = valid-completed-trial
 ```
 
-Classification: valid solve; task was strengthened.
+Classification: valid solve; the task was strengthened.
 
-### Optimistic transaction tree — hidden workspace selector
+### Optimistic transaction predecessor — verifier defect
 
-Task tree `40cbd34104e1f0a549be23b46ef70655b728cece` passed deterministic qualification, then Sol returned reward 0 with 61 passed / 5 failed. All five failures were caused by a verifier helper requiring `.workspace-cache/CURRENT`, while the contract did not prescribe that selector and the candidate used another representation.
+Tree `40cbd34104e1f0a549be23b46ef70655b728cece` returned reward 0 with 61 passed / 5 failed, but those failures depended on a verifier helper requiring `.workspace-cache/CURRENT`, which the contract did not prescribe.
 
-Classification: F4 verifier defect; not difficulty evidence. Workspace current was changed to semantic `commit_seq` observation.
+Classification: `F4`. The workspace-current verifier was made representation-neutral. This run is not difficulty evidence and does not count.
 
-### Rubric-clean transaction tree — genuine Sol failure
+### Difficulty calibration tree — genuine Sol failure
 
-Task tree:
+Tree:
 
 ```text
 fc064cac2fb1241b68a98475dbc8ea04fbe579cc
 ```
 
-Deterministic qualification:
+Historical deterministic qualification:
 
 ```text
 static checks:        PASS
 Oracle/reference:     66/66
 mutants rejected:     40/40
-Harbor Oracle/NOP:    1 / 0
-frontier calls in qualification: 0
+Harbor Oracle/NOP:    1/0
 ```
 
-GPT-5.6 Sol/xhigh standard probe:
+GPT-5.6 Sol/xhigh result:
 
 ```text
 reward = 0
@@ -96,22 +97,33 @@ result_exception_types = []
 runtime = 29m44s
 ```
 
-The failures were broad rather than a single formatting issue: project publication, durable exactly-once recovery, reader/GC behavior, reclamation interleavings, interrupted-work recovery, and workspace transaction replay all remained incorrect. One transaction-replay assertion was later identified as depending on private verifier state, but the remaining failures independently establish that the runtime challenge is difficult enough.
+The failures were broad across publication, exactly-once durability, readers/GC, reclamation interleavings, interrupted-work recovery, and workspace transaction behavior rather than a single formatting error.
 
-Classification: **genuine model implementation failure for difficulty calibration**. No further difficulty strengthening is warranted. Because later rubric review found verifier/schema/process issues, this old-tree result is not part of the final required 3-trial matrix.
+Classification: genuine implementation failure for **difficulty calibration only**. Later verifier/schema/process review superseded the tree, so it does not fill any final matrix slot.
 
-### Frozen rubric-corrected successor
+## Corrections made before the frozen tree
 
-Review of the calibration tree and intermediate successors identified hidden replay state, undocumented record schema, selector/metadata assumptions, incomplete workspace process isolation, an early replay that could repair durability before the intended GC test, and undocumented live-owner duplicate semantics. Tree `85eb3be3...` removes or documents those assumptions without changing starter/reference runtime code or weakening observable concurrency/crash/replay/GC requirements.
+Review of the calibration tree and intermediate successors found and corrected:
 
-The last verifier-only adjustment removed an unnecessary `attempts == 1` assumption from deferred replay. The verifier now checks that `attempts` is the documented positive integer and that the replay identifies the stranded member generation and original `out/app.txt` SHA-256 after that generation itself has been reclaimed.
+- fixed-path workspace-current observation;
+- incorrect ordinary-project-current inference from workspace-only history;
+- private `request_report` replay dependency;
+- undocumented committed-record schema expectations;
+- incomplete candidate-process isolation;
+- a response-loss test that replayed too early and could repair durability before the intended reclamation scenario;
+- undocumented live-owner duplicate semantics;
+- over-prescriptive transaction wording;
+- an unnecessary exact retry-count assumption;
+- verifier teardown zombie contamination.
 
-## Per-trial analysis template
+These were treated as task/verifier defects, not as model failures.
+
+## Final-tree per-trial analysis template
 
 ```text
 Agent / model / reasoning:
 Execution commit:
-Task tree:
+Task tree: d862ab3cc79718e959e9cc7ec1b792540990a24d
 Evidence directory:
 
 Validity:
@@ -139,16 +151,19 @@ Failure analysis:
 
 Decision:
 - legitimate model failure:
-- freeze candidate:
-- invalid run:
+- counts toward final matrix:
+- frozen tree remains valid:
 ```
 
-## Freeze rule
+## Freeze rule for the final tree
 
-For exact task tree `85eb3be3ce69a625a06eab3e37c69badbab89779`:
+For `d862ab3cc79718e959e9cc7ec1b792540990a24d`:
 
-- any valid standard reward `1` means do not treat that tree as meeting the required failure matrix;
-- valid standard reward `0` from a genuine candidate implementation error permits freezing under the deadline policy;
-- F3/F4 requires a narrow task/verifier repair and requalification;
-- F5/F6 is preserved as invalid evidence and does not count;
-- final submission requires three valid standard failures for Sol/xhigh and three for Opus 5/max, plus one zero-reward adversarial run for each agent under the live TB3 `/cheat` behavior.
+- valid standard reward `1` means the required failure matrix is not met;
+- valid standard reward `0` caused by genuine candidate implementation error can count;
+- `F3/F4` requires a narrow task/verifier repair, a **new task-tree hash**, and complete requalification before further counted trials;
+- `F5/F6/F7` is preserved as invalid evidence and does not count;
+- once a legitimate first exact-tree reward-0 failure is reviewed, the tree is frozen for the remainder of the standard/adversarial matrix;
+- final submission requires three valid Sol/xhigh failures, three valid Opus 5/max failures, and one zero-reward adversarial entry for each agent under the pinned live `/cheat` behavior.
+
+No final-tree trial analysis has yet been inserted because no frontier model call has been counted on the frozen tree.
