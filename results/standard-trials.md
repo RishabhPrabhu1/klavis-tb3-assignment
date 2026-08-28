@@ -91,30 +91,7 @@ reward_error=none
 
 The failures exercise requirements stated directly in `instruction.md`: selective cache invalidation; GC revalidation against concurrent commits/readers; temporary protection of live-writer objects; reclamation after dead work; and preservation of later committed reusable state when stale writer bases are reclaimed. They are therefore classified as genuine candidate implementation failures rather than specification, verifier, provider, or infrastructure failures. Trial 1 counts toward the required Codex matrix.
 
-No historical-tree trial counts toward these six entries.
-
-## Difficulty calibration — historical only
-
-Tree:
-
-```text
-fc064cac2fb1241b68a98475dbc8ea04fbe579cc
-```
-
-That superseded tree passed its then-current static checks, Oracle/reference `66/66`, all `40/40` development mutants, and Harbor Oracle/NOP `1/0`. A GPT-5.6 Sol/xhigh standard probe produced:
-
-```text
-reward = 0
-45 passed / 21 failed
-execution_class = valid-completed-trial
-qualification_valid = true
-result_exception_types = []
-runtime = 29m44s
-```
-
-The failure was broad across publication, exactly-once durability, readers/GC, reclamation interleavings, interrupted-work recovery, and workspace transaction replay. Later verifier/schema/process corrections superseded that tree, so the run is difficulty calibration only.
-
-Earlier tree `40cbd34104e1f0a549be23b46ef70655b728cece` produced reward 0 but its failures depended on an undocumented workspace selector; it is verifier-defect evidence and does not count. Earlier tree `17291a73dc954c66db0ef5cc6cf2f70fe1c85db4` was cleanly solved and motivated later task strengthening.
+No historical-tree trial counts toward these six entries. Historical calibration and superseded verifier-defect runs are documented once in `results/failure-analysis.md`.
 
 ## Post-run acceptance procedure
 
