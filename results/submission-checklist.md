@@ -25,21 +25,25 @@ Any change under `tasks/build-snapshot-publish/` changes the task tree and inval
 - [x] Live model identities/trial counts rechecked: 3 Codex standard, 3 Claude standard, 1 Codex cheat, 1 Claude cheat.
 - [x] Common committed credential patterns were checked; no AWS access-key/secret or Anthropic API-key value was found.
 - [x] `.gitignore` excludes local `.env`, key, credential, secret, log, cache, Harbor job, and agent-state files.
+- [x] Claude provider limitation is explicitly documented in README and reviewer-facing result files.
 
 ## Codex evidence
 
-- [ ] Standard trial 1 finishes.
-- [ ] Trial 1 authoritative Harbor result audited.
-- [ ] Trial 1 confirmed free of provider/auth/quota/container/timeout/verifier contamination.
-- [ ] Trial 1 reward and failed tests classified as genuine candidate behavior before counting.
+- [x] Standard trial 1 finished.
+- [x] Trial 1 authoritative Harbor result audited.
+- [x] Trial 1 confirmed free of provider/auth/quota/container/timeout/verifier contamination.
+- [x] Trial 1 reward and failed tests classified as genuine candidate behavior.
+- [x] Trial 1 recorded in `results/standard-trials.md` and `results/failure-analysis.md`.
 - [ ] Standard trial 2 completed and audited.
 - [ ] Standard trial 3 completed and audited.
-- [ ] `results/standard-trials.md` updated with exact evidence paths and results.
-- [ ] `results/failure-analysis.md` updated with per-trial analysis.
+- [ ] Final Codex standard ledger updated with all three exact evidence paths/results.
+- [ ] Final Codex failure analysis updated with all three per-trial analyses.
 - [ ] Codex `/cheat` completed under pinned TB3 adversarial semantics.
-- [ ] `results/cheat-trials.md` updated with exact adversarial evidence/provenance.
+- [ ] `results/cheat-trials.md` updated with exact Codex adversarial evidence/provenance.
 
-## Claude-dependent requirements
+Current Codex standard status: **1/3 counted**.
+
+## Claude-dependent requirements — intentionally incomplete
 
 Full TB3 compliance additionally requires:
 
@@ -49,7 +53,9 @@ Full TB3 compliance additionally requires:
 - [ ] Claude Code / Opus 5 / `max` standard trial 3.
 - [ ] Claude Code / Opus 5 / `max` `/cheat` entry with reward 0.
 
-If provider access remains unavailable, these boxes stay unchecked and the submission email must state that limitation plainly. Do not mark `FINAL_STATUS=READY_FOR_SUBMISSION` in that state.
+These boxes are expected to remain unchecked for this submission because the submission environment has **no Claude Code subscription and no usable Anthropic API or Bedrock route**. The missing entries are not provider failures and are not counted as model results. No alternate model is used to fill them.
+
+The README, `results/environment.md`, `results/implementation-rubric-review.md`, `results/standard-trials.md`, and `results/cheat-trials.md` all disclose this limitation. Do not mark `FINAL_STATUS=READY_FOR_SUBMISSION` while these required items remain incomplete.
 
 ## Repository delivery
 
@@ -58,7 +64,7 @@ If provider access remains unavailable, these boxes stay unchecked and the submi
 - [ ] Confirm `main` contains every final evidence/documentation update.
 - [ ] Confirm latest `Submission Consistency` workflow succeeds.
 - [ ] Re-fetch Terminal-Bench `main` immediately before sending and compare required defaults/workflows.
-- [ ] Run `bash scripts/final-submission-audit.sh`; preserve its truthful status.
+- [ ] Run `bash scripts/final-submission-audit.sh`; preserve its truthful partial/not-ready status if Claude remains incomplete.
 - [ ] Confirm the reviewer can access the GitHub repository. The repository is currently private, so either reviewer access must be granted or visibility must be changed before sending the URL.
 - [ ] Open the repository URL in a logged-out/private browser session if it is intended to be publicly accessible.
 
@@ -69,10 +75,12 @@ The final email should:
 - include the repository URL;
 - apologize briefly for the late/incomplete provider-dependent portion without overexplaining;
 - state what was completed and validated;
-- state exactly which Claude-dependent requirements could not be executed if they remain incomplete;
+- state explicitly that no Claude Code subscription or other usable Claude provider route was available;
+- identify the missing automated rubric, three Claude standard trials, and Claude `/cheat` result;
 - avoid claiming full TB3 compliance if the strict audit does not report ready;
-- offer to complete the missing Claude validation promptly if approved access is provided or a follow-up is permitted.
+- make clear that no substitute model or provider failure was counted as Claude evidence;
+- offer to complete the missing Claude validation if an approved access route or follow-up is provided.
 
 ## Final stop conditions
 
-Do not send until all immediately controllable items above are complete. Do not alter the task merely to make a status page look complete. Evidence accuracy takes precedence over cosmetic completeness.
+Do not send until all immediately controllable Codex and repository-delivery items above are complete. Do not alter the task merely to make a status page look complete. Evidence accuracy takes precedence over cosmetic completeness.
