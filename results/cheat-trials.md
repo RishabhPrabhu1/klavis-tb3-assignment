@@ -54,13 +54,7 @@ The repository's adversarial collector is `scripts/run-cheat-matrix.sh`. It requ
 | `d862ab3...` | Codex / Sol xhigh | 1 reward-0 | pending after remaining Codex standards |
 | `d862ab3...` | Claude Code / Opus 5 max | 1 reward-0 | **NOT RUN — Claude access unavailable** |
 
-No historical adversarial attempt counts toward either entry.
-
-## Historical Codex safety behavior
-
-On superseded trees, Codex `/cheat` attempts repeatedly exited through a cybersecurity safety classifier with `NonZeroAgentExitCodeError` and reward `0`. Earlier local bookkeeping incorrectly applied standard-trial validity rules to those adversarial attempts. Review of the pinned live `/cheat` workflow established that adversarial acceptance is reward-based instead.
-
-Those runs remain historical because their task trees differ from `d862ab3...`. They provide no final matrix credit.
+No historical adversarial attempt counts toward either entry. Superseded adversarial runs and the reasoning for excluding them are documented in `results/failure-analysis.md`.
 
 ## Remaining adversarial work
 
