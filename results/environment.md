@@ -1,6 +1,6 @@
 # Evaluation Environment
 
-Reverified against live `harbor-framework/terminal-bench` on 2026-08-27 immediately before final evaluation.
+Reverified against live `harbor-framework/terminal-bench` immediately before final submission.
 
 ## Authority order
 
@@ -37,11 +37,11 @@ The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejec
 | `/run` + `/cheat` Harbor | `0.14.0` |
 | implementation-rubric Harbor | `0.18.0` |
 
-The public upstream `main` SHA was re-fetched immediately before this update and remained exactly `79e71650...`; there was no newer Terminal-Bench revision to absorb.
+The public upstream `main` SHA was re-fetched during finalization and remained exactly `79e71650...`; there was no newer Terminal-Bench revision to absorb.
 
 ## Current trial configuration
 
-Live `.github/harbor-run-defaults.yml` currently specifies:
+Live `.github/harbor-run-defaults.yml` specifies:
 
 | Setting | Live value |
 |---|---|
@@ -60,14 +60,14 @@ Live `.github/harbor-run-defaults.yml` currently specifies:
 
 The standard `/run` workflow expands `trials: 3` into a `(task × agent × trial)` matrix. The live `/cheat` workflow has no trial dimension; it runs one `(task × agent)` entry per configured agent. Therefore the required final model evidence target is **8 runs total**: 3 Codex standard + 3 Claude standard + 1 Codex cheat + 1 Claude cheat.
 
-## Provider availability
+## Provider availability and completed evidence
 
-| Provider route | Availability | Submission consequence |
+| Provider route | Availability | Submission result |
 |---|---|---|
-| Codex subscription authentication | **Available** | Codex standard and `/cheat` evidence can be collected. |
-| Claude Code subscription / setup-token route | **Unavailable** | Claude Code standard trials and Claude-driven rubric cannot run. |
-| Anthropic API route | **Unavailable for this submission** | Cannot provide the required Claude execution. |
-| Amazon Bedrock Claude route | **Unavailable for this submission** | Cannot provide the required Claude execution. |
+| Codex subscription authentication | **Available** | **Completed:** 3/3 standard reward-0 failures and 1/1 `/cheat` reward-0 entry. |
+| Claude Code subscription / setup-token route | **Unavailable** | Claude Code standard trials and Claude-driven rubric were not run. |
+| Anthropic API route | **Unavailable for this submission** | Could not provide the required Claude execution. |
+| Amazon Bedrock Claude route | **Unavailable for this submission** | Could not provide the required Claude execution. |
 
 The missing Claude-dependent results are an explicit provider-access limitation. They are not counted as model failures or treated as passing evidence. The repository therefore marks the automated implementation rubric, three Claude standard trials, and Claude `/cheat` entry as not run.
 
@@ -79,11 +79,11 @@ At upstream revision `79e71650...`, the adversarial workflow is reward-based:
 - if `harbor run` exits nonzero, the workflow records adversarial reward `0`;
 - the remote-backend JobConfig uses `n_attempts: 1`.
 
-Accordingly, the final adversarial requirement is one reward-0 entry for each required agent. This is intentionally different from standard `/run`, where provider/auth/quota/container/timeout/agent errors are not genuine model failures and do not count.
+Accordingly, the adversarial requirement is one reward-0 entry for each required agent. This is intentionally different from standard `/run`, where provider/auth/quota/container/timeout/agent errors are not genuine model failures and do not count.
 
 ## Docker vs upstream Modal default
 
-Upstream currently defaults `/run`, `/cheat`, and `/validate` to Modal because many benchmark tasks exceed GitHub-hosted runner resources. Both trial workflows retain explicit Docker paths, and Klavis's local examples use `--env docker` with subscription authentication.
+Upstream defaults `/run`, `/cheat`, and `/validate` to Modal because many benchmark tasks exceed GitHub-hosted runner resources. Both trial workflows retain explicit Docker paths, and Klavis's local examples use `--env docker` with subscription authentication.
 
 The frozen task requests only:
 
@@ -119,7 +119,7 @@ artifact: /app/verdicts.json
 
 The current rubric includes criteria such as verifiability, solvability, difficulty, realism/interest, outcome-based verification, anti-cheat robustness, task security, functional verification, reproducibility, essential difficulty, test/instruction alignment, novelty, agentic behavior, reviewability, and instruction concision.
 
-Repository source-level review has already corrected the concrete hidden-representation and verifier-isolation defects found during iteration, but that self-audit is **not** a substitute for the automated exact-tree review. Because Claude access is unavailable, the automated rubric is marked **NOT RUN** rather than PASS.
+Repository source-level review corrected the concrete hidden-representation and verifier-isolation defects found during iteration, but that self-audit is **not** a substitute for the automated exact-tree review. Because Claude access is unavailable, the automated rubric is marked **NOT RUN** rather than PASS.
 
 For reproducibility, the repository retains the Claude Code OAuth implementation-rubric runner:
 
@@ -143,11 +143,12 @@ It was not executed because the required Claude Code access is unavailable in th
 
 ## Repository delivery state
 
-The repository default branch contains the frozen task tree and current submission documentation. A read-only GitHub `Submission Consistency` workflow checks:
+The default branch contains the frozen task tree and final submission documentation. A read-only GitHub `Submission Consistency` workflow checks:
 
 - frozen task-tree identity and cleanliness;
 - `results/preflight-status.json` consistency;
 - current reviewer-facing task hashes/counts;
+- completed controllable Codex evidence markers;
 - Python audit-tool compilation;
 - retained shell-tool syntax;
 - repository hygiene and absence of local-development residue.
@@ -167,4 +168,4 @@ Immediately before final submission, re-fetch and compare:
 
 Any changed model identity, trial count, Harbor behavior, backend behavior, timeout rule, or rubric requirement supersedes this snapshot.
 
-`bash scripts/final-submission-audit.sh` remains intentionally strict. With Claude-dependent requirements unexecuted, it must not report full TB3 readiness even after all controllable Codex evidence is complete; the submission preserves and discloses that partial status.
+`bash scripts/final-submission-audit.sh` remains intentionally strict. With Claude-dependent requirements unexecuted, it must not report full TB3 readiness even though all controllable Codex evidence is complete; the submission preserves and discloses that partial status.
