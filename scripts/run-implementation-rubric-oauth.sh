@@ -7,7 +7,6 @@ TB3_REPO=${TB3_REPO:-"$HOME/.cache/klavis-tb3-terminal-bench"}
 RUNS_ROOT=${RUNS_ROOT:-"$HOME/.cache/klavis-tb3-runs/implementation-rubric"}
 EXPECTED_TASK_TREE=${EXPECTED_TASK_TREE:-}
 EXPECTED_TB3_HEAD=${EXPECTED_TB3_HEAD:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
-CONFIRM_ZERO_COST_COVERAGE=${CONFIRM_ZERO_COST_COVERAGE:-0}
 
 fail() { echo "ERROR: $*" >&2; exit 2; }
 command -v uvx >/dev/null 2>&1 || fail "uvx is required"
@@ -15,9 +14,8 @@ command -v uvx >/dev/null 2>&1 || fail "uvx is required"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 [[ -z "$EXPECTED_TASK_TREE" || "$TREE" == "$EXPECTED_TASK_TREE" ]] || fail "expected task tree $EXPECTED_TASK_TREE, found $TREE"
 [[ -z "$(git -C "$ROOT_DIR" status --porcelain -- "$TASK_REL")" ]] || fail "task tree is dirty"
-[[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "set CONFIRM_ZERO_COST_COVERAGE=1 only for Klavis's subscription/OAuth route with zero API billing"
 [[ -n "${CLAUDE_CODE_OAUTH_TOKEN:-}" ]] || fail "CLAUDE_CODE_OAUTH_TOKEN is missing; run 'claude setup-token' first"
-# Prevent accidental API/provider fallback.
+# Keep the OAuth path isolated from API/provider fallback.
 unset ANTHROPIC_API_KEY || true
 unset AWS_BEARER_TOKEN_BEDROCK || true
 unset AWS_ACCESS_KEY_ID || true
