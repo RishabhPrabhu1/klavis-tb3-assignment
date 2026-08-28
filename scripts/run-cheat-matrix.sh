@@ -6,7 +6,6 @@ TASK_REL="tasks/build-snapshot-publish"
 TREE=$(git -C "$ROOT_DIR" rev-parse "HEAD:$TASK_REL")
 AGENT=${AGENT:-}
 CONFIRM_FREEZE=${CONFIRM_FREEZE:-0}
-CONFIRM_ZERO_COST_COVERAGE=${CONFIRM_ZERO_COST_COVERAGE:-0}
 TARGET=${TARGET_CHEATS:-1}
 QUAL_ROOT=${QUAL_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-preflight"}
 TB3_HEAD_EXPECTED=${TB3_HEAD_EXPECTED:-"79e71650f5b6a6ef5bb46a434c7c04d7d99a9480"}
@@ -27,12 +26,11 @@ if [[ "$AGENT" == "codex" ]]; then
   RUN_ROOT=${RUN_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-cheat-final"}
   [[ -f "$HOME/.codex/auth.json" ]] || fail "Codex auth.json is missing"
 else
-  [[ "$CONFIRM_ZERO_COST_COVERAGE" == "1" ]] || fail "Claude adversarial call blocked until provider coverage is explicitly confirmed"
   MODEL="anthropic/claude-opus-5"; REASONING="max"; AGENT_NAME="claude-code"
   ROOTS=${CHEAT_ROOTS:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-cheat"}
   RUN_ROOT=${RUN_ROOT:-"$HOME/.cache/klavis-tb3-runs/transaction-claude-cheat"}
   if [[ -z "${CLAUDE_CODE_OAUTH_TOKEN:-}" && -z "${AWS_BEARER_TOKEN_BEDROCK:-}" && ( -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ) && -z "${ANTHROPIC_API_KEY:-}" ]]; then
-    fail "Claude auth missing: configure a supported Claude provider route first"
+    fail "Claude authentication is missing: configure a supported Claude provider route first"
   fi
 fi
 
@@ -93,7 +91,7 @@ while (( zero < TARGET )); do
   before=$zero
   printf '\n=== %s ADVERSARIAL TRIAL %s/%s ===\n' "$AGENT_NAME" "$((zero+1))" "$TARGET"
   set +e
-  AGENT="$AGENT" MODE=cheat EXPECTED_TASK_TREE="$TREE" EXPECTED_TB3_HEAD="$TB3_HEAD_EXPECTED" RUNS_ROOT="$RUN_ROOT" CONFIRM_ZERO_COST_COVERAGE="$CONFIRM_ZERO_COST_COVERAGE" \
+  AGENT="$AGENT" MODE=cheat EXPECTED_TASK_TREE="$TREE" EXPECTED_TB3_HEAD="$TB3_HEAD_EXPECTED" RUNS_ROOT="$RUN_ROOT" \
     bash "$ROOT_DIR/scripts/run-candidate-trial.sh"
   runner_status=$?
   set -e
