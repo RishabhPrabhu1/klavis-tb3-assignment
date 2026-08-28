@@ -32,27 +32,17 @@ bash scripts/run-qualification.sh
 
 ## Verifier hardening
 
-Earlier development trees were intentionally invalidated when review exposed hidden representation assumptions. None of those failures is counted as final model evidence. The current verifier no longer requires:
+Earlier development trees were invalidated when review exposed hidden representation assumptions. None of those failures is counted as final model evidence. The current verifier no longer requires a fixed workspace-current selector pathname, newest project-history generation to equal ordinary project current, private request replay fields, undocumented transaction metadata markers, or undocumented exact retry counts.
 
-- a fixed workspace-current selector pathname;
-- newest project-history generation to equal ordinary project current;
-- private request replay fields;
-- undocumented transaction metadata markers;
-- undocumented exact retry counts.
-
-Direct filesystem inspection is limited to the generation/object schemas stated in `instruction.md`. Candidate execution is isolated from verifier truth and runs unprivileged.
-
-`results/contract-coverage.md` contains the detailed requirement-to-test and representation-neutrality audit.
+Direct filesystem inspection is limited to the generation/object schemas stated in `instruction.md`. Candidate execution is isolated from verifier truth and runs unprivileged. `results/contract-coverage.md` contains the detailed requirement-to-test and representation-neutrality audit.
 
 ## Automated implementation rubric — NOT RUN
 
-Source-level review found and corrected the concrete hidden-schema and verifier-isolation defects identified during development. The automated Terminal-Bench implementation-rubric review is a separate required Claude-dependent check and has not been executed because usable Claude access is unavailable for this submission.
-
-No automated rubric PASS is claimed. `results/implementation-rubric-review.md` documents the source-level assessment and the missing provider-dependent check.
+The automated Terminal-Bench implementation-rubric review is a separate required Claude-dependent check and has not been executed because usable Claude access is unavailable for this submission. No automated rubric PASS is claimed. `results/implementation-rubric-review.md` documents the source-level assessment and the missing provider-dependent check.
 
 ## Evaluation evidence policy
 
-Standard `/run` evidence counts only when all of the following are established from authoritative Harbor output:
+Standard `/run` evidence counts only when authoritative Harbor output establishes:
 
 ```text
 execution_class = valid-completed-trial
@@ -69,14 +59,24 @@ Adversarial `/cheat` follows the pinned live workflow's reward acceptance rule: 
 ## Current evaluation status
 
 ```text
-Codex / Sol xhigh standard:         1/3 counted; 2 remaining
-Codex /cheat:                       0/1 counted
+Codex / Sol xhigh standard:         3/3 counted — COMPLETE
+Codex /cheat:                       0/1 counted — OUTSTANDING
 Claude Code / Opus 5 max standard: NOT RUN — Claude access unavailable
 Claude /cheat:                      NOT RUN — Claude access unavailable
 Automated implementation rubric:   NOT RUN — Claude access unavailable
 ```
 
-Each standard run is audited after completion before it can count. Claude-dependent requirements remain visible as incomplete rather than being replaced with another model or an authentication/provider failure.
+The exact-tree Codex standard collector completed on execution commit `90ba6964ae64fa04be2e58162c59b0be186023d8` with:
+
+```text
+valid_sol_xhigh_failures=3
+target=3
+status=SOL_MATRIX_COMPLETE
+```
+
+The three counted verifier outcomes were `62/6`, `64/4`, and `54/14` passed/failed, each with Harbor exit status `0`, authoritative reward `0.0`, and no trial exceptions. `results/standard-trials.md` and `results/failure-analysis.md` contain exact evidence paths and failure analysis.
+
+Claude-dependent requirements remain visible as incomplete rather than being replaced with another model or an authentication/provider failure.
 
 ## Pinned evaluation snapshot
 
