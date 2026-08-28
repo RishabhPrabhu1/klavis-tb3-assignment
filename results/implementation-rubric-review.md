@@ -25,6 +25,12 @@ frontier calls during qualification:   0
 
 Its fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejected all 40/40 development mutation negative controls. The sole successor task delta is verifier teardown/process-reaping hygiene in `tests/conftest.py`; the frozen successor reran current-tree static checks, the complete 68-test reference verifier, and exact-tree Harbor Oracle/NOP.
 
+## Claude access limitation
+
+The current Terminal-Bench implementation-rubric workflow is model-driven and uses Claude Code with Sonnet. This submission environment does not have a Claude Code subscription and does not have a usable Anthropic API or Bedrock route. The automated implementation-rubric review is therefore **NOT RUN** for this submission.
+
+This missing result is intentionally disclosed rather than inferred from the source-level audit below. No authentication failure, alternate model, or manual assessment is represented as an automated rubric PASS. The prepared Claude runners remain in the repository only so the exact intended route is reproducible if provider access is later supplied.
+
 ## Defects found and corrected during review
 
 Read-only source review of earlier predecessors exposed concrete issues. They were treated as task/verifier defects rather than model failures and corrected before the frozen tree:
@@ -46,7 +52,7 @@ Read-only source review of earlier predecessors exposed concrete issues. They we
 |---|---|---|
 | Verifiable | Likely pass | Deterministic hooks, explicit observable schemas, separate verifier, reference witness. |
 | Solvable | Borderline | Complete reference exists and starter scaffolding is nonblank, but the composed state-machine surface is large. |
-| Difficult | Supported by calibration | A superseded qualified tree produced a clean Sol/xhigh reward-0 with broad failures; exact final-tree matrix is still required. |
+| Difficult | Supported by calibration and exact-tree evidence | Historical Sol/xhigh calibration failed broadly; the first exact-tree Sol/xhigh trial also produced a genuine reward-0 implementation failure. |
 | Interesting / realistic | Likely pass | Build consistency, idempotency, crash recovery, optimistic transactions, readers, and reclamation are professional systems concerns. |
 | Outcome verified | Likely pass | Representation assumptions identified during review were removed or documented. |
 | Anti-cheat robustness | Likely pass | Separate verifier, unprivileged candidate, verifier/reference excluded from agent environment; empirical `/cheat` remains required. |
@@ -59,9 +65,9 @@ Read-only source review of earlier predecessors exposed concrete issues. They we
 | Expert-time estimate | Borderline | The 4-hour estimate assumes an expert working from the provided starter and understanding the intended systems approach. |
 | Verifier separation / hygiene | Likely pass | Artifact boundary, pinned verifier dependencies, unprivileged candidate execution, and cleanup are explicit. |
 
-## Automated check — OUTSTANDING
+## Automated check — NOT RUN
 
-No automated rubric PASS is claimed. A valid result must:
+A valid automated result would need to:
 
 - run on the exact frozen task tree;
 - use the pinned/current Terminal-Bench implementation-rubric source of truth;
@@ -83,4 +89,4 @@ EXPECTED_TB3_HEAD=79e71650f5b6a6ef5bb46a434c7c04d7d99a9480 \
 bash scripts/run-implementation-rubric-bedrock.sh
 ```
 
-The automated reviewer depends on Claude access. Until such a run is successfully completed, this requirement remains explicitly outstanding regardless of the source-level assessment above.
+Neither route is usable in the current submission environment because Claude provider access is unavailable. The repository therefore preserves this requirement as incomplete and the final strict readiness audit must not treat it as passed.
