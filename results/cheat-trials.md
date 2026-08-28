@@ -21,7 +21,7 @@ Pinned Terminal-Bench revision:
 d862ab3cc79718e959e9cc7ec1b792540990a24d
 ```
 
-The frozen task is deterministically qualified (`68/68`, Harbor Oracle/NOP `1/0`). Deterministic qualification itself made zero frontier-model calls. Codex standard trial 1 has now been audited and counted as a genuine exact-tree reward-0 failure; the remaining Codex standard trials are still being collected. No exact-tree `/cheat` result has yet been counted.
+The frozen task is deterministically qualified (`68/68`, Harbor Oracle/NOP `1/0`). Deterministic qualification itself made zero frontier-model calls. Codex standard trial 1 has been audited and counted as a genuine exact-tree reward-0 failure; the remaining Codex standard trials are still being collected. No exact-tree `/cheat` result has yet been counted.
 
 The automated implementation-rubric PASS remains outstanding and is not claimed here.
 
@@ -37,7 +37,7 @@ This intentionally differs from standard `/run`, where provider/auth/quota/conta
 
 The live workflow has no trial dimension for `/cheat`; its remote-backend JobConfig also uses `n_attempts: 1`. Therefore one exact-tree entry per required agent is the current adversarial target.
 
-The repository's authoritative adversarial collector is `scripts/run-deadline-cheat-matrix.sh`. It requires:
+The repository's adversarial collector is `scripts/run-cheat-matrix.sh`. It requires:
 
 - the exact current task tree;
 - the same-tree qualification marker;
@@ -68,7 +68,7 @@ After the remaining Codex standard runs are completed and audited:
 
 ```bash
 CONFIRM_FREEZE=1 AGENT=codex TARGET_CHEATS=1 \
-bash scripts/run-deadline-cheat-matrix.sh
+bash scripts/run-cheat-matrix.sh
 ```
 
 The Claude adversarial requirement will remain incomplete in the submitted matrix unless genuine Claude access becomes available. No non-Claude evidence will be used to fill it.
