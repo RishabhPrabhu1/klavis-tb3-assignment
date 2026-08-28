@@ -98,7 +98,7 @@ Raw local Harbor evidence is stored outside the repository under `~/.cache/klavi
 A complete exact-tree deterministic qualification is available with:
 
 ```bash
-bash scripts/run-final-tree-deadline-qualification.sh
+bash scripts/run-qualification.sh
 ```
 
 This path runs static checks, the 68-test reference verifier, mutation controls, and exact-tree Harbor Oracle/NOP without frontier-model calls.
@@ -113,7 +113,15 @@ bash scripts/run-candidate-trial.sh
 
 It records repository SHA, task tree, model, reasoning level, Harbor version, auth mode, and raw result locations. `scripts/audit-trial-evidence.py` then reclassifies standard-trial validity from authoritative Harbor `result.json` state rather than relying on console text alone.
 
-Matrix collectors are provided for the required Codex, Claude, and adversarial configurations. They preserve the frozen task tree and fail closed on inconsistent evidence. Claude tooling remains reproducible in the repository, but no Claude result is represented as executed without actual provider access.
+The matrix collectors are:
+
+```text
+scripts/run-codex-standard-matrix.sh
+scripts/run-claude-standard-matrix.sh
+scripts/run-cheat-matrix.sh
+```
+
+They preserve the frozen task tree and fail closed on inconsistent evidence. Claude tooling remains reproducible in the repository, but no Claude result is represented as executed without actual provider access.
 
 ## Historical calibration
 
