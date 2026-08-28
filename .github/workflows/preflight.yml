@@ -26,6 +26,20 @@ jobs:
       - name: Verify frozen task and submission evidence
         run: python3 scripts/submission-consistency-audit.py
 
+      - name: Check repository hygiene
+        run: |
+          if git grep -nE 'ChatGPT|Luna Max|CONFIRM_ZERO_COST_COVERAGE|/Users/rishabhprabhu/' -- .; then
+            echo "Submission-only repository contains an internal assistant/workstation marker."
+            exit 1
+          fi
+
+          junk=$(git ls-files | grep -E '(^|/)(\.DS_Store|__pycache__)(/|$)|\.(log|tmp|swp|pyc)$|(^|/)\.env($|\.)' || true)
+          if [ -n "$junk" ]; then
+            echo "Committed build/editor residue found:"
+            echo "$junk"
+            exit 1
+          fi
+
       - name: Compile Python tooling
         run: |
           python3 -m py_compile \
