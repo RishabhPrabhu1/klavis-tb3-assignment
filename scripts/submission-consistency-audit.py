@@ -60,6 +60,7 @@ if status.get("qualification_mode") == "successor-delta-exact-tree":
 
 current_docs = [
     "README.md",
+    "results/environment.md",
     "results/validation.md",
     "results/execution-plan.md",
     "results/standard-trials.md",
@@ -87,6 +88,12 @@ for rel in current_docs:
 readme = (ROOT / "README.md").read_text(encoding="utf-8")
 if "Oracle/reference:         68/68" not in readme:
     fail("README does not state current 68/68 qualification")
+
+environment = (ROOT / "results/environment.md").read_text(encoding="utf-8")
+if EXPECTED_TB3 not in environment:
+    fail("environment snapshot does not identify pinned live Terminal-Bench revision")
+if "8 runs total" not in environment:
+    fail("environment snapshot does not state the current eight-run final matrix")
 
 # Authoritative operational entry points must not be hard-pinned to the obsolete
 # difficulty-calibration tree.
@@ -126,6 +133,7 @@ print("=== SUBMISSION CONSISTENCY AUDIT ===")
 print(f"task_tree={tree}")
 print("preflight_status=PASS")
 print("oracle_reference=68/68")
+print("environment_snapshot=PASS")
 print("reviewer_docs=PASS")
 print("authoritative_entry_points=PASS")
 print("task_tree_clean=YES")
