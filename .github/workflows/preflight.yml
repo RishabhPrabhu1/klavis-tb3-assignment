@@ -37,18 +37,18 @@ jobs:
           for script in \
             scripts/final-submission-audit.sh \
             scripts/run-candidate-trial.sh \
-            scripts/run-codex-strong-test.sh \
-            scripts/run-corrected-tree-local-qualification.sh \
-            scripts/run-deadline-cheat-matrix.sh \
-            scripts/run-deadline-claude-matrix.sh \
-            scripts/run-deadline-sol-matrix.sh \
-            scripts/run-final-tree-deadline-qualification.sh \
+            scripts/run-cheat-matrix.sh \
+            scripts/run-claude-standard-matrix.sh \
+            scripts/run-codex-standard-matrix.sh \
+            scripts/run-deterministic-qualification.sh \
+            scripts/run-harbor-preflight.sh \
             scripts/run-implementation-rubric-oauth.sh \
             scripts/run-lifecycle-mutation-checks.sh \
             scripts/run-local-reference-tests.sh \
             scripts/run-mutation-checks.sh \
             scripts/run-nop.sh \
             scripts/run-oracle.sh \
+            scripts/run-qualification.sh \
             scripts/run-request-mutation-checks.sh \
             scripts/run-static-checks.sh \
             scripts/run-workspace-mutation-checks.sh \
