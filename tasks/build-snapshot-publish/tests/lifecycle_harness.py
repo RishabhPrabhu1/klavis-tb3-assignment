@@ -34,14 +34,26 @@ def _candidate_env() -> dict[str, str]:
     return env
 
 
-def _wait_for(path: Path, proc: subprocess.Popen[bytes], description: str) -> None:
+def _wait_for(
+    path: Path,
+    proc: subprocess.Popen[bytes],
+    baseline: set[int],
+    description: str,
+) -> None:
     deadline = time.monotonic() + 8
     while time.monotonic() < deadline:
         if path.exists():
             return
         if proc.poll() is not None:
+            _cleanup_candidate_processes(proc.pid, baseline)
+            proc.wait(timeout=5)
             raise AssertionError(f"candidate exited before {description}")
         time.sleep(0.01)
+    _cleanup_candidate_processes(proc.pid, baseline)
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired as exc:
+        raise AssertionError(f"candidate root survived cleanup while waiting to {description}") from exc
     raise AssertionError(f"candidate did not {description}")
 
 
@@ -207,8 +219,9 @@ def run_gc(
             proc.wait(timeout=5)
             raise AssertionError("candidate gc timed out")
     stderr_text = stderr_path.read_text(errors="replace")
-    assert returncode == expect_returncode, stderr_text
     _cleanup_candidate_processes(proc.pid, baseline)
+    proc.wait(timeout=5)
+    assert returncode == expect_returncode, stderr_text
     if not require_report:
         return None
     assert report.exists(), "gc did not write its report"
@@ -256,7 +269,7 @@ def start_reader(
     )
     stdout.close()
     stderr.close()
-    _wait_for(hold_dir / "acquired", proc, "signal snapshot acquisition")
+    _wait_for(hold_dir / "acquired", proc, baseline, "signal snapshot acquisition")
     return proc, baseline, log_dir
 
 
@@ -276,10 +289,15 @@ def release_reader(
 ) -> None:
     del baseline  # Sibling readers may have started after this reader's baseline.
     _write(hold_dir / "release", "release\n")
-    returncode = proc.wait(timeout=8)
+    try:
+        returncode = proc.wait(timeout=8)
+    except subprocess.TimeoutExpired:
+        _cleanup_process_group(proc.pid)
+        proc.wait(timeout=5)
+        raise AssertionError("candidate reader timed out after release")
     stderr = (log_dir / "stderr").read_text(errors="replace")
-    assert returncode == 0, stderr
     _cleanup_process_group(proc.pid)
+    assert returncode == 0, stderr
 
 
 def kill_reader(proc: subprocess.Popen[bytes], baseline: set[int]) -> None:
@@ -338,7 +356,7 @@ def start_paused_gc(
     )
     stdout.close()
     stderr.close()
-    _wait_for(pause_dir / "reached", proc, "reach the GC pausepoint")
+    _wait_for(pause_dir / "reached", proc, baseline, "reach the GC pausepoint")
     return proc, baseline, report, log_dir
 
 
@@ -351,12 +369,39 @@ def release_gc(
 ) -> dict:
     del baseline  # New readers/writers may intentionally start while GC is paused.
     _write(pause_dir / "release", "release\n")
-    returncode = proc.wait(timeout=12)
+    try:
+        returncode = proc.wait(timeout=12)
+    except subprocess.TimeoutExpired:
+        _cleanup_process_group(proc.pid)
+        proc.wait(timeout=5)
+        raise AssertionError("paused gc timed out after release")
     stderr = (log_dir / "stderr").read_text(errors="replace")
-    assert returncode == 0, stderr
     _cleanup_process_group(proc.pid)
+    assert returncode == 0, stderr
     assert report.exists()
     return json.loads(report.read_text())
+
+
+def cleanup_paused_gc(
+    proc: subprocess.Popen[bytes] | None,
+    baseline: set[int],
+    pause_dir: Path,
+) -> None:
+    """Best-effort finalizer for a paused GC when its test is already unwinding."""
+    if proc is None:
+        return
+    try:
+        _write(pause_dir / "release", "release\n")
+    except OSError:
+        pass
+    try:
+        proc.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        _cleanup_candidate_processes(proc.pid, baseline)
+        proc.wait(timeout=5)
+    else:
+        _cleanup_candidate_processes(proc.pid, baseline)
+        proc.wait(timeout=5)
 
 
 def assert_gc_report(report: dict) -> None:
