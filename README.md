@@ -88,7 +88,7 @@ For `/cheat`, acceptance follows the pinned live TB3 workflow: every required ta
 - [`results/implementation-rubric-review.md`](results/implementation-rubric-review.md) — source-level rubric assessment and the missing Claude-dependent automated check.
 - [`results/standard-trials.md`](results/standard-trials.md) — required standard `/run` matrix and counted Codex evidence.
 - [`results/cheat-trials.md`](results/cheat-trials.md) — required adversarial `/cheat` matrix.
-- [`results/failure-analysis.md`](results/failure-analysis.md) — model-failure validity rules and per-trial analysis.
+- [`results/failure-analysis.md`](results/failure-analysis.md) — model-failure validity rules, historical calibration, and per-trial analysis.
 - [`results/environment.md`](results/environment.md) — pinned versions, provider availability, and evaluation environment.
 
 Raw local Harbor evidence is stored outside the repository under `~/.cache/klavis-tb3-runs/` and keyed by repository/task/upstream identities. Submission-facing summaries contain the exact evidence paths and classifications after each accepted run.
@@ -122,12 +122,6 @@ scripts/run-cheat-matrix.sh
 ```
 
 They preserve the frozen task tree and fail closed on inconsistent evidence. Claude tooling remains reproducible in the repository, but no Claude result is represented as executed without actual provider access.
-
-## Historical calibration
-
-Historical model runs are retained in the evidence documents because they explain task iteration, but they are explicitly excluded from the final matrix.
-
-The strongest superseded calibration tree, `fc064cac2fb1241b68a98475dbc8ea04fbe579cc`, produced a clean GPT-5.6 Sol/xhigh reward-0 trial with `45 passed / 21 failed`. Later verifier/schema/process corrections superseded that tree, so the result demonstrates difficulty only. Earlier solved and verifier-defect trees are documented in [`results/failure-analysis.md`](results/failure-analysis.md).
 
 ## Final acceptance
 
