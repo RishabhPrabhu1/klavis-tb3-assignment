@@ -14,12 +14,12 @@ Deterministic qualification is complete:
 static checks:      PASS
 Oracle/reference:   68/68
 Harbor Oracle/NOP:  1/0
-frontier calls:     0
+frontier calls during deterministic qualification: 0
 ```
 
 The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejected 40/40 development mutation controls. The frozen successor changes only verifier teardown/reaping hygiene in `tests/conftest.py`; it reran current-tree static checks, all 68 reference tests, and exact-tree Harbor Oracle/NOP.
 
-Automated implementation-rubric acceptance remains a pre-frontier gate and is not claimed until same-tree evidence exists.
+Automated implementation-rubric acceptance remains outstanding and is not claimed until same-tree evidence exists.
 
 ## Standard-trial validity
 
@@ -48,6 +48,45 @@ For `/cheat`, the pinned live Terminal-Bench workflow is reward-based: every tas
 - `F7` — other invalid/non-difficulty evidence, including suspicious shortcut behavior.
 
 Only F1/F2-style genuine candidate failures under a clear contract can satisfy the standard-failure requirement. F3-F7 do not.
+
+## Final-tree counted trials
+
+### Codex / GPT-5.6 Sol / xhigh — standard trial 1
+
+```text
+execution commit: 90ba6964ae64fa04be2e58162c59b0be186023d8
+task tree: d862ab3cc79718e959e9cc7ec1b792540990a24d
+evidence directory: ~/.cache/klavis-tb3-runs/transaction-standard-probe/20260828T013339Z-85607-standard-codex-90ba6964ae64
+runtime: 32m46s
+execution_class: valid-completed-trial
+qualification_valid: true
+result_exception_types: []
+Harbor exit status: 0
+authoritative reward: 0.0
+verifier: 62 passed / 6 failed / 0 skipped
+```
+
+Failed tests:
+
+- `test_build_cache.py::test_unrelated_input_and_target_definition_invalidate_selectively`
+- `test_reclamation.py::test_gc_revalidates_after_concurrent_commit`
+- `test_reclamation.py::test_gc_revalidates_reader_pin_acquired_during_scan`
+- `test_reclamation_interleavings.py::test_gc_preserves_private_objects_of_live_writer`
+- `test_reclamation_interleavings.py::test_gc_can_reclaim_writer_base_without_losing_later_commit_state`
+- `test_reclamation_interleavings.py::test_crashed_writer_lease_does_not_prevent_later_object_reclamation`
+
+Evidence audit:
+
+```text
+execution=valid-completed-trial
+result_exceptions=none
+reward=0.0
+reward_error=none
+```
+
+Failure classification: **F1/F2 genuine implementation failure**. The cache failure checks selective invalidation explicitly required by the instruction. The remaining failures check GC/reclamation behavior that is also explicitly stated: GC must account for concurrent commits and readers, active work may temporarily protect otherwise-unreachable objects, dead work cannot protect storage forever, and reclaiming a stale writer's base must not destroy the later commit's reusable state. These are observable behavioral invariants rather than source-layout assumptions.
+
+No evidence from this trial indicates provider/auth/quota contamination, Harbor failure, verifier failure, hidden representation requirements, or a specification mismatch. The six failures are therefore accepted as candidate-behavior failures and this trial **counts as Codex standard failure 1/3**.
 
 ## Historical calibration
 
@@ -163,7 +202,5 @@ For `d862ab3cc79718e959e9cc7ec1b792540990a24d`:
 - valid standard reward `0` caused by genuine candidate implementation error can count;
 - `F3/F4` requires a narrow task/verifier repair, a **new task-tree hash**, and complete requalification before further counted trials;
 - `F5/F6/F7` is preserved as invalid evidence and does not count;
-- once a legitimate first exact-tree reward-0 failure is reviewed, the tree is frozen for the remainder of the standard/adversarial matrix;
+- the first legitimate exact-tree reward-0 failure has now been reviewed, so the task tree is frozen for the remainder of the standard/adversarial matrix;
 - final submission requires three valid Sol/xhigh failures, three valid Opus 5/max failures, and one zero-reward adversarial entry for each agent under the pinned live `/cheat` behavior.
-
-No final-tree trial analysis has yet been inserted because no frontier model call has been counted on the frozen tree.
