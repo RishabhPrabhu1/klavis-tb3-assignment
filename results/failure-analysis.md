@@ -157,43 +157,6 @@ Review of the calibration tree and intermediate successors found and corrected:
 
 These were treated as task/verifier defects, not as model failures.
 
-## Final-tree per-trial analysis template
-
-```text
-Agent / model / reasoning:
-Execution commit:
-Task tree: d862ab3cc79718e959e9cc7ec1b792540990a24d
-Evidence directory:
-
-Validity:
-- execution_class:
-- qualification_valid:
-- result_exception_types:
-- infrastructure/provider contamination:
-
-Result:
-- reward:
-- passed / failed / skipped:
-- failed tests:
-
-Implementation:
-- architecture attempted:
-- substantive execution:
-- suspicious shortcuts:
-
-Failure analysis:
-- primary category F1-F7:
-- violated observable invariant:
-- first incorrect assumption/state boundary:
-- local patch vs broad redesign:
-- specification ambiguity/verifier defect:
-
-Decision:
-- legitimate model failure:
-- counts toward final matrix:
-- frozen tree remains valid:
-```
-
 ## Freeze rule for the final tree
 
 For `d862ab3cc79718e959e9cc7ec1b792540990a24d`:
