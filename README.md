@@ -36,13 +36,19 @@ The frozen tree differs from its fully-qualified predecessor only by verifier te
 | Harbor 0.14 Oracle | **1.000** | [`results/preflight-status.json`](results/preflight-status.json) |
 | Harbor 0.14 NOP | **0.000** | [`results/preflight-status.json`](results/preflight-status.json) |
 | Development mutation controls | **40/40 rejected on fully-qualified predecessor** | [`results/contract-coverage.md`](results/contract-coverage.md) |
-| Automated implementation rubric | **Outstanding** | [`results/implementation-rubric-review.md`](results/implementation-rubric-review.md) |
+| Automated implementation rubric | **NOT RUN — Claude access unavailable** | [`results/implementation-rubric-review.md`](results/implementation-rubric-review.md) |
 | Codex / Sol `xhigh` standard matrix | **1/3 counted; 2 remaining** | [`results/standard-trials.md`](results/standard-trials.md) |
 | Codex `/cheat` | **Outstanding** | [`results/cheat-trials.md`](results/cheat-trials.md) |
-| Claude Code / Opus 5 `max` standard matrix | **Outstanding** | [`results/standard-trials.md`](results/standard-trials.md) |
-| Claude `/cheat` | **Outstanding** | [`results/cheat-trials.md`](results/cheat-trials.md) |
+| Claude Code / Opus 5 `max` standard matrix | **NOT RUN — Claude access unavailable** | [`results/standard-trials.md`](results/standard-trials.md) |
+| Claude `/cheat` | **NOT RUN — Claude access unavailable** | [`results/cheat-trials.md`](results/cheat-trials.md) |
 
 The deterministic qualification itself made **zero frontier-model calls**. Model evidence is represented as complete only after Harbor result evidence is audited and the failure cause is reviewed.
+
+## Claude access limitation
+
+The current Terminal-Bench configuration requires Claude Code for the automated implementation-rubric review and requires Claude Code / Opus 5 for three standard trials plus one adversarial `/cheat` entry. Those Claude-dependent requirements are **not being executed in this submission** because no Claude Code subscription or other usable Claude provider route (Anthropic API or Bedrock) is available in the submission environment.
+
+This is an explicit submission limitation, not a claimed pass. No substitute model result, failed authentication attempt, or provider error is counted as Claude evidence. The repository keeps the required Claude rows visible and marks them incomplete so a reviewer can distinguish completed validation from unavailable provider-dependent evaluation.
 
 ## Evaluation configuration
 
@@ -72,11 +78,11 @@ The reviewer-facing evidence is intentionally separated by purpose:
 - [`results/validation.md`](results/validation.md) — frozen-tree deterministic qualification and verifier hardening summary.
 - [`results/preflight-status.json`](results/preflight-status.json) — machine-readable qualification record.
 - [`results/contract-coverage.md`](results/contract-coverage.md) — instruction-to-verifier traceability and representation-neutrality audit.
-- [`results/implementation-rubric-review.md`](results/implementation-rubric-review.md) — implementation-rubric analysis and automated-gate status.
-- [`results/standard-trials.md`](results/standard-trials.md) — required standard `/run` matrix.
+- [`results/implementation-rubric-review.md`](results/implementation-rubric-review.md) — implementation-rubric analysis, Claude access limitation, and automated-gate status.
+- [`results/standard-trials.md`](results/standard-trials.md) — required standard `/run` matrix and counted Codex evidence.
 - [`results/cheat-trials.md`](results/cheat-trials.md) — required adversarial `/cheat` matrix.
 - [`results/failure-analysis.md`](results/failure-analysis.md) — model-failure validity rules and per-trial analysis.
-- [`results/environment.md`](results/environment.md) — pinned versions, auth modes, and evaluation environment.
+- [`results/environment.md`](results/environment.md) — pinned versions, auth modes, provider availability, and evaluation environment.
 - [`results/submission-checklist.md`](results/submission-checklist.md) — final delivery/access/evidence checklist.
 
 Raw local Harbor evidence is stored outside the repository under `~/.cache/klavis-tb3-runs/` and keyed by repository/task/upstream identities. Submission-facing summaries contain the exact evidence paths and classifications after each accepted run.
@@ -107,7 +113,7 @@ bash scripts/run-candidate-trial.sh
 
 It records repository SHA, task tree, model, reasoning level, Harbor version, auth mode, and raw result locations, then `scripts/audit-trial-evidence.py` reclassifies standard-trial validity from authoritative Harbor `result.json` state rather than relying on console text alone.
 
-Matrix wrappers are provided for the final Codex, Claude, and adversarial runs. These scripts preserve the frozen task tree and fail closed on inconsistent evidence.
+Matrix wrappers are provided for the final Codex, Claude, and adversarial runs. These scripts preserve the frozen task tree and fail closed on inconsistent evidence. Claude runners remain in the repository for reproducibility, but they are not represented as executed without actual provider access.
 
 ## Historical calibration
 
@@ -123,4 +129,6 @@ The repository includes a strict final audit:
 bash scripts/final-submission-audit.sh
 ```
 
-That script reports full TB3 submission readiness only when the exact frozen task has the required deterministic qualification, same-tree automated implementation-rubric PASS, complete valid standard matrices, and reward-0 adversarial entries. Until those conditions are met, the repository documents the remaining gaps rather than representing them as passed.
+That script reports full TB3 submission readiness only when the exact frozen task has the required deterministic qualification, same-tree automated implementation-rubric PASS, complete valid standard matrices, and reward-0 adversarial entries.
+
+Because the Claude-dependent requirements are not being run without Claude access, the final strict audit is expected to remain **not fully ready** even after the remaining Codex evidence is complete. The submission will preserve that truthful partial status and disclose the Claude limitation rather than weaken the audit or claim full TB3 compliance.
