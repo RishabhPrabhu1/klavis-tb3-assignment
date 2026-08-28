@@ -27,7 +27,7 @@ The fully-qualified predecessor `301107828273e249fbd31ed34d86bf3fed7143a1` rejec
 A full exact-tree reproduction, including mutation controls, is available through:
 
 ```bash
-bash scripts/run-final-tree-deadline-qualification.sh
+bash scripts/run-qualification.sh
 ```
 
 ## Verifier hardening
